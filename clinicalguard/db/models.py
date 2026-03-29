@@ -18,6 +18,7 @@ class GuidelineDataset(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     version: Mapped[str] = mapped_column(String(50), nullable=False)
+    ingestion_version: Mapped[str] = mapped_column(String(50), nullable=False, default="1.0")
     country: Mapped[str] = mapped_column(String(10), nullable=False)
     care_context: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -52,6 +53,8 @@ class Condition(Base):
     is_emergency: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     age_group: Mapped[str | None] = mapped_column(String(50), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    introduction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    raw_json: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
     )
@@ -83,6 +86,15 @@ class Condition(Base):
     embeddings: Mapped[list["ConditionEmbedding"]] = relationship(
         "ConditionEmbedding", back_populates="condition"
     )
+    complications: Mapped[list["ConditionComplication"]] = relationship(
+        "ConditionComplication", back_populates="condition"
+    )
+    prevention_measures: Mapped[list["ConditionPrevention"]] = relationship(
+        "ConditionPrevention", back_populates="condition"
+    )
+    adverse_reactions: Mapped[list["ConditionAdverseReaction"]] = relationship(
+        "ConditionAdverseReaction", back_populates="condition"
+    )
 
     __table_args__ = (UniqueConstraint("dataset_id", "icd10_code"),)
 
@@ -112,6 +124,7 @@ class ConditionFinding(Base):
     )
     finding_text: Mapped[str] = mapped_column(Text, nullable=False)
     finding_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    subtype: Mapped[str | None] = mapped_column(String(100), nullable=True)
     severity_tier: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -146,6 +159,7 @@ class ConditionTreatment(Base):
     condition_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("conditions.id"), nullable=False
     )
+    subtype: Mapped[str | None] = mapped_column(String(100), nullable=True)
     severity_tier: Mapped[str | None] = mapped_column(String(50), nullable=True)
     care_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     treatment_type: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -191,6 +205,7 @@ class ConditionSafetyRule(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     severity: Mapped[str] = mapped_column(String(20), nullable=False)
     is_universal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     rule_logic: Mapped[str | None] = mapped_column(Text, nullable=True)
     action: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -228,6 +243,54 @@ class ConditionEmbedding(Base):
     __table_args__ = (UniqueConstraint("condition_id", "model_name"),)
 
 
+
+class ConditionComplication(Base):
+    __tablename__ = "condition_complications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    condition_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("conditions.id"), nullable=False
+    )
+    complication: Mapped[str] = mapped_column(Text, nullable=False)
+    subtype: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    severity: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    condition: Mapped["Condition"] = relationship(
+        "Condition", back_populates="complications"
+    )
+
+
+class ConditionPrevention(Base):
+    __tablename__ = "condition_prevention"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    condition_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("conditions.id"), nullable=False
+    )
+    measure: Mapped[str] = mapped_column(Text, nullable=False)
+
+    condition: Mapped["Condition"] = relationship(
+        "Condition", back_populates="prevention_measures"
+    )
+
+
+class ConditionAdverseReaction(Base):
+    __tablename__ = "condition_adverse_reactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    condition_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("conditions.id"), nullable=False
+    )
+    reaction: Mapped[str] = mapped_column(Text, nullable=False)
+    subtype: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    severity: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    condition: Mapped["Condition"] = relationship(
+        "Condition", back_populates="adverse_reactions"
+    )
+
+
+    
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

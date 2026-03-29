@@ -27,6 +27,9 @@ def test_tables_exist() -> None:
         "condition_differentials",
         "condition_safety_rules",
         "condition_embeddings",
+        "condition_complications",
+        "condition_prevention", 
+        "condition_adverse_reactions",
         "audit_log",
     ]
     

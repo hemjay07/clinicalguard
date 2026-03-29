@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Data (we'll track structure, not raw files)
+data/raw/*.json
+
+# OS
+.DS_Store
+
+
+*.log
+logs/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/

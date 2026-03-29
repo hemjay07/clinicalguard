@@ -10,11 +10,12 @@ venv/
 .vscode/
 .idea/
 
-# Data (we'll track structure, not raw files)
-data/raw/*.json
 
 # OS
 .DS_Store
+
+# Cache
+.cache/
 
 
 *.log
@@ -24,3 +25,6 @@ logs/
 *.egg-info/
 dist/
 build/
+
+data/raw/
+

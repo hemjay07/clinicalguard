@@ -1,9 +1,16 @@
+# NOTE: These tests run against the real Supabase database configured in .env.
+# Each test uses a session that is rolled back after completion, so no data persists.
+# The correct long-term solution is a separate test database (TEST_DATABASE_URL).
+# This is a known limitation documented in ADR-008.
+
 import json
 from pathlib import Path
-from clinicalguard.db.session import engine, Base, SessionLocal
-from clinicalguard.db.models import Condition, ConditionFinding, ConditionTreatment
-from clinicalguard.ingestion.nstg import ingest_file
+
 import pytest
+
+from clinicalguard.db.models import Condition, ConditionFinding
+from clinicalguard.db.session import Base, SessionLocal, engine
+from clinicalguard.ingestion.nstg import ingest_file
 
 
 @pytest.fixture
@@ -32,8 +39,8 @@ def test_findings_count(db):
     condition = ingest_file(db, ABORTION_FILE)
     db.commit()
 
-    findings = db.query(ConditionFinding).filter_by(condition_id=condition.id).all()
-    assert len(findings) == 13
+    count = db.query(ConditionFinding).filter_by(condition_id=condition.id).count()
+    assert count == 13
 
 
 def test_upsert_does_not_duplicate(db):

@@ -22,8 +22,7 @@ def db():
     session.close()
 
 
-ABORTION_FILE = Path("data/raw/nstg/processed_json/ABORTION.json")
-
+ABORTION_FILE = Path("tests/fixtures/ABORTION.json")
 
 def test_condition_is_created(db):
     condition = ingest_file(db, ABORTION_FILE)

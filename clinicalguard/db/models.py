@@ -1,4 +1,6 @@
 from datetime import datetime
+from pgvector.sqlalchemy import Vector
+
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -232,6 +234,7 @@ class ConditionEmbedding(Base):
     embedding_text: Mapped[str] = mapped_column(Text, nullable=False)
     model_name: Mapped[str] = mapped_column(String(100), nullable=False)
     model_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    embedding: Mapped[list] = mapped_column(Vector(1536), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
     )

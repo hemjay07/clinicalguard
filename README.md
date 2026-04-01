@@ -8,7 +8,7 @@ guidelines.
 ClinicalGuard evaluates and supports clinical AI systems against structured 
 medical guidelines. It ships with the Nigerian Standard Treatment Guidelines 
 (NSTG 2022, 251 conditions) as the first dataset and is designed to support 
-additional guideline datasets through a pluggable adapter pattern.
+additional guideline datasets through a pluggable adapter pattern
 
 It operates in two modes:
 

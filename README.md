@@ -1,7 +1,7 @@
 # ClinicalGuard
 
 An open-source clinical AI safety framework built on real Nigerian clinical 
-guidelines.
+guidelines (phase 1 complete).
 
 ## What it is
 

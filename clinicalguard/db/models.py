@@ -187,7 +187,7 @@ class ConditionDifferential(Base):
     condition_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("conditions.id"), nullable=False
     )
-    differential_condition: Mapped[str] = mapped_column(String(200), nullable=False)
+    differential_condition: Mapped[str] = mapped_column(Text, nullable=False)
     distinguishing_features: Mapped[str | None] = mapped_column(Text, nullable=True)
     priority_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
 

@@ -5,13 +5,13 @@ from sqlalchemy.orm import Session
 
 from clinicalguard.db.models import (
     Condition,
-    ConditionFinding,
-    ConditionTreatment,
-    ConditionComplication,
-    ConditionPrevention,
     ConditionAdverseReaction,
+    ConditionComplication,
+    ConditionInvestigation,
+    ConditionPrevention,
+    ConditionSafetyRule,
+    ConditionTreatment,
     GuidelineDataset,
-    ConditionInvestigation
 )
 from clinicalguard.models.cds import (
     CDSResponse,
@@ -62,6 +62,7 @@ def build_differential(
         .filter_by(condition_id=condition.id)
         .all()
     ]
+
     complications = [
         c.complication
         for c in db.query(ConditionComplication)
@@ -76,10 +77,19 @@ def build_differential(
         .all()
     ]
 
-    adverse_reactions = [
-        a.reaction
-        for a in db.query(ConditionAdverseReaction)
-        .filter_by(condition_id=condition.id)
+    safety_flags = [
+        SafetyFlag(
+            rule_type=rule.rule_type,
+            description=rule.description,
+            severity=rule.severity,
+            verified=rule.is_verified,
+        )
+        for rule in db.query(ConditionSafetyRule)
+        .filter_by(
+            condition_id=condition.id,
+            is_active=True,
+            is_verified=True,
+        )
         .all()
     ]
 
@@ -92,7 +102,7 @@ def build_differential(
         treatment=build_treatment(condition, db),
         complications=complications,
         prevention=prevention,
-        safety_flags=[],
+        safety_flags=safety_flags,
     )
 
 
@@ -114,10 +124,12 @@ def get_cds_response(
         for result in retrieval_results
     ]
 
+    total_flags = sum(len(d.safety_flags) for d in differentials)
+
     return CDSResponse(
         query=query,
         retrieved_at=datetime.utcnow(),
         differentials=differentials,
-        safety_rules_fired=0,
+        safety_rules_fired=total_flags,
         guideline_version=guideline_version,
     )

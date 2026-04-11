@@ -42,6 +42,39 @@ binary: a rule either fires or it does not.
 The second category belongs in the LLM-as-judge eval scorer. Mixing the two 
 creates rules that cannot be reliably evaluated by code alone.
 
+## Rule Scope: Condition-Specific and Universal
+
+Safety rules have two scopes.
+
+**Condition-specific rules** are attached to a particular condition and only 
+fire when that condition is returned by retrieval. A valproate contraindication 
+rule attached to Seizures/Epilepsies only fires when the system is evaluating 
+a response about seizures.
+
+**Universal rules** apply regardless of which condition is being evaluated. 
+They fire on every clinical response. Examples include rules about high-risk 
+drug monitoring requirements and paediatric weight-based dosing standards. 
+Universal rules have no condition attachment and a null condition_id in the 
+database.
+
+Deploying organisations can define both types. Universal rules should be used 
+sparingly and only for genuinely cross-condition safety concerns.
+
+## How Rules Are Evaluated
+
+Rule evaluation uses a two-stage process.
+
+Stage 1 is a fast pre-filter. The system identifies which rules are relevant 
+to the current response by matching condition-specific rules to the conditions 
+retrieved for that query, then adding all active universal rules. This narrows 
+thousands of potential rules to the small relevant subset.
+
+Stage 2 is a batched LLM evaluation. The filtered rules and the AI response 
+are passed to a language model in a single call. The model evaluates each rule 
+against the response and returns a structured result: fired or not fired, with 
+a reason. This is semantically aware and scales to any number of rules without 
+code changes.
+
 ## Safety Rule Standards
 
 Every rule must meet these standards before activation:

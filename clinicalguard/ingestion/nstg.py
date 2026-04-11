@@ -13,6 +13,7 @@ from clinicalguard.db.models import (
     ConditionPrevention,
     ConditionTreatment,
     GuidelineDataset,
+    ConditionInvestigation,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ def delete_condition_children(db: Session, condition_id: int) -> None:
     db.query(ConditionPrevention).filter_by(condition_id=condition_id).delete()
     db.query(ConditionAdverseReaction).filter_by(condition_id=condition_id).delete()
     db.query(ConditionDifferential).filter_by(condition_id=condition_id).delete()
+    db.query(ConditionInvestigation).filter_by(condition_id=condition_id).delete()
 
 
 def ingest_condition(db: Session, data: dict, dataset: GuidelineDataset) -> Condition:
@@ -78,6 +80,7 @@ def ingest_condition(db: Session, data: dict, dataset: GuidelineDataset) -> Cond
     _ingest_complications(db, condition, data)
     _ingest_prevention(db, condition, data)
     _ingest_adverse_reactions(db, condition, data)
+    _ingest_investigations(db, condition, data)
     _ingest_differentials(db, condition, data)
 
     return condition
@@ -171,3 +174,10 @@ def ingest_file(db: Session, filepath: Path) -> Condition:
     dataset = get_or_create_dataset(db)
     condition = ingest_condition(db, data, dataset)
     return condition
+
+def _ingest_investigations(db: Session, condition: Condition, data: dict) -> None:
+    for item in data.get("investigations", []):
+        db.add(ConditionInvestigation(
+            condition_id=condition.id,
+            investigation_text=item,
+        ))

@@ -14,10 +14,6 @@ Phase 2 will deliver the following in sequence:
 Alembic migration setup to replace manual ALTER TABLE statements. This 
 unblocks safe schema changes for the rest of Phase 2.
 
-Structured drug extraction from raw treatment strings using an LLM pass. 
-Currently treatments are stored as free text. Phase 2 extracts drug name, 
-dose, route, and frequency into structured fields.
-
 CDS response structure: a defined JSON schema for what the system returns 
 given a clinical query. This is the contract between the retrieval layer 
 and the eval layer.
@@ -33,6 +29,9 @@ running after the deterministic engine.
 
 Dedicated test database to replace the current pattern of rolling back 
 against production.
+
+Structured drug extraction is deferred to Phase 3 pending a proper validation pipeline using RxNorm cross-referencing.
+
 
 ## Consequences
 This scope is the minimum for Phase 2. New ADRs will be written for 

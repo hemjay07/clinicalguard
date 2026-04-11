@@ -97,7 +97,9 @@ class Condition(Base):
     adverse_reactions: Mapped[list["ConditionAdverseReaction"]] = relationship(
         "ConditionAdverseReaction", back_populates="condition"
     )
-
+    investigations: Mapped[list["ConditionInvestigation"]] = relationship(
+    "ConditionInvestigation", back_populates="condition"
+)
     __table_args__ = (UniqueConstraint("dataset_id", "icd10_code"),)
 
 
@@ -292,6 +294,20 @@ class ConditionAdverseReaction(Base):
         "Condition", back_populates="adverse_reactions"
     )
 
+
+class ConditionInvestigation(Base):
+    __tablename__ = "condition_investigations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    condition_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("conditions.id"), nullable=False
+    )
+    investigation_text: Mapped[str] = mapped_column(Text, nullable=False)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    condition: Mapped["Condition"] = relationship(
+        "Condition", back_populates="investigations"
+    )
 
     
 class AuditLog(Base):

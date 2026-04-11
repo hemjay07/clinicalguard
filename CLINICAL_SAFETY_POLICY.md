@@ -2,111 +2,97 @@
 
 ## Purpose
 
-ClinicalGuard is a clinical decision support and evaluation framework. It is 
-designed to assist clinicians and developers in evaluating AI-generated clinical 
-responses against established treatment guidelines. It is not a replacement for 
-clinical judgment.
+ClinicalGuard is a clinical decision support and evaluation framework for 
+evaluating AI-generated clinical responses against treatment guidelines. It 
+is not a replacement for clinical judgment and is not a certified medical 
+device. Regulatory approval has not been sought.
 
 ## What ClinicalGuard Provides
 
-ClinicalGuard provides three things:
+Three things:
 
 1. **A baseline rule set** derived from the Nigerian Standard Treatment 
-   Guidelines (NSTG 2022). These ship with the framework as the reference 
-   implementation.
+   Guidelines (NSTG 2022) as the reference implementation.
 
 2. **A standard for safety rules.** Format, verification requirements, and 
    severity tiers that any organisation can follow when writing their own rules.
 
-3. **Infrastructure for extension.** Organisations deploying ClinicalGuard can 
-   add their own rules on top of the baseline, disable rules that do not apply 
-   to their context, and set their own verification standards for 
-   organisation-specific rules.
+3. **Infrastructure for extension.** Organisations can add their own rules, 
+   disable rules that do not apply to their context, and set their own 
+   verification standards.
 
-ClinicalGuard does not dictate what an organisation's rules say. It dictates 
-how rules are structured and verified.
+ClinicalGuard defines how rules are structured and verified. Deploying 
+organisations define what their rules say.
+
+## What Safety Rules Are and Are Not
+
+Safety rules are deterministic checks against harmful AI outputs. They are 
+binary: a rule either fires or it does not.
+
+**Appropriate for safety rules:**
+- Contraindications: drug X must not be given to patient population Y
+- Known drug interactions: drug A must not be combined with drug B
+- Absolute clinical thresholds requiring immediate action
+
+**Not appropriate for safety rules:**
+- Completeness checks (did the AI mention all danger signs?)
+- Protocol adherence (did the AI follow the correct sequence?)
+- Clinical judgment calls
+
+The second category belongs in the LLM-as-judge eval scorer. Mixing the two 
+creates rules that cannot be reliably evaluated by code alone.
 
 ## Safety Rule Standards
 
-All safety rules in ClinicalGuard must meet the following standards before 
-activation:
+Every rule must meet these standards before activation:
 
-1. **Documented source.** Every rule must reference its origin. This can be a 
-   published treatment guideline, a pharmacological reference, or an 
-   organisation-specific clinical protocol. The source must be explicitly 
-   documented regardless of origin. Rules without a documented source will not 
-   be activated.
+1. **Documented source.** Guideline, pharmacological reference, or 
+   organisation protocol. Rules without a source will not be activated.
 
-2. **Clinician verification.** Every rule must be reviewed and confirmed by a 
-   licensed clinician familiar with the source material before the `is_verified` 
-   flag is set to true. Unverified rules are stored in the database but never 
+2. **Clinician verification.** Reviewed and confirmed by a licensed clinician 
+   before `is_verified` is set to true. Unverified rules are stored but never 
    fire in production.
 
-3. **Conservative severity assignment.** When in doubt between WARNING and 
-   CRITICAL, assign CRITICAL. It is safer to over-alert than to under-alert 
-   in a clinical context.
+3. **Conservative severity.** When in doubt between WARNING and CRITICAL, 
+   assign CRITICAL.
 
 4. **No fabrication.** Rules must reflect what the source explicitly states. 
-   Inferred or extrapolated rules require explicit clinical review and 
-   documentation of the reasoning before activation.
+   Inferred rules require documented clinical reasoning.
 
 ## Deploying Organisation Responsibilities
 
-Organisations deploying ClinicalGuard are responsible for:
+Organisations are responsible for:
 
-- Verifying that all active safety rules are appropriate for their clinical 
-  context, patient population, and jurisdiction
-- Ensuring organisation-specific rules meet the same verification standards 
-  as baseline rules
-- Appointing a clinician responsible for safety rule oversight within their 
-  deployment
+- Verifying rules are appropriate for their clinical context and jurisdiction
+- Appointing a clinician responsible for safety rule oversight
 - Reviewing rules when source guidelines are updated
 
-ClinicalGuard provides the standard and the infrastructure. The deploying 
+ClinicalGuard provides the standard and infrastructure. The deploying 
 organisation owns the clinical responsibility for their instance.
 
 ## Current Limitations
 
-The NSTG safety rules shipped with this framework were extracted from the 
-Nigerian Standard Treatment Guidelines 2022 and reviewed to the best of the 
-maintainer's ability. The maintainer acknowledges the following limitations:
-
 - The initial rule set covers only the highest-risk scenarios identified 
-  during Phase 2 development. Comprehensive coverage of all 251 conditions 
-  is a future goal.
-- Community verification is actively encouraged. If you are a licensed 
-  clinician and identify an error, incomplete rule, or missing rule, please 
-  open an issue or pull request. See CONTRIBUTING.md for the verification 
-  workflow.
-- Rules derived from NSTG 2022 reflect Nigerian clinical practice guidelines. 
-  They may not be appropriate for other jurisdictions without review by a 
-  clinician familiar with local standards.
+  during Phase 2. Comprehensive coverage is a future goal.
+- NSTG 2022 rules reflect Nigerian clinical practice and may not be 
+  appropriate for other jurisdictions without local clinical review.
+- Community verification is actively encouraged. See CONTRIBUTING.md.
 
 ## Disclaimer
 
-ClinicalGuard is a software framework for clinical AI evaluation. It is not 
-a certified medical device. Regulatory approval has not been sought. It does 
-not provide medical advice. Clinical decisions must always be made by 
-qualified healthcare professionals using their own judgment.
+The safety rules in this framework are provided for informational and 
+evaluation purposes only. The framework maintainers accept no liability 
+for clinical decisions made using this system. Clinical decisions must 
+always be made by qualified healthcare professionals.
 
-The safety rules in this framework are derived from publicly available 
-treatment guidelines and are provided for informational and evaluation 
-purposes only. The framework maintainers accept no liability for clinical 
-decisions made using this system.
+## Contributing Safety Rules
 
-## Verification Workflow for Contributors
+1. Identify the source and specific section
+2. Write the rule in plain language using `docs/templates/safety_rule_template.md`
+3. Open a pull request tagged `safety-rule` and `needs-clinical-review`
+4. A maintainer formats the rule into the structured schema
+5. The contributing clinician confirms the formatted version
+6. A second clinician signs off where possible
+7. Rule is merged with `is_verified = true`
 
-If you are a licensed clinician who wants to contribute safety rules:
-
-1. Identify the source material and specific section
-2. Write the rule in plain language
-3. Open a pull request using the safety rule template in `docs/templates/`
-4. Tag the PR with `safety-rule` and `needs-clinical-review`
-5. A maintainer will format the rule into the structured schema
-6. The contributing clinician confirms the formatted version
-7. A second clinician reviewer signs off where possible
-8. The rule is merged with `is_verified = true`
-
-## Contact
-
-For clinical safety concerns, open an issue tagged `clinical-safety` on GitHub.
+For clinical safety concerns, open an issue tagged `clinical-safety`.

@@ -103,6 +103,7 @@ Organisations are responsible for:
 ClinicalGuard provides the standard and infrastructure. The deploying 
 organisation owns the clinical responsibility for their instance.
 
+
 ## Current Limitations
 
 - The initial rule set covers only the highest-risk scenarios identified 
@@ -110,6 +111,15 @@ organisation owns the clinical responsibility for their instance.
 - NSTG 2022 rules reflect Nigerian clinical practice and may not be 
   appropriate for other jurisdictions without local clinical review.
 - Community verification is actively encouraged. See CONTRIBUTING.md.
+- ClinicalGuard evaluates guideline adherence, not clinical outcomes. 
+  It cannot account for patient-specific factors, comorbidities, or 
+  longitudinal care decisions that a clinician would weigh in practice. 
+  Whether the guidelines themselves represent optimal care is outside 
+  the scope of this framework.
+- Evaluation is performed against static guideline snapshots. Real 
+  clinical decisions involve dynamic patient data, imaging, laboratory 
+  trends, and contextual factors that no guideline-grounded eval system 
+  can fully capture.
 
 ## Disclaimer
 

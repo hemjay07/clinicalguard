@@ -115,3 +115,14 @@ what makes the framework deployable without requiring EHR integration,
 longitudinal data, or outcome tracking. Organisations that need outcome 
 measurement must build that layer on top of ClinicalGuard, not expect it 
 from the framework itself.
+
+Eval cases support two scoring modes. Baseline scoring evaluates against the 
+published guideline and enables cross-organisation benchmarking. Contextual 
+scoring evaluates against the guideline as modified by organisation-specific 
+context: drug availability, formulary restrictions, care level, and local 
+protocols. A hospital with limited drug availability may score lower on the 
+baseline but appropriately high on contextual scoring because their AI 
+correctly recommends what is actually available. Both scores together tell 
+the full clinical story. The eval_cases schema supports this from day one 
+with nullable contextual_ground_truth and organisation_id columns. Contextual 
+scoring logic is deferred to Phase 3.

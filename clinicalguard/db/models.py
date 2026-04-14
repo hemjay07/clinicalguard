@@ -310,6 +310,25 @@ class ConditionInvestigation(Base):
     )
 
     
+class EvalCase(Base):
+    __tablename__ = "eval_cases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    baseline_ground_truth: Mapped[str] = mapped_column(Text, nullable=False)
+    contextual_ground_truth: Mapped[str | None] = mapped_column(Text, nullable=True)
+    condition_ids: Mapped[str] = mapped_column(Text, nullable=False)
+    dataset_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    source: Mapped[str] = mapped_column(String(50), nullable=False, default="auto_generated")
+    difficulty: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    is_validated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    organisation_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tags: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

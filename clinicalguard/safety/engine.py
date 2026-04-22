@@ -28,6 +28,13 @@ def get_relevant_rules(
     condition_ids: list[int],
     db: Session,
 ) -> list[ConditionSafetyRule]:
+    # Stage 1 of two-stage safety evaluation: pre-filter by condition.
+    # Only rules attached to the retrieved conditions are evaluated,
+    # plus universal rules (null condition_id) which apply to every response.
+    # This narrows thousands of potential rules to the small relevant subset
+    # before any LLM call, making the system scale to large rule sets.
+    # Only verified, active rules are returned — unverified rules are stored
+    # but never fire in production per CLINICAL_SAFETY_POLICY.md.
     condition_specific = (
         db.query(ConditionSafetyRule)
         .filter(
@@ -60,6 +67,11 @@ def evaluate_rules_with_llm(
     if not rules:
         return []
 
+    # Stage 2: single batched LLM call for all relevant rules.
+    # All rules are evaluated in one call rather than one call per rule.
+    # This keeps cost and latency flat regardless of how many rules pass
+    # the pre-filter. The rule description itself is the evaluation criterion
+    # — no code changes are needed to add new rules to the system.
     rules_text = "\n".join([
         f"Rule {rule.id}: {rule.description}"
         for rule in rules
@@ -97,6 +109,8 @@ Return a JSON array with one object per rule:
 
 Return only the JSON array, nothing else."""
 
+    # temperature=0 for deterministic evaluation. Safety rule firing
+    # must be consistent across repeated evaluations of the same response.
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
@@ -145,6 +159,10 @@ def run_safety_check(
     condition_ids: list[int],
     db: Session,
 ) -> list[FiredRule]:
+    # Entry point for safety evaluation. Orchestrates the two-stage pipeline:
+    # pre-filter by condition, then batched LLM evaluation.
+    # Called by both the eval scorer (to score AI responses) and the CDS engine
+    # (to surface relevant safety flags for retrieved conditions).
     logger.info(f"Running safety check against {len(condition_ids)} conditions")
     rules = get_relevant_rules(condition_ids, db)
     logger.info(f"Pre-filter: {len(rules)} relevant rules")

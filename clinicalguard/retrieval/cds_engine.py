@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 def build_citation(condition: Condition, dataset: GuidelineDataset) -> Citation:
+    # Every differential result carries a citation back to the source guideline.
+    # This is a first-class requirement: any recommendation surfaced by the
+    # system must be traceable to the specific guideline it came from.
     return Citation(
         source=f"{dataset.name} {dataset.version}",
         country=dataset.country,
@@ -36,6 +39,10 @@ def build_citation(condition: Condition, dataset: GuidelineDataset) -> Citation:
 def build_treatment(condition: Condition, db: Session) -> TreatmentDetail:
     treatments = db.query(ConditionTreatment).filter_by(condition_id=condition.id).all()
 
+    # Treatment types are stored as separate records with a treatment_type
+    # discriminator rather than in separate tables. This keeps the schema
+    # flat while preserving the semantic distinctions between goals, non-drug
+    # measures, drug instructions, and supportive measures.
     goals = [t.notes for t in treatments if t.treatment_type == "goal" and t.notes]
     non_drug = [t.notes for t in treatments if t.treatment_type == "non_drug" and t.notes]
     drug_instructions = [t.notes for t in treatments if t.treatment_type == "drug_instruction" and t.notes]
@@ -77,6 +84,11 @@ def build_differential(
         .all()
     ]
 
+    # Safety flags in CDS mode are proactive, not reactive.
+    # They surface all verified rules for the retrieved condition so a
+    # clinician sees relevant safety considerations before making a decision.
+    # This differs from eval mode where flags fire in response to something
+    # an AI response actually recommended. See safety/engine.py for eval mode.
     safety_flags = [
         SafetyFlag(
             rule_type=rule.rule_type,
@@ -112,6 +124,11 @@ def get_cds_response(
     top_k: int = 5,
     use_hyde: bool = False,
 ) -> CDSResponse:
+    # The CDS response serves two purposes:
+    # 1. In CDS mode: returns guideline-backed recommendations to a clinician.
+    # 2. In eval mode: provides the ground truth that AI responses are scored
+    #    against. When generating eval cases, the CDS response is stored as
+    #    the baseline ground truth JSON. See retrieval/generate_eval_cases.py.
     logger.info(f"CDS query: '{query}'")
 
     retrieval_results = hybrid_search(query, db, top_k=top_k, use_hyde=use_hyde)

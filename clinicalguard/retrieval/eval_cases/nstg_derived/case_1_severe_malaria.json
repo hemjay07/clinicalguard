@@ -1,0 +1,62 @@
+{
+  "case_id": "severe_malaria_adult_altered_consciousness",
+  "query": "adult patient with high fever, altered consciousness, and recent travel to endemic area — diagnosis and management",
+  "derived_from": "NSTG 2022 Malaria section",
+  "query_scope": "diagnosis + acute management. Excludes prevention, chemoprophylaxis counselling, long-term follow-up.",
+  "scoring_dimensions": ["treatment_correctness", "investigation_appropriateness", "completeness", "safety_adherence"],
+  "expected_diagnoses": {
+    "required": {
+      "primary": "Severe (complicated) malaria",
+      "critical_differentials": ["Meningitis", "Encephalitis"]
+    },
+    "expected": {
+      "other_differentials": ["Septicaemia"]
+    }
+  },
+  "required_investigations": {
+    "required": [
+      "Blood smear for malaria parasites",
+      "Blood sugar",
+      "Packed cell volume / haemoglobin concentration",
+      "Electrolytes, urea, creatinine"
+    ],
+    "expected": [
+      "White cell count with differentials",
+      "Urinalysis"
+    ],
+    "situational": [
+      {"test": "CSF biochemistry, microscopy, culture, sensitivity", "trigger": "meningitis suspected"},
+      {"test": "Chest radiograph", "trigger": "respiratory symptoms or pulmonary oedema suspected"},
+      {"test": "Stool microscopy", "trigger": "GI symptoms present"}
+    ]
+  },
+  "required_treatments": {
+    "required": {
+      "first_line": "Parenteral artesunate as drug of choice for severe malaria",
+      "follow_on": "Full course of ACT (artemether-lumefantrine, artesunate-amodiaquine, dihydroartemisinin-piperaquine, or artesunate-pyronaridine) after parenteral phase"
+    },
+    "expected": {
+      "supportive_principle": "Supportive care guided by findings: antipyretic if febrile, oxygen and furosemide if pulmonary oedema, fluid management for dehydration, catheterisation for urine output monitoring, blood transfusion for bleeding, antibiotics if meningitis suspected"
+    }
+  },
+  "required_safety_flags": {
+    "required": [
+      "Mefloquine must not be used in this patient for future chemoprophylaxis due to cerebral involvement (altered consciousness suggests cerebral malaria). Increased risk of seizure, encephalopathy, psychosis."
+    ]
+  },
+  "required_monitoring": {
+    "required_principle": "Patient must be actively monitored for signs of clinical deterioration. Monitoring is essential, not optional, in severe malaria.",
+    "required_elements": ["Level of consciousness", "Blood glucose", "Urine output", "Parasitaemia"],
+    "expected_elements": ["Respiratory rate and pattern", "Temperature", "Signs of bleeding", "Haemodynamic status"]
+  },
+  "required_escalation_triggers": {
+    "expected": [
+      "Deep coma",
+      "Repeated convulsions",
+      "Anuria",
+      "Haemodynamic shock",
+      "Persistent hypoglycaemia",
+      "Hyperparasitaemia >5% or >250,000/μL"
+    ]
+  }
+}

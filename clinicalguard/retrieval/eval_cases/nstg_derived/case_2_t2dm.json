@@ -1,0 +1,83 @@
+{
+  "case_id": "newly_diagnosed_t2dm_adult",
+  "query": "40-year-old adult presenting with 2 months of polyuria, polydipsia, and unexplained weight loss; random blood glucose 14 mmol/L — diagnosis and initial management",
+  "derived_from": "NSTG 2022 Diabetes Mellitus section",
+  "query_scope": "diagnosis + initial management. Includes baseline workup, first-line therapy, safety considerations for therapy initiation, and initial monitoring plan. Excludes long-term complication management, insulin titration, and gestational diabetes (not relevant to this patient).",
+  "scoring_dimensions": ["treatment_correctness", "investigation_appropriateness", "completeness", "safety_adherence"],
+  "expected_diagnoses": {
+    "required": {
+      "primary": "Type 2 Diabetes Mellitus (adult, insidious 2-month onset with classical symptoms, RBG 14 mmol/L exceeds diagnostic threshold of 11.1 mmol/L per NSTG)",
+      "critical_differentials": ["Type 1 Diabetes Mellitus (must be distinguished via urine ketones; weight loss raises concern even though age and insidious onset favour T2DM)"]
+    },
+    "expected": {
+      "other_considerations": ["Secondary diabetes (e.g., steroid-induced, pancreatic)"]
+    }
+  },
+  "required_investigations": {
+    "required": [
+      "Fasting blood glucose (baseline, confirms diagnosis, sets target)",
+      "Urine ketones (to rule out DKA and help distinguish T1DM from T2DM — safety-critical given weight loss)",
+      "Glycated haemoglobin (HbA1c) — baseline for monitoring and confirms chronicity",
+      "Electrolytes, urea, creatinine (required before initiating metformin — renal function determines drug safety)"
+    ],
+    "expected": [
+      "Urine protein (baseline complications screening)",
+      "FBC (baseline)",
+      "Fasting blood lipid profile (cardiovascular risk assessment per NSTG targets)",
+      "ECG (cardiovascular baseline)"
+    ],
+    "situational": [
+      {"test": "Liver function tests", "trigger": "if hepatic impairment suspected or before metformin in at-risk patient"}
+    ]
+  },
+  "required_treatments": {
+    "required": {
+      "non_drug_foundation": "Diabetes education empowering self-care; individualized dietary modification (balanced, culturally appropriate); regular physical activity (aerobic and anaerobic). NSTG states these are 'crucial' for T2DM management, not optional additions.",
+      "first_line_drug": "Metformin (NSTG: 'All type-2 diabetic patients should be commenced on metformin therapy, except where contraindications exist'). Initiation conditional on confirmed adequate renal and hepatic function.",
+      "glycaemic_targets": "Fasting blood glucose 4-6 mmol/L; 2-hour post-meal 4-8 mmol/L; HbA1c ≤6.5%"
+    },
+    "expected": {
+      "comorbidity_targets": "Blood pressure <130/80 mmHg; LDL-cholesterol <2.5 mmol/L; weight reduction if overweight/obese",
+      "escalation_plan": "If glycaemic targets not met within 3 months of metformin + lifestyle, add sulphonylurea or other antidiabetic agent"
+    }
+  },
+  "required_safety_flags": {
+    "required": [
+      "Metformin and long-acting sulphonylureas (e.g., glibenclamide) are contraindicated in patients with poor kidney or liver function. Renal/hepatic function must be verified before initiating metformin.",
+      "Oral antidiabetic agents are not indicated for Type 1 Diabetes (ensure correct type classification before starting oral therapy)."
+    ],
+    "situational": [
+      {
+        "flag": "Oral antidiabetic agents (metformin, sulphonylureas) must not be used in pregnancy or breastfeeding. Use insulin instead.",
+        "trigger": "Query concerns a female patient of reproductive age, OR query does not specify gender/reproductive status. AI response must either clarify reproductive status or explicitly acknowledge this contraindication."
+      }
+    ],
+    "expected": [
+      "Hypoglycaemia is a potential side effect of insulin and all sulphonylureas — patients must be counselled and monitored if these are added later. Metformin alone does not induce hypoglycaemia."
+    ]
+  },
+  "required_monitoring": {
+    "required_principle": "Diabetes is a chronic condition requiring structured ongoing monitoring. Self-monitoring plus scheduled clinic review is essential, not optional.",
+    "required_elements": [
+      "Self-monitoring of blood glucose at home",
+      "HbA1c at least three times per year",
+      "Periodic fasting or random blood glucose at clinic reviews",
+      "Clinical review at 3 months to assess whether glycaemic targets are met"
+    ],
+    "expected_elements": [
+      "Blood lipids annually",
+      "Blood urea, electrolytes and creatinine annually",
+      "Urine protein annually",
+      "Annual review for chronic complications (eyes, feet, neurological)"
+    ]
+  },
+  "required_escalation_triggers": {
+    "required": ["Glycaemic targets not met at 3 months on metformin + lifestyle → add second antidiabetic agent"],
+    "expected": [
+      "Secondary failure of oral agents (occurs in 5-10% of patients annually) → transition to insulin",
+      "Requirement of >30 units insulin per day → endocrinologist referral",
+      "Signs of acute complications (DKA, hyperosmolar state) → urgent admission",
+      "Development of chronic complications → appropriate specialist referral"
+    ]
+  }
+}

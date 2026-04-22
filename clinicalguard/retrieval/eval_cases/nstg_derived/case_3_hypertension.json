@@ -1,0 +1,95 @@
+{
+  "case_id": "newly_diagnosed_hypertension_adult",
+  "query": "52-year-old man presenting for routine check-up with blood pressure readings of 162/98 mmHg on two separate visits one month apart, asymptomatic, no known comorbidities — diagnosis and initial management",
+  "derived_from": "NSTG 2022 Hypertension section",
+  "query_scope": "diagnosis + initial management. Includes diagnosis confirmation, baseline workup, drug class selection, lifestyle modification, comorbidity targets, monitoring plan, contraindication awareness. Excludes secondary hypertension workup, hypertensive emergency management, and long-term complication management.",
+  "scoring_dimensions": ["treatment_correctness", "investigation_appropriateness", "completeness", "safety_adherence"],
+  "expected_diagnoses": {
+    "required": {
+      "primary": "Hypertension (NSTG: persistent elevation ≥140/90 mmHg taken 2-3 times on at least two different occasions; 162/98 on two visits one month apart meets criterion). Stage 2 categorisation may be noted but is not NSTG-required terminology.",
+      "critical_differentials": []
+    },
+    "expected": {
+      "other_considerations": [
+        "Secondary hypertension (renal, endocrine, coarctation) — generally considered if young patient, resistant hypertension, or features suggesting underlying cause. For this 52-year-old with no comorbidities and moderate elevation, primary hypertension is overwhelmingly likely, but the possibility should be acknowledged.",
+        "White-coat hypertension (elevations in clinical setting only) — mitigated by two-visit criterion but could be raised"
+      ]
+    }
+  },
+  "required_investigations": {
+    "required": [
+      "Urinalysis with urine microscopy (baseline renal assessment; proteinuria screening)",
+      "Electrolytes, urea, creatinine (baseline renal function; required before initiating ACE inhibitors or ARBs if considered)",
+      "Fasting blood glucose (baseline metabolic assessment; screens for comorbid diabetes which alters management)",
+      "Lipid profile (cardiovascular risk assessment; NSTG explicit target of LDL <2.5 mmol/L when combined with other conditions)",
+      "Electrocardiography (baseline cardiac assessment; detects left ventricular hypertrophy as target organ damage)"
+    ],
+    "expected": [
+      "Uric acid (NSTG-listed investigation)",
+      "Chest radiograph (baseline cardiac and pulmonary assessment)",
+      "Echocardiography (more sensitive for LVH than ECG; NSTG-listed)",
+      "Abdominal ultrasound (NSTG-listed; evaluates renal structure)"
+    ],
+    "situational": [
+      {"test": "Renal angiography", "trigger": "if secondary hypertension from renal artery stenosis suspected (e.g., young age, resistant hypertension, abdominal bruit)"}
+    ]
+  },
+  "required_treatments": {
+    "required": {
+      "non_drug_foundation": "Lifestyle modification: low salt diet (NSTG: not more than 1 level teaspoon per day, no added salt, avoid salt-preserved foods), achieve/maintain ideal body weight (BMI 18.5-24.9 kg/m²), stop smoking, reduce alcohol intake, regular exercise, reduce polyunsaturated fatty acid intake. NSTG: all patients require lifestyle modifications.",
+      "drug_therapy_principles": "Treatment must be individualized. Most patients require combination chemotherapy using drugs from different classes. Drugs with at least 24-hour duration preferred for once-daily dosing. Fixed-dose combinations desirable when two or more drugs needed. Diuretics should be included in the regimen unless contraindicated.",
+      "monotherapy_constraint": "ACE inhibitors (captopril, lisinopril) and beta blockers (atenolol) are ineffective when used as monotherapy in Blacks per NSTG. For this Nigerian patient, these agents must not be selected as sole first-line therapy. They may appear in combination regimens.",
+      "drug_class_options": "NSTG lists these classes with doses: thiazide diuretics (bendroflumethiazide 2.5-10 mg daily, hydrochlorothiazide 12.5-50 mg daily), beta blockers (atenolol 25-100 mg daily — combination only for Black patients), calcium channel blockers (nifedipine retard 20-40 mg 1-2× daily, amlodipine 2.5-10 mg daily), ACE inhibitors (captopril, lisinopril — combination only for Black patients), ARBs (losartan, valsartan), vasodilators (hydralazine, prazosin), centrally acting (methyldopa)."
+    },
+    "expected": {
+      "combination_approach": "Given BP 162/98 (stage 2), combination therapy from the start is reasonable and NSTG-aligned. A thiazide plus a CCB, or a thiazide plus an ACE inhibitor, are common NSTG-compatible combinations.",
+      "cardiovascular_risk_factor_management": "Treat coexisting cardiovascular risk factors as part of comprehensive management",
+      "patient_education": "Patient education about disease and need for treatment adherence is an NSTG treatment goal"
+    }
+  },
+  "required_safety_flags": {
+    "required": [
+      "Beta blockers (atenolol) must not be used in patients with asthma or heart failure. An AI response recommending beta-blockers without acknowledging this constraint is clinically unsafe.",
+      "If ACE inhibitor or ARB is considered, patient must be screened for pregnancy (for women of reproductive age) as these agents are teratogenic; also counselled about angioedema risk and dry cough with ACE inhibitors."
+    ],
+    "situational": [
+      {
+        "flag": "ACE inhibitors and angiotensin receptor blockers are teratogenic and contraindicated in pregnancy; to be used with caution in women of reproductive age.",
+        "trigger": "Triggers when AI response recommends an ACE inhibitor or ARB. For this 52-year-old male patient, the flag is not directly relevant to the patient but should be part of general prescribing awareness if these agents are considered for other patients."
+      }
+    ],
+    "expected": [
+      "Alpha-methyldopa may cause postural hypotension",
+      "Alpha-methyldopa, thiazides, and potentially other antihypertensive drugs may cause erectile dysfunction — relevant counselling point for this male patient",
+      "Hydralazine may cause SLE-like syndrome with prolonged use"
+    ]
+  },
+  "required_monitoring": {
+    "required_principle": "Hypertension is a chronic condition requiring structured ongoing monitoring. Blood pressure targets must be achieved and maintained; cardiovascular risk factors must be reassessed; treatment adherence must be reinforced.",
+    "required_elements": [
+      "Blood pressure at every clinical review until controlled, then at defined intervals",
+      "Assessment of treatment adherence at each visit",
+      "Periodic reassessment of cardiovascular risk factors (weight, smoking, diet, exercise)"
+    ],
+    "expected_elements": [
+      "Periodic urinalysis (proteinuria monitoring as marker of renal involvement)",
+      "Periodic renal function (E/U/Cr)",
+      "Periodic fasting blood glucose",
+      "Periodic lipid profile",
+      "Periodic ECG if LVH concerns"
+    ]
+  },
+  "required_escalation_triggers": {
+    "required": [
+      "Blood pressure targets not achieved on initial monotherapy within reasonable review period → add second agent from different drug class",
+      "Development of target organ damage (heart failure, stroke, renal impairment, retinopathy) → intensified management and specialist referral"
+    ],
+    "expected": [
+      "Severe or resistant hypertension despite three or more antihypertensives at adequate doses → specialist referral, consider secondary causes",
+      "Hypertensive emergency (severe elevation with target organ involvement) → parenteral therapy such as intravenous hydralazine or sodium nitroprusside administered by experts in appropriate setting"
+    ]
+  },
+  "nstg_specific_notes": {
+    "nigerian_context": "NSTG explicitly states 'ACEI and beta blockers are ineffective when used as monotherapy in blacks.' This is the clearest Nigerian-population-specific prescribing guidance in the NSTG hypertension section. For this 52-year-old Nigerian male, first-line monotherapy with an ACE inhibitor or beta-blocker would run counter to this NSTG statement. An AI response that selects either as monotherapy without acknowledging this caveat misses a context-specific NSTG requirement. This is a Layer 2 test point — the same AI response would be defensible for a non-Black patient, but for this patient it violates population-specific NSTG guidance."
+  }
+}

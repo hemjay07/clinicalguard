@@ -324,6 +324,13 @@ class EvalCase(Base):
     is_validated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     organisation_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expected_response: Mapped[str | None] = mapped_column(Text, nullable=True)
+    nstg_citations: Mapped[str | None] = mapped_column(Text, nullable=True)
+    query_scope: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ground_truth_source: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="auto_generated_legacy"
+    )
+    query_scope_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
     )

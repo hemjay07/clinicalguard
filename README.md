@@ -37,6 +37,12 @@ override a guideline. Strong performance on ClinicalGuard evaluations does not
 guarantee good patient outcomes. It means the AI responded in a way consistent
 with the specified guidelines.
 
+## Methodology
+
+Evaluation design, ground truth construction, scoring formulas, measured variance,
+and acknowledged limitations are documented in
+[docs/methodology.md](docs/methodology.md).
+
 ## Architecture
 
 ```mermaid
@@ -83,9 +89,10 @@ ID, narrowing thousands of potential rules to the relevant subset. Stage 2 sends
 all relevant rules to an LLM in a single batched call. The rule description is
 the evaluation criterion — adding new rules requires no code changes.
 
-**Eval scorer:** LLM-as-judge across four dimensions with claim-level
-traceability back to the NSTG source. Each claim is classified as supported,
-inferrable, unsupported, or contradicted.
+**Eval scorer:** LLM-as-judge across four dimensions with required/expected split
+and claim-level traceability back to the NSTG source. Each claim is classified as
+supported, inferrable, unsupported, or contradicted. Intra-judge variance measured
+across 10 runs per case.
 
 **API and frontend:** REST API and eval dashboard. Phase 3, planned.
 
@@ -119,19 +126,16 @@ Phase 2 (Intelligence) complete:
 
 - CDS response structure with citations and safety flags
 - Two-stage safety rule engine with 9 verified NSTG rules
-- LLM-as-judge eval scorer: four dimensions, claim-level traceability
-- eval_cases table with 10 seed cases, baseline and contextual ground truth support
-- 14 tests passing in CI
-- 18 ADRs documenting all major architectural decisions
-- CLINICAL_SAFETY_POLICY.md with verification standards
-- CONTRIBUTING.md for adapter authors and safety rule contributors
+- LLM-as-judge eval scorer: four dimensions, required/expected split,
+  claim-level traceability, intra-judge variance measured
+- 3 NSTG-derived eval cases with required/expected/situational ground truth
+  (severe malaria, newly diagnosed T2DM, newly diagnosed hypertension)
+- docs/methodology.md documenting evaluation design and measured reliability
 
 Phase 3 (Benchmark) planned:
 
-- Retrieval benchmark suite across all 251 conditions
-- Auto-generation of eval cases at scale
-- Contextual scoring for organisation-specific deployments
-- Regression detection CI gates
+Phase 3 will add retrieval benchmarking, auto-generated cases at scale,
+contextual scoring, and regression detection CI gates.
 
 ## Getting started
 
@@ -165,7 +169,9 @@ pytest tests/ -v
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a new guideline adapter,
-contribute safety rules, or make general code contributions.
+contribute safety rules, or make general code contributions. Clinical contributors
+— physicians who can review eval cases or contribute new ones — see the Clinical
+Contributors section of CONTRIBUTING.md.
 
 ## Dataset
 

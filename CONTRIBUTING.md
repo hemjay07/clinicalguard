@@ -181,3 +181,39 @@ pytest tests/ -v
 
 Open an issue tagged `question`. For clinical safety concerns specifically,
 tag the issue `clinical-safety`.
+
+---
+
+## Clinical Contributors
+
+ClinicalGuard's evaluation infrastructure requires clinical review that a single
+builder cannot produce at scale. We explicitly invite physician contribution.
+
+**Case review.** Review existing NSTG-derived eval cases for clinical validity.
+Flag over-specification, under-specification, or clinically unrealistic requirements.
+The three current cases cover severe malaria, newly diagnosed T2DM, and newly
+diagnosed hypertension. Open an issue with the `case-review` label.
+
+**New case submission.** Contribute new eval cases grounded in specific NSTG
+sections not yet covered. Use the expected_response schema documented in
+`docs/methodology.md`. Cases live under
+`clinicalguard/retrieval/eval_cases/nstg_derived/`. Open a PR with the new JSON
+file and tag it `new-eval-case` and `needs-clinical-review`.
+
+**Deployment-context validation.** If you work at a Nigerian hospital or clinic
+and can validate cases against your institution's formulary and protocols,
+contribute `contextual_overrides` to existing cases. This is the Layer 2
+deployment-context work that requires on-the-ground knowledge no external reviewer
+can provide.
+
+**Institutional partnership.** ClinicalGuard is open for institutional partnerships
+with the Nigerian Medical Association, teaching hospitals, or clinical AI deployment
+projects. Contact the maintainer to discuss structured case development and
+multi-physician calibration.
+
+The literature on clinical AI evaluation is explicit about the infrastructure
+required: NOHARM used 29 physicians and 12,747 annotations; Penda hired 30
+physicians from 162 applicants with formal calibration gates. This is the standard
+we're building toward, in public, with proper attribution to every contributor.
+
+For clinical safety concerns, open an issue tagged `clinical-safety`.

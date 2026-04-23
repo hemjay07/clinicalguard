@@ -126,15 +126,24 @@ def parse_dimension(data: dict, condition_name: str = "NSTG 2022") -> DimensionS
     if not data:
         return DimensionScore(score=0.0, findings=[])
 
-    findings = [
-        ClaimEvaluation(
-            claim=f.get("claim", ""),
-            classification=f.get("classification", "unsupported"),
-            evidence=f.get("evidence", ""),
-            condition_name=condition_name,
-        )
-        for f in data.get("findings", [])
-    ]
+    findings = []
+    for f in data.get("findings", []):
+        if isinstance(f, dict):
+            findings.append(ClaimEvaluation(
+                claim=f.get("claim", ""),
+                classification=f.get("classification", "unsupported"),
+                evidence=f.get("evidence", ""),
+                condition_name="NSTG 2022",
+            ))
+        elif isinstance(f, str):
+            # LLM occasionally returns strings instead of objects.
+            # Treat as an unsupported claim with the string as the claim text.
+            findings.append(ClaimEvaluation(
+                claim=f,
+                classification="unsupported",
+                evidence="",
+                condition_name="NSTG 2022",
+            ))
 
     return DimensionScore(score=data.get("score", 0.0), findings=findings)
 
@@ -323,15 +332,22 @@ Return only the JSON object. Do not include explanation text outside the JSON.""
         critical_coverage = float(data.get("critical_coverage", 0.0))
         thoroughness = float(data.get("thoroughness", 0.0))
         score = round(0.75 * critical_coverage + 0.25 * thoroughness, 3)
-        findings = [
-            ClaimEvaluation(
-                claim=f.get("claim", ""),
-                classification=f.get("classification", "unsupported"),
-                evidence=f.get("evidence", ""),
-                condition_name="NSTG 2022",
-            )
-            for f in data.get("findings", [])
-        ]
+        findings = []
+        for f in data.get("findings", []):
+            if isinstance(f, dict):
+                findings.append(ClaimEvaluation(
+                    claim=f.get("claim", ""),
+                    classification=f.get("classification", "unsupported"),
+                    evidence=f.get("evidence", ""),
+                    condition_name="NSTG 2022",
+                ))
+            elif isinstance(f, str):
+                findings.append(ClaimEvaluation(
+                    claim=f,
+                    classification="unsupported",
+                    evidence="",
+                    condition_name="NSTG 2022",
+                ))
         return DimensionScore(score=score, findings=findings)
 
     treatment_correctness = parse_v2_dimension(

@@ -1,0 +1,39 @@
+{
+  "date": "2026-04-23",
+  "source_variance_report": "evaluation/variance_report_2026-04-23.json",
+  "n_observations": 30,
+  "correlation_matrix": {
+    "treatment_correctness": {
+      "treatment_correctness": 1.0,
+      "investigation_appropriateness": -0.7083,
+      "completeness": 0.8667,
+      "safety_adherence": 0.8513
+    },
+    "investigation_appropriateness": {
+      "treatment_correctness": -0.7083,
+      "investigation_appropriateness": 1.0,
+      "completeness": -0.4066,
+      "safety_adherence": -0.7528
+    },
+    "completeness": {
+      "treatment_correctness": 0.8667,
+      "investigation_appropriateness": -0.4066,
+      "completeness": 1.0,
+      "safety_adherence": 0.6758
+    },
+    "safety_adherence": {
+      "treatment_correctness": 0.8513,
+      "investigation_appropriateness": -0.7528,
+      "completeness": 0.6758,
+      "safety_adherence": 1.0
+    }
+  },
+  "interpretation": {
+    "max_off_diagonal_correlation": 0.8667,
+    "dimensions_highly_correlated": [
+      "treatment_correctness:completeness (0.8667)",
+      "treatment_correctness:safety_adherence (0.8513)"
+    ],
+    "note": "If max correlation > 0.8, dimensions may be measuring the same underlying signal and the multi-dimensional design may not be adding independent information. If correlations are low, each dimension captures a distinct aspect of response quality."
+  }
+}

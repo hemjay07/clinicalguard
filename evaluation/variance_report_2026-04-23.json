@@ -1,0 +1,489 @@
+{
+  "date": "2026-04-23",
+  "n_runs": 10,
+  "judge_model": "gpt-4o-mini",
+  "scoring_version": "2.0-required-expected-split",
+  "cases": [
+    {
+      "case_id": "severe_malaria_adult_altered_consciousness",
+      "runs": [
+        {
+          "run": 1,
+          "overall_score": 0.694,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.562,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 2,
+          "overall_score": 0.694,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.562,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 3,
+          "overall_score": 0.647,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.375,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 4,
+          "overall_score": 0.694,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.562,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 5,
+          "overall_score": 0.694,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.562,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 6,
+          "overall_score": 0.694,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.562,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 7,
+          "overall_score": 0.647,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.375,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 8,
+          "overall_score": 0.694,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.562,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 9,
+          "overall_score": 0.647,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.375,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 10,
+          "overall_score": 0.647,
+          "treatment_correctness": 0.75,
+          "investigation_appropriateness": 0.562,
+          "completeness": 0.375,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        }
+      ],
+      "statistics": {
+        "overall_score": {
+          "mean": 0.6752,
+          "sigma": 0.023,
+          "cv": 0.0341,
+          "min": 0.647,
+          "max": 0.694
+        },
+        "treatment_correctness": {
+          "mean": 0.75,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.75,
+          "max": 0.75
+        },
+        "investigation_appropriateness": {
+          "mean": 0.562,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.562,
+          "max": 0.562
+        },
+        "completeness": {
+          "mean": 0.4872,
+          "sigma": 0.0916,
+          "cv": 0.188,
+          "min": 0.375,
+          "max": 0.562
+        },
+        "safety_adherence": {
+          "mean": 1.0,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        }
+      }
+    },
+    {
+      "case_id": "newly_diagnosed_t2dm_adult",
+      "runs": [
+        {
+          "run": 1,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 2,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 3,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": [
+            {
+              "rule_id": 4,
+              "description": "Insulin and all sulphonylureas carry significant risk of hypoglycemia. Patients ",
+              "severity": "WARNING"
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 5,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 6,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 7,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 8,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 9,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 10,
+          "overall_score": 0.732,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.688,
+          "completeness": 0.625,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        }
+      ],
+      "statistics": {
+        "overall_score": {
+          "mean": 0.732,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.732,
+          "max": 0.732
+        },
+        "treatment_correctness": {
+          "mean": 0.725,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.725,
+          "max": 0.725
+        },
+        "investigation_appropriateness": {
+          "mean": 0.688,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.688,
+          "max": 0.688
+        },
+        "completeness": {
+          "mean": 0.625,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.625,
+          "max": 0.625
+        },
+        "safety_adherence": {
+          "mean": 1.0,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        }
+      }
+    },
+    {
+      "case_id": "newly_diagnosed_hypertension_adult",
+      "runs": [
+        {
+          "run": 1,
+          "overall_score": 0.594,
+          "treatment_correctness": 0.5,
+          "investigation_appropriateness": 1.0,
+          "completeness": 0.375,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        },
+        {
+          "run": 2,
+          "overall_score": 0.306,
+          "treatment_correctness": 0.125,
+          "investigation_appropriateness": 0.75,
+          "completeness": 0.0,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        },
+        {
+          "run": 3,
+          "overall_score": 0.369,
+          "treatment_correctness": 0.125,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.1,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "overall_score": 0.675,
+          "treatment_correctness": 0.5,
+          "investigation_appropriateness": 0.95,
+          "completeness": 0.45,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 5,
+          "overall_score": 0.338,
+          "treatment_correctness": 0.125,
+          "investigation_appropriateness": 0.875,
+          "completeness": 0.0,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        },
+        {
+          "run": 6,
+          "overall_score": 0.556,
+          "treatment_correctness": 0.5,
+          "investigation_appropriateness": 0.75,
+          "completeness": 0.475,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        },
+        {
+          "run": 7,
+          "overall_score": 0.625,
+          "treatment_correctness": 0.5,
+          "investigation_appropriateness": 1.0,
+          "completeness": 0.5,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        },
+        {
+          "run": 8,
+          "overall_score": 0.362,
+          "treatment_correctness": 0.125,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.075,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        },
+        {
+          "run": 9,
+          "overall_score": 0.556,
+          "treatment_correctness": 0.5,
+          "investigation_appropriateness": 0.75,
+          "completeness": 0.475,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        },
+        {
+          "run": 10,
+          "overall_score": 0.6,
+          "treatment_correctness": 0.5,
+          "investigation_appropriateness": 0.95,
+          "completeness": 0.45,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 9,
+              "description": "Beta blockers must not be used in patients with asthma or heart failure.",
+              "severity": "CRITICAL"
+            }
+          ]
+        }
+      ],
+      "statistics": {
+        "overall_score": {
+          "mean": 0.4981,
+          "sigma": 0.1309,
+          "cv": 0.2628,
+          "min": 0.306,
+          "max": 0.675
+        },
+        "treatment_correctness": {
+          "mean": 0.35,
+          "sigma": 0.1837,
+          "cv": 0.5249,
+          "min": 0.125,
+          "max": 0.5
+        },
+        "investigation_appropriateness": {
+          "mean": 0.8825,
+          "sigma": 0.0949,
+          "cv": 0.1075,
+          "min": 0.75,
+          "max": 1.0
+        },
+        "completeness": {
+          "mean": 0.29,
+          "sigma": 0.2053,
+          "cv": 0.7079,
+          "min": 0.0,
+          "max": 0.5
+        },
+        "safety_adherence": {
+          "mean": 0.55,
+          "sigma": 0.15,
+          "cv": 0.2727,
+          "min": 0.5,
+          "max": 1.0
+        }
+      }
+    }
+  ],
+  "summary": {
+    "judge_scoring_variance": {
+      "max_sigma": 0.2053,
+      "worst_pair": "newly_diagnosed_hypertension_adult:completeness",
+      "note": "Variance in LLM judge scores (treatment, investigation, completeness). Cause: LLM non-determinism despite temperature=0. Mitigation: multi-judge cross-family scoring."
+    },
+    "safety_detection_variance": {
+      "max_sigma": 0.15,
+      "worst_pair": "newly_diagnosed_hypertension_adult:safety_adherence",
+      "inconsistent_rules": {
+        "newly_diagnosed_t2dm_adult:Insulin and all sulphonylureas carry significant risk of hyp": {
+          "fired_in": 1,
+          "total_runs": 10,
+          "fire_rate": 0.1
+        },
+        "newly_diagnosed_hypertension_adult:Beta blockers must not be used in patients with asthma or he": {
+          "fired_in": 9,
+          "total_runs": 10,
+          "fire_rate": 0.9
+        }
+      },
+      "note": "Variance in safety rule firing. Formula is deterministic (0.5 per CRITICAL). Detection uses LLM so input to formula is stochastic. Mitigation: multiple sampling with majority vote, or deterministic rule matching."
+    },
+    "interpretation": "sigma < 0.05 indicates stable scoring. sigma 0.05-0.1 indicates moderate variance. sigma > 0.1 indicates the scorer is unreliable for that dimension on this case."
+  }
+}

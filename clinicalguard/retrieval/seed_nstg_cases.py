@@ -16,7 +16,6 @@ CASE_FILES = [
     "case_2_t2dm.json",
     "case_3_hypertension.json",
 ]
-
 NSTG_CITATIONS = {
     "severe_malaria_adult_altered_consciousness": [
         "Malaria - clinical_features (Severe/Complicated)",
@@ -46,10 +45,29 @@ NSTG_CITATIONS = {
     ],
 }
 
+# Exact condition names as stored in the database.
+# Verified against conditions table before writing this mapping.
+# If a condition can't be found at seed time, the script raises ValueError
+# rather than silently inserting with empty condition_ids.
+CONDITION_NAMES = {
+    "severe_malaria_adult_altered_consciousness": "Malaria",
+    "newly_diagnosed_t2dm_adult": "Diabetes Mellitus",
+    "newly_diagnosed_hypertension_adult": "Hypertension",
+}
+
+
+def lookup_condition_id(db: Session, condition_name: str, case_id: str) -> int:
+    from clinicalguard.db.models import Condition
+    condition = db.query(Condition).filter_by(name=condition_name).first()
+    if not condition:
+        raise ValueError(
+            f"Condition '{condition_name}' not found in database for case '{case_id}'. "
+            f"Cannot seed case with empty condition_ids — safety rules would not fire."
+        )
+    return condition.id
+
 
 def seed_nstg_cases(db: Session) -> None:
-    # Mark all existing auto-generated cases as legacy.
-    # These remain queryable but are excluded from headline eval metrics.
     legacy_updated = (
         db.query(EvalCase)
         .filter(EvalCase.ground_truth_source == "auto_generated_legacy")
@@ -85,18 +103,29 @@ def seed_nstg_cases(db: Session) -> None:
 
         existing = db.query(EvalCase).filter_by(query=case_data["query"]).first()
         if existing:
-            logger.info(f"Case already exists, skipping: {case_id}")
+            # Update condition_ids if it was seeded with empty list previously
+            existing_ids = json.loads(existing.condition_ids) if existing.condition_ids else []
+            if not existing_ids:
+                condition_name = CONDITION_NAMES[case_id]
+                condition_id = lookup_condition_id(db, condition_name, case_id)
+                existing.condition_ids = json.dumps([condition_id])
+                db.flush()
+                logger.info(f"Updated condition_ids for existing case: {case_id}")
+            else:
+                logger.info(f"Case already exists with condition_ids, skipping: {case_id}")
             skipped += 1
             continue
 
+        condition_name = CONDITION_NAMES[case_id]
+        condition_id = lookup_condition_id(db, condition_name, case_id)
+
         eval_case = EvalCase(
             query=case_data["query"],
-            # baseline_ground_truth required by schema (NOT NULL).
-            # New cases use expected_response as the ground truth source.
-            # baseline_ground_truth is populated with a placeholder to satisfy
-            # the constraint without polluting it with circular CDS output.
-            baseline_ground_truth=json.dumps({"note": "superseded by expected_response", "case_id": case_id}),
-            condition_ids=json.dumps([]),
+            baseline_ground_truth=json.dumps({
+                "note": "superseded by expected_response",
+                "case_id": case_id
+            }),
+            condition_ids=json.dumps([condition_id]),
             dataset_version="NSTG 2022",
             source="nstg_derived",
             difficulty="medium",
@@ -108,7 +137,7 @@ def seed_nstg_cases(db: Session) -> None:
         )
         db.add(eval_case)
         seeded += 1
-        logger.info(f"Seeded case: {case_id}")
+        logger.info(f"Seeded case: {case_id} with condition_id={condition_id}")
 
     db.commit()
     logger.info(f"Done. Seeded: {seeded}, Skipped: {skipped}")

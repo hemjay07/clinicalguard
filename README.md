@@ -1,14 +1,11 @@
 # ClinicalGuard
 
-An open-source clinical AI evaluation framework built on real treatment guidelines.
-Phase 1 and Phase 2 complete.
+An open-source clinical AI evaluation framework with a pluggable adapter pattern for any treatment guideline. NSTG 2022 (251 conditions) is the first adapter. Phase 1 and Phase 2 complete.
 
 ## What it is
 
 ClinicalGuard evaluates clinical AI systems against structured medical guidelines.
-It ships with the Nigerian Standard Treatment Guidelines (NSTG 2022, 251 conditions)
-as the first dataset and is designed to support additional guideline datasets through
-a pluggable adapter pattern.
+It is designed to support any treatment guideline through a pluggable adapter pattern. NSTG 2022 (251 conditions) is the first adapter dataset.
 
 It operates in two modes:
 

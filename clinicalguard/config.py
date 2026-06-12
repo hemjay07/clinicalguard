@@ -10,6 +10,9 @@ class Settings(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
+        # Ignore unrelated env vars (e.g. FRONTEND_ORIGIN, PORT on the host) so
+        # deployment platforms that inject extra variables don't break startup.
+        "extra": "ignore",
     }
 
 

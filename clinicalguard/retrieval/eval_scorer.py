@@ -412,7 +412,10 @@ def score_eval_case(
     """
     condition_ids = json.loads(eval_case.condition_ids) if eval_case.condition_ids else []
 
-    if eval_case.ground_truth_source == "nstg_derived":
+    if eval_case.ground_truth_source in ("nstg_derived", "md_authored_via_ui"):
+        # Both are MD-authored ground truth in the same structural shape
+        # (the second is authored via the Phase A UI). They differ only in
+        # provenance, so they share the rich expected-response scorer. See ADR-019.
         expected = json.loads(eval_case.expected_response)
         return score_response_against_expected(
             eval_case.query, ai_response, expected, condition_ids, db

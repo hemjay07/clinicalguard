@@ -1,0 +1,251 @@
+"""Eval-case endpoints: create (MD-authored), list, get one."""
+
+import json
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from clinicalguard.api.deps import get_db
+from clinicalguard.api.schemas import EvalCaseCreate, EvalCaseCreated
+from clinicalguard.db.models import Condition, ConditionSafetyRule, EvalCase
+from clinicalguard.generation.template_extractor import _generate_case_id
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/eval-cases", tags=["eval-cases"])
+
+GROUND_TRUTH_SOURCE = "md_authored_via_ui"
+DATASET_VERSION = "NSTG 2022"
+SCORING_DIMENSIONS = [
+    "treatment_correctness",
+    "investigation_appropriateness",
+    "completeness",
+    "safety_adherence",
+]
+
+
+def validate_case(payload: EvalCaseCreate) -> tuple[list[str], list[str]]:
+    """
+    Structural validation. Returns (errors, warnings).
+
+    Errors block submission (the case is structurally incomplete). Warnings are
+    surfaced to the author but do not block — they flag thinness, not breakage.
+    The frontend mirrors these checks; the server is the source of truth.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not payload.query.strip():
+        errors.append("Clinical query is required.")
+    if not payload.diagnoses.primary.strip():
+        errors.append("Expected primary diagnosis is required.")
+    if not payload.investigations.required and not payload.treatments.required:
+        errors.append(
+            "At least one required investigation or one required treatment is needed."
+        )
+    for sit in payload.investigations.situational:
+        if not sit.trigger.strip():
+            errors.append(f"Situational investigation '{sit.item}' is missing a trigger.")
+    for sit in payload.treatments.situational:
+        if not sit.trigger.strip():
+            errors.append(f"Situational treatment '{sit.item}' is missing a trigger.")
+
+    if not payload.what_this_evaluates.strip():
+        warnings.append(
+            "'What this case evaluates' is empty — recommended for interpretability."
+        )
+    if not payload.monitoring.required_elements and not payload.monitoring.required_principle.strip():
+        warnings.append("No monitoring plan provided.")
+    if not payload.escalation.required:
+        warnings.append("No required escalation triggers provided.")
+
+    return errors, warnings
+
+
+def build_expected_response(
+    payload: EvalCaseCreate, condition_name: str, case_id: str, db: Session
+) -> dict:
+    """Map the clean UI payload into the nstg_derived-style JSON blob stored in
+    eval_cases.expected_response (the shape the rich scorer consumes)."""
+    # Resolve selected safety-rule ids into their stored detail for the blob.
+    resolved_rules = []
+    if payload.safety.selected_rule_ids:
+        rules = (
+            db.query(ConditionSafetyRule)
+            .filter(ConditionSafetyRule.id.in_(payload.safety.selected_rule_ids))
+            .all()
+        )
+        resolved_rules = [
+            {
+                "id": r.id,
+                "severity": r.severity,
+                "description": r.description,
+                "source": r.source,
+            }
+            for r in rules
+        ]
+
+    return {
+        "case_id": case_id,
+        "query": payload.query.strip(),
+        "what_this_evaluates": payload.what_this_evaluates.strip(),
+        "authored_by": payload.authored_by.strip(),
+        "subtype": payload.subtype,
+        "derived_from": f"NSTG 2022 {condition_name} section",
+        "query_scope": payload.query_scope.strip(),
+        "scoring_dimensions": SCORING_DIMENSIONS,
+        "expected_diagnoses": {
+            "required": {
+                "primary": payload.diagnoses.primary.strip(),
+                "critical_differentials": payload.diagnoses.critical_differentials,
+            },
+            "expected": {"other_considerations": payload.diagnoses.other_considerations},
+        },
+        "required_investigations": {
+            "required": payload.investigations.required,
+            "expected": payload.investigations.expected,
+            "situational": [
+                {"test": s.item, "trigger": s.trigger}
+                for s in payload.investigations.situational
+            ],
+        },
+        "required_treatments": {
+            "required": payload.treatments.required,
+            "expected": payload.treatments.expected,
+            "situational": [
+                {"treatment": s.item, "trigger": s.trigger}
+                for s in payload.treatments.situational
+            ],
+        },
+        "complications": payload.complications,
+        "required_monitoring": {
+            "required_principle": payload.monitoring.required_principle.strip(),
+            "required_elements": payload.monitoring.required_elements,
+            "expected_elements": payload.monitoring.expected_elements,
+        },
+        "required_escalation_triggers": {
+            "required": payload.escalation.required,
+            "expected": payload.escalation.expected,
+        },
+        "required_safety_flags": {
+            "selected_rule_ids": payload.safety.selected_rule_ids,
+            "rules": resolved_rules,
+            "free_text": payload.safety.free_text,
+        },
+    }
+
+
+@router.post("", response_model=EvalCaseCreated, status_code=201)
+def create_eval_case(payload: EvalCaseCreate, db: Session = Depends(get_db)):
+    condition = db.query(Condition).filter_by(id=payload.condition_id).first()
+    if not condition:
+        raise HTTPException(status_code=404, detail=f"Condition {payload.condition_id} not found")
+
+    errors, warnings = validate_case(payload)
+    if errors:
+        # 422 = the submission is structurally incomplete.
+        raise HTTPException(status_code=422, detail={"errors": errors})
+
+    case_id = _generate_case_id(condition.name, payload.subtype)
+    expected = build_expected_response(payload, condition.name, case_id, db)
+
+    row = EvalCase(
+        query=payload.query.strip(),
+        baseline_ground_truth=json.dumps(
+            {"note": "superseded by expected_response", "case_id": case_id}
+        ),
+        condition_ids=json.dumps([payload.condition_id]),
+        dataset_version=DATASET_VERSION,
+        source=GROUND_TRUTH_SOURCE,
+        difficulty=None,
+        is_validated=False,
+        expected_response=json.dumps(expected),
+        query_scope=payload.query_scope.strip() or None,
+        ground_truth_source=GROUND_TRUTH_SOURCE,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    return EvalCaseCreated(id=row.id, case_id=case_id, warnings=warnings)
+
+
+def _safe_load(blob: str | None) -> dict:
+    if not blob:
+        return {}
+    try:
+        return json.loads(blob)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+
+@router.get("")
+def list_eval_cases(db: Session = Depends(get_db)):
+    """List eval cases for the submitted-cases view. Includes both UI-authored
+    cases and the hand-seeded nstg_derived ones so the framework's existing work
+    is visible. Reads metadata (case_id, subtype, authored_by) from the stored
+    expected_response JSON."""
+    rows = db.query(EvalCase).order_by(EvalCase.created_at.desc()).all()
+
+    # Map condition ids -> names in one query.
+    all_ids: set[int] = set()
+    parsed: list[tuple[EvalCase, dict, list[int]]] = []
+    for row in rows:
+        meta = _safe_load(row.expected_response)
+        cids = _safe_load(row.condition_ids) if row.condition_ids else []
+        cids = cids if isinstance(cids, list) else []
+        all_ids.update(cids)
+        parsed.append((row, meta, cids))
+
+    name_map = {
+        c.id: c.name
+        for c in db.query(Condition.id, Condition.name).filter(Condition.id.in_(all_ids)).all()
+    } if all_ids else {}
+
+    out = []
+    for row, meta, cids in parsed:
+        condition_name = name_map.get(cids[0]) if cids else None
+        out.append(
+            {
+                "id": row.id,
+                "case_id": meta.get("case_id"),
+                "condition_id": cids[0] if cids else None,
+                "condition_name": condition_name,
+                "subtype": meta.get("subtype"),
+                "query": row.query,
+                "authored_by": meta.get("authored_by"),
+                "ground_truth_source": row.ground_truth_source,
+                "submitted_at": row.created_at.isoformat() if row.created_at else None,
+            }
+        )
+    return out
+
+
+@router.get("/{case_id}")
+def get_eval_case(case_id: int, db: Session = Depends(get_db)):
+    """Full eval case for the read-only detail view."""
+    row = db.query(EvalCase).filter_by(id=case_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Eval case {case_id} not found")
+
+    expected = _safe_load(row.expected_response)
+    cids = _safe_load(row.condition_ids) if row.condition_ids else []
+    cids = cids if isinstance(cids, list) else []
+    condition_name = None
+    if cids:
+        c = db.query(Condition.name).filter_by(id=cids[0]).first()
+        condition_name = c.name if c else None
+
+    return {
+        "id": row.id,
+        "query": row.query,
+        "condition_ids": cids,
+        "condition_name": condition_name,
+        "ground_truth_source": row.ground_truth_source,
+        "source": row.source,
+        "dataset_version": row.dataset_version,
+        "query_scope": row.query_scope,
+        "is_validated": row.is_validated,
+        "submitted_at": row.created_at.isoformat() if row.created_at else None,
+        "expected_response": expected,
+    }

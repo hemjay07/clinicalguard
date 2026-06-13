@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install sqlalchemy psycopg2-binary pgvector pydantic pydantic-settings python-dotenv rank-bm25 openai anthropic httpx
+          pip install sqlalchemy psycopg2-binary pgvector pydantic pydantic-settings python-dotenv rank-bm25 openai anthropic httpx fastapi "uvicorn[standard]"
           pip install pytest pytest-asyncio mypy ruff
 
       - name: Run tests

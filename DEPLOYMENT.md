@@ -2,88 +2,71 @@
 
 Two pieces are deployed:
 
-- **Backend** — FastAPI app (`clinicalguard/api`) → **Railway**
+- **Backend** — FastAPI app (`clinicalguard/api`) → **Render** (free web service)
 - **Frontend** — React/Vite SPA (`frontend/`) → **Vercel**
 
-Both auto-deploy from GitHub on push to `main`. No authentication is configured
-(Phase A relies on URL obscurity — see ADR-019).
+Both auto-deploy from GitHub on push to the connected branch. No authentication is
+configured (Phase A relies on URL obscurity — see ADR-019).
 
 ---
 
-## 1. Backend → Railway
+## 1. Backend → Render
 
 ### Config in the repo
-- `railway.json` — builder + start command + `/health` health check.
-- `nixpacks.toml` — installs the package (`pip install .`) and runs uvicorn.
+- `render.yaml` — build command (`pip install .`), start command, `/health` check,
+  Python version, and the env vars (secrets are entered in the dashboard).
 
 Start command: `uvicorn clinicalguard.api.main:app --host 0.0.0.0 --port $PORT`
-(Railway provides `$PORT`).
+(Render provides `$PORT`).
 
-### One-time setup
-1. Create a project at <https://railway.app> → **Deploy from GitHub repo** → pick
-   `hemjay07/clinicalguard`. Leave the root directory as the repo root.
-2. Add environment variables (Railway → service → **Variables**):
+### One-time setup (dashboard)
+1. <https://dashboard.render.com> → **New** → **Web Service** → connect the
+   `hemjay07/clinicalguard` repo (authorize GitHub if prompted).
+2. Pick the branch to deploy (`main`, or `phase-a-authoring-ui` before merge).
+3. Render reads `render.yaml`. Confirm: Runtime **Python**, Build `pip install .`,
+   Start `uvicorn clinicalguard.api.main:app --host 0.0.0.0 --port $PORT`, Plan **Free**.
+4. Add the secret environment variables (values are in your local `.env`):
+   `DATABASE_URL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`. Leave `FRONTEND_ORIGIN`
+   empty for now — set it after the frontend is deployed.
+5. Create the service. First build takes a few minutes.
 
-   | Variable | Value | Where to get it |
-   |---|---|---|
-   | `DATABASE_URL` | Supabase Postgres URL | Supabase → Project → Settings → Database → Connection string (URI). Same value as local `.env`. |
-   | `OPENAI_API_KEY` | OpenAI key | Existing project key (used by the scorer/safety engine, not the authoring path). |
-   | `ANTHROPIC_API_KEY` | Anthropic key | Existing project key. |
-   | `FRONTEND_ORIGIN` | Vercel URL | Set after the frontend is deployed, e.g. `https://clinicalguard.vercel.app`. Comma-separate multiple. |
-
-3. Deploy. Railway builds with Nixpacks and starts uvicorn.
-
-### CLI alternative (run these yourself — they need an interactive login)
-```bash
-npm i -g @railway/cli
-railway login            # opens a browser
-railway init             # or `railway link` to an existing project
-railway up               # build & deploy
-railway variables set DATABASE_URL=... OPENAI_API_KEY=... ANTHROPIC_API_KEY=... FRONTEND_ORIGIN=...
-```
+> **Free tier note:** the service spins down after ~15 min idle; the next request
+> cold-starts in ~30–60s, then is fast again. Fine for Phase A.
 
 ### Verify
 ```bash
-curl https://<your-app>.up.railway.app/health
-# -> {"status":"ok"}
-curl https://<your-app>.up.railway.app/api/v1/conditions | head
-# -> JSON array of 251 conditions
+curl https://<your-service>.onrender.com/health      # -> {"status":"ok"}
+curl https://<your-service>.onrender.com/api/v1/conditions | head   # 251 conditions
 ```
-Interactive docs are at `https://<your-app>.up.railway.app/docs`.
+Interactive API docs: `https://<your-service>.onrender.com/docs`.
 
 ---
 
 ## 2. Frontend → Vercel
 
 ### Config in the repo
-- `frontend/vercel.json` — Vite framework preset + SPA rewrite (so client routes
-  like `/author/149` serve `index.html`).
+- `frontend/vercel.json` — Vite preset + SPA rewrite (so client routes like
+  `/author/149` serve `index.html`).
 
 ### One-time setup
-1. Create a project at <https://vercel.com> → **Import** `hemjay07/clinicalguard`.
-2. **Set Root Directory to `frontend`** (Project Settings → General → Root
-   Directory). This is the key step — the app lives in a subdirectory.
-3. Framework preset: **Vite** (auto-detected). Build `npm run build`, output `dist`.
-4. Add an environment variable:
-
-   | Variable | Value |
-   |---|---|
-   | `VITE_API_URL` | The Railway backend URL, e.g. `https://<your-app>.up.railway.app` (no trailing slash) |
-
+1. <https://vercel.com> → **Add New… → Project** → import `hemjay07/clinicalguard`.
+2. **Set Root Directory to `frontend`** (the app lives in a subdirectory — key step).
+3. Framework preset **Vite** is auto-detected (build `npm run build`, output `dist`).
+4. Add env var `VITE_API_URL` = the Render backend URL (no trailing slash),
+   e.g. `https://clinicalguard-api.onrender.com`.
 5. Deploy.
 
-### CLI alternative (interactive login)
+### CLI alternative
 ```bash
 npm i -g vercel
 cd frontend
-vercel            # first run links/creates the project; set root dir = . here
-vercel env add VITE_API_URL production   # paste the Railway URL
+vercel            # link/create the project; Root Directory = .
+echo "https://<render-service>.onrender.com" | vercel env add VITE_API_URL production
 vercel --prod
 ```
 
 ### Verify
-Open the Vercel URL. The home page should show live stats (251 conditions, the
-safety-rule count, submitted-case count) fetched from the backend.
+Open the Vercel URL — the home page shows live stats fetched from the backend.
 
 ---
 
@@ -91,23 +74,22 @@ safety-rule count, submitted-case count) fetched from the backend.
 
 The backend only allows the specific frontend origin (never `*`).
 
-1. Set `FRONTEND_ORIGIN` on **Railway** to the exact Vercel URL
-   (`https://clinicalguard.vercel.app`). Redeploy the backend (Railway redeploys
-   on a variable change).
-2. Set `VITE_API_URL` on **Vercel** to the Railway URL. Redeploy the frontend.
+1. Set `FRONTEND_ORIGIN` on **Render** to the exact Vercel URL
+   (`https://clinicalguard.vercel.app`) → Render redeploys on the change.
+2. Set `VITE_API_URL` on **Vercel** to the Render URL → redeploy.
 
-Localhost origins (`http://localhost:5173`) are always allowed, so local dev
-keeps working without configuration.
+Localhost origins (`http://localhost:5173`) are always allowed, so local dev works
+without configuration.
 
-**If the frontend URL changes** (e.g. a new Vercel domain or preview URL): update
-`FRONTEND_ORIGIN` on Railway to the new origin and redeploy. To allow several
-origins, comma-separate them: `FRONTEND_ORIGIN=https://a.vercel.app,https://b.vercel.app`.
+**If the frontend URL changes:** update `FRONTEND_ORIGIN` on Render to the new
+origin. Multiple origins can be comma-separated:
+`FRONTEND_ORIGIN=https://a.vercel.app,https://b.vercel.app`.
 
 ---
 
 ## 4. End-to-end check
 
-1. `curl https://<railway>/health` → `{"status":"ok"}`.
+1. `curl https://<render>/health` → `{"status":"ok"}`.
 2. Open the Vercel URL → home stats load (no CORS error in the browser console).
 3. Author Case → search "Malaria" → subtype "Severe (Complicated) malaria" →
    the source panel populates with NSTG data.
@@ -129,9 +111,7 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 `frontend/.env` defaults `VITE_API_URL` to `http://localhost:8011`.
 
 ## Notes / troubleshooting
-- **Railway build fails to find the package:** confirm `nixpacks.toml` ran
-  `pip install .`; the package is `clinicalguard` (auto-detected by hatchling).
-- **Free-tier cold starts:** the first request after idle may be slow; the home
-  page already tolerates a few seconds of latency on the stat fetch.
-- **DB:** Supabase is already provisioned; no new database setup is needed — the
-  backend connects via `DATABASE_URL`.
+- **Build can't find the package:** the build command is `pip install .`; the
+  package `clinicalguard` is auto-detected by hatchling from `pyproject.toml`.
+- **DB:** Supabase is already provisioned; the backend connects via `DATABASE_URL`.
+  No new database setup is needed.

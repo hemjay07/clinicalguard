@@ -46,9 +46,14 @@ export function CaseDetail() {
           <>
             <Link to="/cases" className="text-sm text-brand-700 hover:underline">← Submitted cases</Link>
             <h1 className="mt-2 text-2xl font-bold text-slate-800">{e.case_id ?? `Case #${data.id}`}</h1>
-            <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
-              <span>{data.condition_name}</span>
-              {e.subtype && <span>· {e.subtype}</span>}
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+              <span>Conditions:</span>
+              {data.conditions.map((c, i) => (
+                <span key={c.id}>
+                  <Link to={`/conditions/${c.id}`} className="text-brand-700 hover:underline">{c.name}</Link>
+                  {i < data.conditions.length - 1 ? "," : ""}
+                </span>
+              ))}
               {e.authored_by && <span>· authored by {e.authored_by}</span>}
               <span>· {data.ground_truth_source}</span>
             </div>

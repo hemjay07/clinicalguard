@@ -48,9 +48,16 @@ class SafetyFlags(BaseModel):
     free_text: list[str] = Field(default_factory=list)
 
 
-class EvalCaseCreate(BaseModel):
+class ConditionRef(BaseModel):
+    """One condition the case references, with its own optional subtype.
+    A case may span multiple conditions (eval_cases.condition_ids is a JSON array)."""
     condition_id: int
     subtype: Optional[str] = None
+
+
+class EvalCaseCreate(BaseModel):
+    # A case references one or more conditions; each carries its own subtype.
+    conditions: list[ConditionRef] = Field(default_factory=list)
     authored_by: str
     query: str
     what_this_evaluates: str = ""

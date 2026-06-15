@@ -1,15 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { PageContainer, Spinner, ErrorBox } from "../components/ui";
+import { encodeConditions } from "../selection";
+import type { SelectedCondition } from "../types";
 
 export function ConditionPicker() {
   const { data, error, loading } = useFetch(() => api.listConditions(), []);
   const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [subtype, setSubtype] = useState<string>("");
+  const [selected, setSelected] = useState<SelectedCondition[]>([]);
+  // subtype options per condition id, fetched lazily when a condition is added
+  const [subtypeOpts, setSubtypeOpts] = useState<Record<number, string[]>>({});
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -17,83 +20,112 @@ export function ConditionPicker() {
     return (needle ? data.filter((c) => c.name.toLowerCase().includes(needle)) : data).slice(0, 200);
   }, [data, q]);
 
-  const subtypes = useFetch(
-    () => (selectedId ? api.subtypes(selectedId) : Promise.resolve([])),
-    [selectedId]
-  );
+  const selectedIds = useMemo(() => new Set(selected.map((s) => s.condition_id)), [selected]);
+
+  function addCondition(id: number, name: string) {
+    if (selectedIds.has(id)) return;
+    setSelected((prev) => [...prev, { condition_id: id, name, subtype: null }]);
+  }
+  function removeCondition(id: number) {
+    setSelected((prev) => prev.filter((s) => s.condition_id !== id));
+  }
+  function setSubtype(id: number, subtype: string | null) {
+    setSelected((prev) => prev.map((s) => (s.condition_id === id ? { ...s, subtype } : s)));
+  }
+
+  // Fetch subtype options for any selected condition we haven't loaded yet.
+  useEffect(() => {
+    selected.forEach((s) => {
+      if (subtypeOpts[s.condition_id] === undefined) {
+        api
+          .subtypes(s.condition_id)
+          .then((opts) => setSubtypeOpts((prev) => ({ ...prev, [s.condition_id]: opts })))
+          .catch(() => setSubtypeOpts((prev) => ({ ...prev, [s.condition_id]: [] })));
+      }
+    });
+  }, [selected, subtypeOpts]);
 
   function proceed() {
-    if (!selectedId) return;
-    const qs = subtype ? `?subtype=${encodeURIComponent(subtype)}` : "";
-    navigate(`/author/${selectedId}${qs}`);
+    if (selected.length === 0) return;
+    const refs = selected.map((s) => ({ condition_id: s.condition_id, subtype: s.subtype }));
+    navigate(`/author/compose?conditions=${encodeConditions(refs)}`);
   }
 
   return (
     <PageContainer>
-      <h1 className="text-2xl font-bold text-slate-800">Author a case</h1>
-      <p className="mt-1 text-slate-600">Search for a condition, optionally pick a subtype, then start authoring.</p>
+      <h1 className="font-serif text-2xl font-semibold text-neutral-900">Author a case</h1>
+      <p className="mt-1 text-neutral-600">
+        Select one or more conditions the case spans. Each condition can have its own subtype.
+      </p>
+
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="mt-4 rounded-lg border border-neutral-200 bg-white p-4">
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+            Selected: {selected.length} condition{selected.length > 1 ? "s" : ""}
+          </div>
+          <div className="space-y-2">
+            {selected.map((s) => (
+              <div key={s.condition_id} className="flex flex-wrap items-center gap-2 rounded-md bg-neutral-50 px-3 py-2">
+                <span className="font-medium text-neutral-800">{s.name}</span>
+                <select
+                  value={s.subtype ?? ""}
+                  onChange={(e) => setSubtype(s.condition_id, e.target.value || null)}
+                  className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                >
+                  <option value="">— whole condition —</option>
+                  {(subtypeOpts[s.condition_id] ?? []).map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => removeCondition(s.condition_id)}
+                  className="ml-auto rounded px-2 py-0.5 text-xs text-neutral-500 hover:bg-neutral-200"
+                  aria-label={`Remove ${s.name}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={proceed}
+            className="mt-4 rounded-md bg-brand-700 px-5 py-2 text-sm font-medium text-white hover:bg-brand-800"
+          >
+            Author case →
+          </button>
+        </div>
+      )}
 
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search conditions… (e.g. Malaria)"
-        className="mt-4 w-full max-w-md rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+        className="mt-4 w-full max-w-md rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-brand-700 focus:outline-none"
       />
 
       {loading && <div className="mt-6"><Spinner /></div>}
       {error && <div className="mt-6"><ErrorBox message={error} /></div>}
 
       {data && (
-        <div className="mt-4 grid gap-6 md:grid-cols-[1fr_320px]">
-          <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-            {filtered.map((c) => (
+        <div className="mt-4 max-h-[55vh] overflow-y-auto rounded-lg border border-neutral-200 bg-white">
+          {filtered.map((c) => {
+            const added = selectedIds.has(c.id);
+            return (
               <button
                 key={c.id}
-                onClick={() => { setSelectedId(c.id); setSubtype(""); }}
-                className={`flex w-full items-center justify-between border-b border-slate-100 px-4 py-2 text-left text-sm hover:bg-slate-50 ${
-                  selectedId === c.id ? "bg-brand-50" : ""
+                onClick={() => (added ? removeCondition(c.id) : addCondition(c.id, c.name))}
+                className={`flex w-full items-center justify-between border-b border-neutral-100 px-4 py-2 text-left text-sm hover:bg-neutral-50 ${
+                  added ? "bg-brand-50" : ""
                 }`}
               >
-                <span className="font-medium text-slate-700">{c.name}</span>
-                <span className="text-xs text-slate-400">{c.counts.treatments} treatments</span>
+                <span className="font-medium text-neutral-700">{c.name}</span>
+                <span className={`text-xs ${added ? "text-brand-700" : "text-neutral-400"}`}>
+                  {added ? "✓ selected — remove" : "+ add"}
+                </span>
               </button>
-            ))}
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            {selectedId ? (
-              <>
-                <div className="text-sm font-semibold text-slate-700">
-                  {data.find((c) => c.id === selectedId)?.name}
-                </div>
-                <label className="mt-4 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Subtype (optional)
-                </label>
-                {subtypes.loading ? (
-                  <div className="mt-2"><Spinner label="Loading subtypes…" /></div>
-                ) : (
-                  <select
-                    value={subtype}
-                    onChange={(e) => setSubtype(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  >
-                    <option value="">— whole condition —</option>
-                    {(subtypes.data ?? []).map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                )}
-                <button
-                  onClick={proceed}
-                  className="mt-5 w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-                >
-                  Author case →
-                </button>
-              </>
-            ) : (
-              <p className="text-sm text-slate-400">Select a condition to choose a subtype and begin.</p>
-            )}
-          </div>
+            );
+          })}
         </div>
       )}
     </PageContainer>

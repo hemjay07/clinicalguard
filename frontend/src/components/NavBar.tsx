@@ -8,21 +8,24 @@ const links = [
   { to: "/conditions", label: "Conditions" },
   { to: "/safety-rules", label: "Safety Rules" },
   { to: "/cases", label: "Submitted Cases" },
+  { to: "/eval-dashboard", label: "Eval Dashboard" },
 ];
 
 export function NavBar() {
   return (
-    <header className="border-b border-slate-200 bg-white">
-      <nav className="mx-auto flex w-full max-w-6xl items-center gap-1 px-4 py-3">
-        <span className="mr-4 font-semibold text-brand-700">ClinicalGuard</span>
+    <header className="border-b border-neutral-200 bg-neutral-50/80 backdrop-blur">
+      <nav className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-4">
+        <span className="mr-3 font-serif text-lg font-semibold text-brand-700">ClinicalGuard</span>
         {links.map((l) => (
           <NavLink
             key={l.to}
             to={l.to}
             end={l.end}
             className={({ isActive }) =>
-              `rounded px-3 py-1.5 text-sm font-medium ${
-                isActive ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100"
+              `border-b-2 pb-0.5 text-sm font-medium transition-colors ${
+                isActive
+                  ? "border-brand-700 text-neutral-900"
+                  : "border-transparent text-neutral-500 hover:text-neutral-900"
               }`
             }
           >
@@ -33,7 +36,7 @@ export function NavBar() {
           href={GITHUB_URL}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto rounded px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          className="ml-auto border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
         >
           GitHub ↗
         </a>

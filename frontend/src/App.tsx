@@ -8,6 +8,7 @@ import { ConditionPicker } from "./pages/ConditionPicker";
 import { Authoring } from "./pages/Authoring";
 import { Cases } from "./pages/Cases";
 import { CaseDetail } from "./pages/CaseDetail";
+import { EvalDashboard } from "./pages/EvalDashboard";
 
 export default function App() {
   return (
@@ -17,12 +18,13 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/author" element={<ConditionPicker />} />
-          <Route path="/author/:conditionId" element={<Authoring />} />
+          <Route path="/author/compose" element={<Authoring />} />
           <Route path="/conditions" element={<Conditions />} />
           <Route path="/conditions/:conditionId" element={<ConditionDetail />} />
           <Route path="/safety-rules" element={<SafetyRules />} />
           <Route path="/cases" element={<Cases />} />
           <Route path="/cases/:caseId" element={<CaseDetail />} />
+          <Route path="/eval-dashboard" element={<EvalDashboard />} />
         </Routes>
       </main>
     </div>

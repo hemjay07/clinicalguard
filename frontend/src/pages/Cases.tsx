@@ -39,7 +39,7 @@ export function Cases() {
                       {c.case_id ?? `#${c.id}`}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-slate-700">{c.condition_name ?? "—"}</td>
+                  <td className="px-3 py-2 text-slate-700">{c.condition_names.length ? truncate(c.condition_names.join(", "), 40) : "—"}</td>
                   <td className="px-3 py-2 text-slate-500">{c.subtype ?? "—"}</td>
                   <td className="px-3 py-2 text-slate-600">{truncate(c.query)}</td>
                   <td className="px-3 py-2 text-slate-600">{c.authored_by ?? "—"}</td>

@@ -9,18 +9,15 @@ export interface Draft<T> {
   savedAt: string;
 }
 
-function key(conditionId: number, subtype: string | null): string {
-  return `${PREFIX}${conditionId}:${subtype ?? ""}`;
-}
-
-export function saveDraft<T>(conditionId: number, subtype: string | null, state: T): string {
+// `slug` identifies the selection (e.g. the set of conditions+subtypes being authored).
+export function saveDraft<T>(slug: string, state: T): string {
   const savedAt = new Date().toISOString();
-  localStorage.setItem(key(conditionId, subtype), JSON.stringify({ state, savedAt }));
+  localStorage.setItem(PREFIX + slug, JSON.stringify({ state, savedAt }));
   return savedAt;
 }
 
-export function loadDraft<T>(conditionId: number, subtype: string | null): Draft<T> | null {
-  const raw = localStorage.getItem(key(conditionId, subtype));
+export function loadDraft<T>(slug: string): Draft<T> | null {
+  const raw = localStorage.getItem(PREFIX + slug);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as Draft<T>;
@@ -29,6 +26,6 @@ export function loadDraft<T>(conditionId: number, subtype: string | null): Draft
   }
 }
 
-export function clearDraft(conditionId: number, subtype: string | null): void {
-  localStorage.removeItem(key(conditionId, subtype));
+export function clearDraft(slug: string): void {
+  localStorage.removeItem(PREFIX + slug);
 }

@@ -194,6 +194,8 @@ def test_create_then_list_and_get(client):
 
     listed = client.get("/api/v1/eval-cases")
     assert listed.status_code == 200
+    # The list surfaces only the MD-authored corpus.
+    assert all(c["ground_truth_source"] == "md_authored_via_ui" for c in listed.json())
     listed_case = next(c for c in listed.json() if c["id"] == case_id)
     assert "Malaria" in listed_case["condition_names"]
 

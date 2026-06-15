@@ -19,7 +19,7 @@ function Cite({ href, children }: { href: string; children: React.ReactNode }) {
 
 function Section({ id, title, children }: { id?: string; title?: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="border-t border-neutral-200 py-12">
+    <section id={id} className="scroll-mt-6 border-t border-neutral-200 py-12">
       {title && <h2 className="mb-5 font-serif text-2xl font-semibold text-neutral-900">{title}</h2>}
       <div className="prose-measure space-y-4 text-[17px] leading-relaxed text-neutral-700">{children}</div>
     </section>
@@ -54,8 +54,25 @@ export function Home() {
         </div>
       </header>
 
+      {/* Table of contents */}
+      <nav aria-label="On this page" className="flex flex-wrap items-center gap-x-3 gap-y-1 border-y border-neutral-200 py-3 text-sm text-neutral-500">
+        {[
+          ["#why", "Why this matters"],
+          ["#framework", "The framework"],
+          ["#status", "Current status"],
+          ["#roadmap", "Roadmap"],
+          ["#contribute", "How to contribute"],
+          ["#resources", "Resources"],
+        ].map(([href, label], i) => (
+          <span key={href} className="flex items-center gap-x-3">
+            {i > 0 && <span aria-hidden className="text-neutral-300">·</span>}
+            <a href={href} className="hover:text-brand-700">{label}</a>
+          </span>
+        ))}
+      </nav>
+
       {/* Section 2: Why this matters */}
-      <Section title="Why this matters">
+      <Section id="why" title="Why this matters">
         <p>
           Clinical AI systems are being deployed in healthcare settings where the consequences of
           error are serious. Recent research documents two specific failure modes. In a
@@ -112,31 +129,28 @@ export function Home() {
           ))}
         </div>
 
-        <h3 className="font-serif text-lg font-semibold text-neutral-900">Guideline layer</h3>
         <p>
-          Structured clinical guidelines are ingested into a normalized schema. Findings, treatments,
+          <strong className="font-semibold text-neutral-900">The guideline layer</strong> ingests
+          structured clinical guidelines into a normalized schema. Findings, treatments,
           investigations, differentials, complications, and safety signals are extracted into
           queryable structured data. The first guideline supported is the Nigeria Standard Treatment
           Guidelines (NSTG 2022), with {nConditions} conditions ingested. The framework's
           architecture supports other reference-style guidelines (WHO Standard Treatment Guidelines,
           NICE guidelines, other national treatment guidelines) and is designed to be extended.
         </p>
-
-        <h3 className="font-serif text-lg font-semibold text-neutral-900">Safety layer</h3>
         <p>
-          A curated layer of safety rules sits on top of the guideline ingestion. These rules encode
-          high-stakes constraints that the AI should respect — drug contraindications, dangerous
-          combinations, population-specific warnings such as pregnancy, pediatric, or renal
-          impairment. Each rule is traceable to its source provision in the guideline and is reviewed
-          by an MD before activation. The framework currently has {nSafety} active verified safety
-          rules.
+          <strong className="font-semibold text-neutral-900">The safety layer</strong> is a curated
+          set of rules that sits on top of the guideline ingestion, encoding high-stakes constraints
+          the AI should respect — drug contraindications, dangerous combinations, population-specific
+          warnings such as pregnancy, pediatric, or renal impairment. Each rule is traceable to its
+          source provision in the guideline and is reviewed by an MD before activation. The framework
+          currently has {nSafety} active verified safety rules.
         </p>
-
-        <h3 className="font-serif text-lg font-semibold text-neutral-900">Context layer</h3>
         <p>
-          Real clinical AI deployments operate within institutional constraints. What drugs are on
-          the formulary, what equipment is available, what protocols the institution mandates. The
-          framework's architecture supports ingestion of these institutional rules and contextual
+          <strong className="font-semibold text-neutral-900">The context layer</strong> grounds
+          evaluation in the institutional constraints real deployments operate within — what drugs
+          are on the formulary, what equipment is available, what protocols the institution mandates.
+          The framework's architecture supports ingestion of these institutional rules and contextual
           scoring against them. This is the layer that makes evaluation match where the AI actually
           operates rather than where the guideline author imagined. Implementation of this layer is
           roadmapped for future work with institutional partners.
@@ -144,7 +158,7 @@ export function Home() {
       </Section>
 
       {/* Section 4: Current status */}
-      <Section title="Current status">
+      <Section id="status" title="Current status">
         <p>
           ClinicalGuard is currently in Phase A: minimum viable authoring. The framework was built
           by Mujeeb Opabode, MD (University of Ibadan, 2025). The first batch of NSTG-derived
@@ -161,64 +175,71 @@ export function Home() {
       </Section>
 
       {/* Section 5: Roadmap */}
-      <Section title="Roadmap">
-        <p><strong className="font-semibold text-neutral-900">Phase B (in progress):</strong> Case corpus building. Co-authoring of NSTG-derived eval cases by the two reviewers, targeting the first batch of 10 to 15 cases.</p>
-        <p><strong className="font-semibold text-neutral-900">Phase C (next):</strong> Methodology paper. Documents the workflow, the corpus, the design decisions, and the honest limits. Released open-source alongside the framework.</p>
-        <p><strong className="font-semibold text-neutral-900">Phase D (after C):</strong> Multi-contributor pipeline. Other MD contributors will be able to author cases through a moderated workflow with auth, review queues, and inter-rater agreement tracking. The evaluation dashboard for running cases against AI systems will ship in this phase.</p>
-        <p><strong className="font-semibold text-neutral-900">Phase E (longer term):</strong> Cross-guideline support. Extending the framework to ingest WHO Standard Treatment Guidelines, NICE guidelines, and other national/international guidelines. Demonstrating cross-guideline workflows with collaborators in different healthcare contexts.</p>
-        <p><strong className="font-semibold text-neutral-900">Context layer implementation:</strong> The deployment-context grounding layer is roadmapped pending real institutional partnerships. The architecture supports it; the implementation awaits actual deployment contexts to design against.</p>
+      <Section id="roadmap" title="Roadmap">
+        <div className="not-prose overflow-x-auto">
+          <table className="w-full border-collapse text-[15px]">
+            <thead>
+              <tr className="border-b border-neutral-300 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                <th className="py-2 pr-4 align-bottom">Phase</th>
+                <th className="py-2 pr-4 align-bottom">Status</th>
+                <th className="py-2 align-bottom">What it is</th>
+              </tr>
+            </thead>
+            <tbody className="align-top text-neutral-700">
+              {[
+                ["Phase B", "In progress", "Case corpus building. Co-authoring of NSTG-derived eval cases by the two reviewers, targeting the first batch of 10 to 15 cases."],
+                ["Phase C", "Next", "Methodology paper. Documents the workflow, the corpus, the design decisions, and the honest limits. Released open-source alongside the framework."],
+                ["Phase D", "After C", "Multi-contributor pipeline. Other MD contributors will be able to author cases through a moderated workflow with auth, review queues, and inter-rater agreement tracking. The evaluation dashboard for running cases against AI systems will ship in this phase."],
+                ["Phase E", "Longer term", "Cross-guideline support. Extending the framework to ingest WHO Standard Treatment Guidelines, NICE guidelines, and other national/international guidelines."],
+                ["Context layer", "Pending institutional partner", "The deployment-context grounding layer is roadmapped pending real institutional partnerships. The architecture supports it; the implementation awaits actual deployment contexts to design against."],
+              ].map(([phase, status, what]) => (
+                <tr key={phase} className="border-b border-neutral-200">
+                  <td className="py-3 pr-4 font-medium text-neutral-900 whitespace-nowrap">{phase}</td>
+                  <td className="py-3 pr-4">
+                    <span className="inline-block rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 whitespace-nowrap">{status}</span>
+                  </td>
+                  <td className="py-3 leading-relaxed">{what}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Section>
 
       {/* How to contribute */}
-      <Section title="How to contribute">
+      <Section id="contribute" title="How to contribute">
         <p>
           ClinicalGuard's value depends on physicians authoring high-quality evaluation cases
           grounded in the clinical guidelines they know. Contribution is currently closed during
-          Phase A while the first batch of NSTG-derived cases is authored. The contribution pipeline
-          opens to external contributors in Phase D, which includes the moderated multi-contributor
-          workflow with review queues and inter-rater agreement tracking.
+          Phase A while the first batch of NSTG-derived cases is authored. The pipeline opens to
+          external contributors in Phase D.
         </p>
         <p>When contribution opens, the path will be:</p>
         <ul className="list-disc space-y-2 pl-6">
-          <li>
-            <strong className="font-semibold text-neutral-900">Case authoring</strong> — MDs use this
-            interface to author evaluation cases for conditions they have clinical expertise in. The
-            cases become part of the public ClinicalGuard corpus.
-          </li>
-          <li>
-            <strong className="font-semibold text-neutral-900">Case review</strong> — MDs
-            independently review cases authored by others, providing the second-reviewer validation
-            that the methodology requires.
-          </li>
-          <li>
-            <strong className="font-semibold text-neutral-900">Methodology contribution</strong> —
-            Experienced contributors can propose changes to the case structure, scoring dimensions, or
-            workflow itself, with input weighted into the next framework version.
-          </li>
+          <li><strong className="font-semibold text-neutral-900">Case authoring</strong> — MDs author evaluation cases for conditions they have clinical expertise in.</li>
+          <li><strong className="font-semibold text-neutral-900">Case review</strong> — MDs independently review cases authored by others, providing second-reviewer validation.</li>
+          <li><strong className="font-semibold text-neutral-900">Methodology contribution</strong> — Experienced contributors propose changes to case structure, scoring dimensions, or workflow itself.</li>
         </ul>
         <p>
           Contributors receive named credit on the framework, co-authorship on the methodology paper
-          for substantive contributions, and a public artifact for their own clinical AI work. The
-          workflow itself documents clinical AI evaluation methodology in a way few resources
-          currently do, which contributors find useful for their own understanding of the field.
+          for substantive contributions, and a public artifact for their own clinical AI work.
         </p>
         <p>
-          Interested clinicians can express early interest via{" "}
-          <Cite href={GITHUB_URL}>GitHub</Cite> or by opening an issue on the{" "}
+          Interested clinicians can express early interest by opening an issue on the{" "}
           <Cite href={`${GITHUB_URL}/issues`}>GitHub repo</Cite>.
         </p>
       </Section>
 
       {/* Section 7: Resources */}
-      <Section title="Resources">
+      <Section id="resources" title="Resources">
         <ul className="not-prose space-y-3 text-[15px]">
           <li>
             <Cite href={METHODOLOGY_URL}>Methodology document</Cite>
             <span className="text-neutral-500"> — evaluation methodology, scoring formulas, measured variance, and acknowledged limitations.</span>
           </li>
           <li>
-            <Cite href={BLOG_URL}>Why evaluation is the bottleneck</Cite>
-            <span className="text-neutral-500"> — why clinical AI evaluation is the constraining problem for safe deployment.</span>
+            <Cite href={BLOG_URL}>The eval was wrong, not the AI</Cite>
+            <span className="text-neutral-500"> — why clinical AI evaluation is the constraining problem for safe deployment, and what guideline-grounded evaluation looks like.</span>
           </li>
           <li>
             <Cite href={ADR_URL}>Architecture decisions</Cite>

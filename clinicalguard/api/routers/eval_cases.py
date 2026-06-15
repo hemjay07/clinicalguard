@@ -223,11 +223,17 @@ def _subtype_display(meta: dict) -> str | None:
 
 @router.get("")
 def list_eval_cases(db: Session = Depends(get_db)):
-    """List eval cases for the submitted-cases view. Includes both UI-authored
-    cases and the hand-seeded nstg_derived ones so the framework's existing work
-    is visible. Reads metadata (case_id, subtype, authored_by) from the stored
-    expected_response JSON."""
-    rows = db.query(EvalCase).order_by(EvalCase.created_at.desc()).all()
+    """List the Phase A corpus: only cases authored through this UI
+    (ground_truth_source = md_authored_via_ui). Legacy auto_generated_legacy
+    cases and the hand-seeded nstg_derived reference cases remain in the database
+    but are not surfaced here, so the count reflects the real MD-authored corpus.
+    Reads metadata (case_id, subtype, authored_by) from the expected_response JSON."""
+    rows = (
+        db.query(EvalCase)
+        .filter(EvalCase.ground_truth_source == GROUND_TRUTH_SOURCE)
+        .order_by(EvalCase.created_at.desc())
+        .all()
+    )
 
     # Map condition ids -> names in one query.
     all_ids: set[int] = set()

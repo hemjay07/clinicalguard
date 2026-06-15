@@ -50,8 +50,9 @@ export function Cases() {
               ))}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
-                    No cases yet. <Link to="/author" className="text-brand-700 hover:underline">Author the first one →</Link>
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                    No cases authored through the UI yet. This list will populate as Mujeeb and
+                    Abdulquddus submit cases through the authoring interface.
                   </td>
                 </tr>
               )}

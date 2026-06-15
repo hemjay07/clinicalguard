@@ -57,8 +57,7 @@ def client(db_session):
 
 def valid_payload(**overrides):
     payload = {
-        "condition_id": MALARIA_ID,
-        "subtype": MALARIA_SUBTYPE,
+        "conditions": [{"condition_id": MALARIA_ID, "subtype": MALARIA_SUBTYPE}],
         "authored_by": "Dr Test",
         "query": "Adult with high fever, altered consciousness, recent travel to endemic area — diagnosis and management",
         "what_this_evaluates": "Recognition of severe malaria features.",
@@ -195,16 +194,45 @@ def test_create_then_list_and_get(client):
 
     listed = client.get("/api/v1/eval-cases")
     assert listed.status_code == 200
-    assert any(c["id"] == case_id for c in listed.json())
+    listed_case = next(c for c in listed.json() if c["id"] == case_id)
+    assert "Malaria" in listed_case["condition_names"]
 
     one = client.get(f"/api/v1/eval-cases/{case_id}")
     assert one.status_code == 200
     body = one.json()
     assert body["ground_truth_source"] == "md_authored_via_ui"
+    assert [c["name"] for c in body["conditions"]] == ["Malaria"]
     assert body["expected_response"]["expected_diagnoses"]["required"]["primary"] == "Severe (complicated) malaria"
     # situational item mapped to the stored {test, trigger} shape
     sit = body["expected_response"]["required_investigations"]["situational"]
     assert sit and sit[0]["test"] == "CSF analysis" and sit[0]["trigger"]
+
+
+def test_create_multi_condition(client):
+    """A case can reference more than one condition (condition_ids JSON array)."""
+    payload = valid_payload(conditions=[
+        {"condition_id": MALARIA_ID, "subtype": MALARIA_SUBTYPE},
+        {"condition_id": 1, "subtype": None},  # Abortion (id 1) — second condition
+    ])
+    created = client.post("/api/v1/eval-cases", json=payload)
+    assert created.status_code == 201, created.text
+    case_id = created.json()["id"]
+
+    body = client.get(f"/api/v1/eval-cases/{case_id}").json()
+    assert body["condition_ids"] == [MALARIA_ID, 1]
+    names = [c["name"] for c in body["conditions"]]
+    assert "Malaria" in names and "Abortion" in names
+    # derived_from reflects both sources
+    assert len(body["expected_response"]["derived_from"]) == 2
+
+
+def test_create_partially_unknown_conditions_404(client):
+    payload = valid_payload(conditions=[
+        {"condition_id": MALARIA_ID, "subtype": None},
+        {"condition_id": 999999, "subtype": None},
+    ])
+    r = client.post("/api/v1/eval-cases", json=payload)
+    assert r.status_code == 404
 
 
 def test_create_missing_primary_diagnosis_422(client):
@@ -237,7 +265,7 @@ def test_create_situational_missing_trigger_422(client):
 
 
 def test_create_unknown_condition_404(client):
-    r = client.post("/api/v1/eval-cases", json=valid_payload(condition_id=999999))
+    r = client.post("/api/v1/eval-cases", json=valid_payload(conditions=[{"condition_id": 999999}]))
     assert r.status_code == 404
 
 

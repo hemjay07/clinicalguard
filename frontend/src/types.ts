@@ -69,8 +69,8 @@ export interface SourceMaterial {
 export interface EvalCaseListItem {
   id: number;
   case_id: string | null;
-  condition_id: number | null;
-  condition_name: string | null;
+  condition_ids: number[];
+  condition_names: string[];
   subtype: string | null;
   query: string;
   authored_by: string | null;
@@ -82,7 +82,7 @@ export interface EvalCaseDetail {
   id: number;
   query: string;
   condition_ids: number[];
-  condition_name: string | null;
+  conditions: { id: number; name: string }[];
   ground_truth_source: string;
   source: string;
   dataset_version: string;
@@ -105,9 +105,17 @@ export interface TierGroup {
   situational: SituationalItem[];
 }
 
-export interface EvalCasePayload {
+export interface ConditionRef {
   condition_id: number;
   subtype: string | null;
+}
+
+export interface SelectedCondition extends ConditionRef {
+  name: string;
+}
+
+export interface EvalCasePayload {
+  conditions: ConditionRef[];
   authored_by: string;
   query: string;
   what_this_evaluates: string;

@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { encodeConditions } from "../selection";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { PageContainer, Spinner, ErrorBox, SectionCard, SeverityBadge } from "../components/ui";
@@ -28,7 +29,7 @@ export function ConditionDetail() {
           <div className="mb-2 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-slate-800">{data.name}</h1>
             <Link
-              to={`/author/${data.id}`}
+              to={`/author/compose?conditions=${encodeConditions([{ condition_id: data.id, subtype: null }])}`}
               className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
               Author case for this condition

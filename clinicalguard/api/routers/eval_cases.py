@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from clinicalguard.api.deps import get_db
 from clinicalguard.api.schemas import EvalCaseCreate, EvalCaseCreated
 from clinicalguard.db.models import Condition, ConditionSafetyRule, EvalCase
-from clinicalguard.generation.template_extractor import _generate_case_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/eval-cases", tags=["eval-cases"])
@@ -62,11 +61,31 @@ def validate_case(payload: EvalCaseCreate) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+def _slug(text: str) -> str:
+    return text.lower().replace(" ", "_").replace("(", "").replace(")", "")
+
+
+def build_case_id(conds: list[dict]) -> str:
+    """Stable, readable id from each condition (+subtype). Joined for multi-condition."""
+    parts = []
+    for c in conds:
+        base = _slug(c["condition_name"])
+        if c.get("subtype"):
+            base = f"{base}__{_slug(c['subtype'])}"
+        parts.append(base)
+    return "__".join(parts)
+
+
 def build_expected_response(
-    payload: EvalCaseCreate, condition_name: str, case_id: str, db: Session
+    payload: EvalCaseCreate, conds: list[dict], case_id: str, db: Session
 ) -> dict:
     """Map the clean UI payload into the nstg_derived-style JSON blob stored in
-    eval_cases.expected_response (the shape the rich scorer consumes)."""
+    eval_cases.expected_response (the shape the rich scorer consumes).
+
+    `conds` is the ordered list of referenced conditions, each
+    {condition_id, condition_name, subtype}. The case body itself stays singular
+    (one query, one diagnosis set, one set of tiers); only the source references
+    are plural."""
     # Resolve selected safety-rule ids into their stored detail for the blob.
     resolved_rules = []
     if payload.safety.selected_rule_ids:
@@ -90,8 +109,8 @@ def build_expected_response(
         "query": payload.query.strip(),
         "what_this_evaluates": payload.what_this_evaluates.strip(),
         "authored_by": payload.authored_by.strip(),
-        "subtype": payload.subtype,
-        "derived_from": f"NSTG 2022 {condition_name} section",
+        "conditions": conds,
+        "derived_from": [f"NSTG 2022 {c['condition_name']} section" for c in conds],
         "query_scope": payload.query_scope.strip(),
         "scoring_dimensions": SCORING_DIMENSIONS,
         "expected_diagnoses": {
@@ -137,24 +156,37 @@ def build_expected_response(
 
 @router.post("", response_model=EvalCaseCreated, status_code=201)
 def create_eval_case(payload: EvalCaseCreate, db: Session = Depends(get_db)):
-    condition = db.query(Condition).filter_by(id=payload.condition_id).first()
-    if not condition:
-        raise HTTPException(status_code=404, detail=f"Condition {payload.condition_id} not found")
+    if not payload.conditions:
+        raise HTTPException(status_code=422, detail={"errors": ["At least one condition is required."]})
+
+    ids = [c.condition_id for c in payload.conditions]
+    name_map = {
+        c.id: c.name
+        for c in db.query(Condition.id, Condition.name).filter(Condition.id.in_(ids)).all()
+    }
+    missing = [cid for cid in ids if cid not in name_map]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Condition(s) not found: {missing}")
 
     errors, warnings = validate_case(payload)
     if errors:
         # 422 = the submission is structurally incomplete.
         raise HTTPException(status_code=422, detail={"errors": errors})
 
-    case_id = _generate_case_id(condition.name, payload.subtype)
-    expected = build_expected_response(payload, condition.name, case_id, db)
+    # Ordered list of referenced conditions, each with its name and subtype.
+    conds = [
+        {"condition_id": c.condition_id, "condition_name": name_map[c.condition_id], "subtype": c.subtype}
+        for c in payload.conditions
+    ]
+    case_id = build_case_id(conds)
+    expected = build_expected_response(payload, conds, case_id, db)
 
     row = EvalCase(
         query=payload.query.strip(),
         baseline_ground_truth=json.dumps(
             {"note": "superseded by expected_response", "case_id": case_id}
         ),
-        condition_ids=json.dumps([payload.condition_id]),
+        condition_ids=json.dumps(ids),
         dataset_version=DATASET_VERSION,
         source=GROUND_TRUTH_SOURCE,
         difficulty=None,
@@ -177,6 +209,16 @@ def _safe_load(blob: str | None) -> dict:
         return json.loads(blob)
     except (json.JSONDecodeError, TypeError):
         return {}
+
+
+def _subtype_display(meta: dict) -> str | None:
+    """Subtype text for the list view. New (multi-condition) cases carry
+    per-condition subtypes under `conditions`; older cases use a flat `subtype`."""
+    conds = meta.get("conditions")
+    if isinstance(conds, list) and conds:
+        subs = [c.get("subtype") for c in conds if c.get("subtype")]
+        return ", ".join(subs) if subs else None
+    return meta.get("subtype")
 
 
 @router.get("")
@@ -204,14 +246,14 @@ def list_eval_cases(db: Session = Depends(get_db)):
 
     out = []
     for row, meta, cids in parsed:
-        condition_name = name_map.get(cids[0]) if cids else None
+        names = [name_map[c] for c in cids if c in name_map]
         out.append(
             {
                 "id": row.id,
                 "case_id": meta.get("case_id"),
-                "condition_id": cids[0] if cids else None,
-                "condition_name": condition_name,
-                "subtype": meta.get("subtype"),
+                "condition_ids": cids,
+                "condition_names": names,
+                "subtype": _subtype_display(meta),
                 "query": row.query,
                 "authored_by": meta.get("authored_by"),
                 "ground_truth_source": row.ground_truth_source,
@@ -231,16 +273,17 @@ def get_eval_case(case_id: int, db: Session = Depends(get_db)):
     expected = _safe_load(row.expected_response)
     cids = _safe_load(row.condition_ids) if row.condition_ids else []
     cids = cids if isinstance(cids, list) else []
-    condition_name = None
-    if cids:
-        c = db.query(Condition.name).filter_by(id=cids[0]).first()
-        condition_name = c.name if c else None
+    name_map = {
+        c.id: c.name
+        for c in db.query(Condition.id, Condition.name).filter(Condition.id.in_(cids)).all()
+    } if cids else {}
+    conditions = [{"id": c, "name": name_map[c]} for c in cids if c in name_map]
 
     return {
         "id": row.id,
         "query": row.query,
         "condition_ids": cids,
-        "condition_name": condition_name,
+        "conditions": conditions,
         "ground_truth_source": row.ground_truth_source,
         "source": row.source,
         "dataset_version": row.dataset_version,

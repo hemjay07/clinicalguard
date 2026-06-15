@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useFetch } from "../useFetch";
-import { Spinner, ErrorBox } from "../components/ui";
+import { PageContainer, ErrorBox } from "../components/ui";
 import { SourcePanel } from "../components/SourcePanel";
 import { GuidanceIcon } from "../components/GuidancePopover";
 import { QUERY_GUIDANCE, TIER_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE } from "../guidance";
 import { saveDraft, loadDraft, clearDraft } from "../storage";
-import type { EvalCasePayload, SituationalItem } from "../types";
+import { decodeConditions, draftSlug } from "../selection";
+import type { EvalCasePayload, SituationalItem, SourceMaterial, ConditionRef } from "../types";
 
 interface FormState {
   authored_by: string;
@@ -44,7 +45,6 @@ const EMPTY: FormState = {
 
 const lines = (s: string): string[] => s.split("\n").map((x) => x.trim()).filter(Boolean);
 
-// Parse "item — trigger: text" (em-dash or hyphen) into {item, trigger}.
 function parseSituational(s: string): SituationalItem[] {
   return lines(s).map((line) => {
     const m = line.split(/\s*[—-]\s*trigger:\s*/i);
@@ -53,10 +53,9 @@ function parseSituational(s: string): SituationalItem[] {
   });
 }
 
-function toPayload(f: FormState, conditionId: number, subtype: string | null): EvalCasePayload {
+function toPayload(f: FormState, conditions: ConditionRef[]): EvalCasePayload {
   return {
-    condition_id: conditionId,
-    subtype,
+    conditions,
     authored_by: f.authored_by.trim(),
     query: f.query.trim(),
     what_this_evaluates: f.what_this_evaluates.trim(),
@@ -66,22 +65,10 @@ function toPayload(f: FormState, conditionId: number, subtype: string | null): E
       critical_differentials: lines(f.critical_differentials),
       other_considerations: lines(f.other_considerations),
     },
-    investigations: {
-      required: lines(f.inv_required),
-      expected: lines(f.inv_expected),
-      situational: parseSituational(f.inv_situational),
-    },
-    treatments: {
-      required: lines(f.tx_required),
-      expected: lines(f.tx_expected),
-      situational: parseSituational(f.tx_situational),
-    },
+    investigations: { required: lines(f.inv_required), expected: lines(f.inv_expected), situational: parseSituational(f.inv_situational) },
+    treatments: { required: lines(f.tx_required), expected: lines(f.tx_expected), situational: parseSituational(f.tx_situational) },
     complications: lines(f.complications),
-    monitoring: {
-      required_principle: f.mon_principle.trim(),
-      required_elements: lines(f.mon_required),
-      expected_elements: lines(f.mon_expected),
-    },
+    monitoring: { required_principle: f.mon_principle.trim(), required_elements: lines(f.mon_required), expected_elements: lines(f.mon_expected) },
     escalation: { required: lines(f.esc_required), expected: lines(f.esc_expected) },
     safety: { selected_rule_ids: f.selected_rule_ids, free_text: lines(f.safety_free_text) },
   };
@@ -99,12 +86,10 @@ function clientValidate(p: EvalCasePayload): string[] {
   return errs;
 }
 
-// --- small form atoms ---
-
 function Field({ label, guidance, children }: { label: string; guidance?: { title: string; text: string }; children: React.ReactNode }) {
   return (
     <div className="mb-4">
-      <label className="mb-1 flex items-center text-sm font-medium text-slate-700">
+      <label className="mb-1 flex items-center text-sm font-medium text-neutral-700">
         {label}
         {guidance && <GuidanceIcon title={guidance.title} text={guidance.text} />}
       </label>
@@ -113,7 +98,7 @@ function Field({ label, guidance, children }: { label: string; guidance?: { titl
   );
 }
 
-const ta = "w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none";
+const ta = "w-full rounded-md border border-neutral-300 bg-neutral-50/60 px-3 py-2 text-sm focus:border-brand-700 focus:bg-white focus:outline-none";
 
 function Tiers({ prefix, f, set }: { prefix: "inv" | "tx"; f: FormState; set: (patch: Partial<FormState>) => void }) {
   const r = `${prefix}_required` as keyof FormState;
@@ -122,58 +107,61 @@ function Tiers({ prefix, f, set }: { prefix: "inv" | "tx"; f: FormState; set: (p
   return (
     <div className="grid gap-3">
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Required</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Required</div>
         <textarea rows={3} className={ta} value={f[r] as string} onChange={(ev) => set({ [r]: ev.target.value } as Partial<FormState>)} placeholder="One item per line" />
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Expected</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Expected</div>
         <textarea rows={3} className={ta} value={f[e] as string} onChange={(ev) => set({ [e]: ev.target.value } as Partial<FormState>)} placeholder="One item per line" />
       </div>
       <div>
-        <div className="flex items-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="flex items-center text-xs font-semibold uppercase tracking-wide text-neutral-500">
           Situational
           <GuidanceIcon title="Writing situational triggers" text={TRIGGER_GUIDANCE} />
         </div>
-        <p className="mb-1 text-xs text-slate-400">Format: [item] — trigger: [trigger condition]</p>
+        <p className="mb-1 text-xs text-neutral-400">Format: [item] — trigger: [trigger condition]</p>
         <textarea rows={2} className={ta} value={f[s] as string} onChange={(ev) => set({ [s]: ev.target.value } as Partial<FormState>)} placeholder="CSF analysis — trigger: AI raises meningitis as a differential" />
       </div>
     </div>
   );
 }
 
-export function Authoring() {
-  const { conditionId } = useParams();
-  const id = Number(conditionId);
-  const [searchParams] = useSearchParams();
-  const subtype = searchParams.get("subtype");
-  const navigate = useNavigate();
+interface SourceEntry { ref: ConditionRef; data: SourceMaterial }
 
-  const details = useFetch(() => api.conditionDetails(id), [id]);
-  const source = useFetch(() => api.sourceMaterial(id, subtype), [id, subtype]);
+export function Authoring() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const refs = useMemo(() => decodeConditions(searchParams.get("conditions")), [searchParams]);
+  const slug = useMemo(() => draftSlug(refs), [refs]);
+
+  const sources = useFetch<SourceEntry[]>(
+    () => Promise.all(refs.map((r) => api.sourceMaterial(r.condition_id, r.subtype).then((data) => ({ ref: r, data })))),
+    [slug]
+  );
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [showPanel, setShowPanel] = useState(true); // desktop panel visibility
-  const [mobileOpen, setMobileOpen] = useState(false); // mobile slide-in overlay
+  const [showPanel, setShowPanel] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
   const [loadedDraft, setLoadedDraft] = useState(false);
 
-  // Load any saved draft once, keyed by condition+subtype.
+  // Load draft once per selection
   useEffect(() => {
-    const d = loadDraft<FormState>(id, subtype);
-    if (d) { setForm(d.state); setSavedAt(d.savedAt); }
-    else setForm(EMPTY);
+    const d = loadDraft<FormState>(slug);
+    if (d) { setForm(d.state); setSavedAt(d.savedAt); } else setForm(EMPTY);
     setLoadedDraft(true);
+    setActiveTab(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, subtype]);
+  }, [slug]);
 
-  // Autosave on every change (after the initial draft load).
+  // Autosave
   useEffect(() => {
     if (!loadedDraft) return;
-    const at = saveDraft(id, subtype, form);
-    setSavedAt(at);
+    setSavedAt(saveDraft(slug, form));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
@@ -186,7 +174,20 @@ export function Authoring() {
         : [...prev.selected_rule_ids, ruleId],
     }));
 
-  const payload = useMemo(() => toPayload(form, id, subtype), [form, id, subtype]);
+  const names = useMemo(() => (sources.data ?? []).map((s) => s.data.condition.name), [sources.data]);
+
+  // Union of verified safety rules across all selected conditions (dedup by id).
+  const safetyRules = useMemo(() => {
+    const map = new Map<number, { id: number; severity: string; description: string; source: string | null }>();
+    (sources.data ?? []).forEach((s) =>
+      (s.data.safety_signals.verified_safety_rules ?? []).forEach((r) => {
+        if (!map.has(r.rule_id)) map.set(r.rule_id, { id: r.rule_id, severity: r.severity, description: r.description, source: r.source });
+      })
+    );
+    return [...map.values()];
+  }, [sources.data]);
+
+  const payload = useMemo(() => toPayload(form, refs), [form, refs]);
 
   async function submit() {
     const errs = clientValidate(payload);
@@ -195,7 +196,7 @@ export function Authoring() {
     setSubmitting(true);
     try {
       await api.createEvalCase(payload);
-      clearDraft(id, subtype);
+      clearDraft(slug);
       navigate("/cases");
     } catch (e) {
       if (e instanceof ApiError && e.detail && typeof e.detail === "object" && "errors" in (e.detail as any))
@@ -207,31 +208,63 @@ export function Authoring() {
     }
   }
 
-  if (details.loading) return <div className="p-8"><Spinner /></div>;
-  if (details.error) return <div className="p-8"><ErrorBox message={details.error} /></div>;
+  if (refs.length === 0) {
+    return (
+      <PageContainer>
+        <ErrorBox message="No conditions selected." />
+        <Link to="/author" className="mt-3 inline-block text-brand-700 hover:underline">← Choose conditions</Link>
+      </PageContainer>
+    );
+  }
+
+  const intro = sources.data?.[0]?.data.condition.introduction;
+
+  // Tabbed source area (used in both the desktop aside and the mobile overlay).
+  const sourceArea = (
+    <div className="flex h-full flex-col">
+      {(sources.data?.length ?? 0) > 1 && (
+        <div className="flex flex-wrap gap-1 border-b border-neutral-200 bg-neutral-50 px-2 pt-2">
+          {(sources.data ?? []).map((s, i) => (
+            <button
+              key={s.ref.condition_id}
+              onClick={() => setActiveTab(i)}
+              className={`rounded-t px-3 py-1.5 text-xs font-medium ${i === activeTab ? "bg-white text-brand-700 ring-1 ring-neutral-200" : "text-neutral-500 hover:bg-neutral-100"}`}
+            >
+              {s.data.condition.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="min-h-0 flex-1">
+        <SourcePanel data={sources.data?.[activeTab]?.data ?? null} loading={sources.loading} error={sources.error} />
+      </div>
+    </div>
+  );
 
   return (
     <div className="relative mx-auto flex w-full max-w-7xl gap-4 px-4 py-6">
-      {/* Form */}
       <div className={showPanel ? "w-full lg:w-[60%]" : "w-full"}>
-        {/* Section A: condition context */}
-        <div className="mb-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {/* Section A */}
+        <div className="mb-4 rounded-lg border border-neutral-200 bg-white p-5">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-xl font-bold text-slate-800">{details.data?.name}</h1>
-              {subtype && <p className="text-sm text-slate-500">{subtype}</p>}
-              <p className="mt-1 text-xs text-slate-400">Authoring an eval case for {details.data?.name}</p>
+              <h1 className="font-serif text-xl font-semibold text-neutral-900">
+                {names.length ? names.join(", ") : "Loading…"}
+              </h1>
+              <p className="mt-1 text-xs text-neutral-400">
+                Authoring an eval case for: {names.length ? names.join(", ") : "…"}
+              </p>
             </div>
-            <button onClick={() => setShowPanel((s) => !s)} className="hidden rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 lg:block">
+            <button onClick={() => setShowPanel((s) => !s)} className="hidden rounded border border-neutral-300 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100 lg:block">
               {showPanel ? "Hide source" : "Show source"}
             </button>
           </div>
-          {details.data?.introduction && (
+          {intro && (
             <div className="mt-3">
               <button onClick={() => setIntroOpen((o) => !o)} className="text-xs font-medium text-brand-700">
                 {introOpen ? "Hide" : "Show"} NSTG introduction
               </button>
-              {introOpen && <p className="mt-2 text-sm leading-relaxed text-slate-600">{details.data.introduction}</p>}
+              {introOpen && <p className="mt-2 text-sm leading-relaxed text-neutral-600">{intro}</p>}
             </div>
           )}
         </div>
@@ -244,9 +277,8 @@ export function Authoring() {
         )}
 
         <div className="space-y-4">
-          {/* B: query */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <Field label="Authored by" >
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <Field label="Authored by">
               <input className={ta} value={form.authored_by} onChange={(e) => set({ authored_by: e.target.value })} placeholder="Your name" />
             </Field>
             <Field label="Clinical query" guidance={{ title: "Writing the clinical query", text: QUERY_GUIDANCE }}>
@@ -260,9 +292,8 @@ export function Authoring() {
             </Field>
           </div>
 
-          {/* B2: diagnoses */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Expected diagnoses</h2>
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Expected diagnoses</h2>
             <Field label="Primary diagnosis">
               <input className={ta} value={form.primary} onChange={(e) => set({ primary: e.target.value })} placeholder="The diagnosis the AI should reach (kept out of the query)." />
             </Field>
@@ -274,34 +305,30 @@ export function Authoring() {
             </Field>
           </div>
 
-          {/* C: investigations */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 flex items-center text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 className="mb-3 flex items-center text-sm font-semibold uppercase tracking-wide text-neutral-500">
               Investigations the AI should address
               <GuidanceIcon title="About the tier categories" text={TIER_GUIDANCE} />
             </h2>
             <Tiers prefix="inv" f={form} set={set} />
           </div>
 
-          {/* D: treatments */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 flex items-center text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 className="mb-3 flex items-center text-sm font-semibold uppercase tracking-wide text-neutral-500">
               Treatments the AI should address
               <GuidanceIcon title="About the tier categories" text={TIER_GUIDANCE} />
             </h2>
             <Tiers prefix="tx" f={form} set={set} />
           </div>
 
-          {/* F: complications */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
             <Field label="Complications the AI should address">
               <textarea rows={3} className={ta} value={form.complications} onChange={(e) => set({ complications: e.target.value })} placeholder="One complication per line" />
             </Field>
           </div>
 
-          {/* G: monitoring + escalation */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Monitoring &amp; escalation</h2>
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Monitoring &amp; escalation</h2>
             <Field label="Monitoring principle">
               <input className={ta} value={form.mon_principle} onChange={(e) => set({ mon_principle: e.target.value })} placeholder="e.g. Active monitoring is essential, not optional." />
             </Field>
@@ -321,16 +348,15 @@ export function Authoring() {
             </div>
           </div>
 
-          {/* H: safety signals */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Safety rules that apply to this scenario</h2>
-            <p className="mt-1 text-xs text-slate-400">Select the safety rules that apply to your specific query scope.</p>
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Safety rules that apply to this scenario</h2>
+            <p className="mt-1 text-xs text-neutral-400">Select the safety rules that apply to your specific query scope (rules from all selected conditions).</p>
             <div className="mt-3 space-y-2">
-              {(details.data?.safety_rules ?? []).length === 0 && <p className="text-sm text-slate-400">No safety rules recorded for this condition.</p>}
-              {details.data?.safety_rules.map((r) => (
-                <label key={r.id} className="flex cursor-pointer items-start gap-2 rounded border border-slate-200 p-2 text-sm hover:bg-slate-50">
+              {safetyRules.length === 0 && <p className="text-sm text-neutral-400">No verified safety rules recorded for the selected condition(s).</p>}
+              {safetyRules.map((r) => (
+                <label key={r.id} className="flex cursor-pointer items-start gap-2 rounded border border-neutral-200 p-2 text-sm hover:bg-neutral-50">
                   <input type="checkbox" checked={form.selected_rule_ids.includes(r.id)} onChange={() => toggleRule(r.id)} className="mt-1" />
-                  <span><span className="font-semibold">[{r.severity}]</span> {r.description} {r.source && <span className="text-xs text-slate-400">— {r.source}</span>}</span>
+                  <span><span className="font-semibold">[{r.severity}]</span> {r.description} {r.source && <span className="text-xs text-neutral-400">— {r.source}</span>}</span>
                 </label>
               ))}
             </div>
@@ -339,33 +365,28 @@ export function Authoring() {
             </Field>
           </div>
 
-          {/* Submit */}
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <span className="text-xs text-slate-400">{savedAt ? `Draft saved ${new Date(savedAt).toLocaleTimeString()}` : "Not yet saved"}</span>
-            <button onClick={submit} disabled={submitting} className="rounded-md bg-brand-600 px-6 py-2 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+          <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white p-5">
+            <span className="text-xs text-neutral-400">{savedAt ? `Draft saved ${new Date(savedAt).toLocaleTimeString()}` : "Not yet saved"}</span>
+            <button onClick={submit} disabled={submitting} className="rounded-md bg-brand-700 px-6 py-2 font-medium text-white hover:bg-brand-800 disabled:opacity-50">
               {submitting ? "Submitting…" : "Submit case"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Source panel — desktop */}
       {showPanel && (
-        <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-[40%] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm lg:block">
-          <SourcePanel data={source.data} loading={source.loading} error={source.error} />
+        <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-[40%] overflow-hidden rounded-lg border border-neutral-200 bg-white lg:block">
+          {sourceArea}
         </aside>
       )}
 
-      {/* Source panel — mobile slide-in (hidden by default on mobile) */}
-      <button onClick={() => setMobileOpen(true)} className="fixed bottom-4 right-4 z-30 rounded-full bg-brand-600 px-4 py-3 text-sm font-medium text-white shadow-lg lg:hidden">
+      <button onClick={() => setMobileOpen(true)} className="fixed bottom-4 right-4 z-30 rounded-full bg-brand-700 px-4 py-3 text-sm font-medium text-white shadow-lg lg:hidden">
         Source
       </button>
       <div className={`fixed inset-0 z-40 transform bg-white transition-transform duration-300 lg:hidden ${mobileOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex h-full flex-col">
-          <button onClick={() => setMobileOpen(false)} className="self-end p-3 text-slate-500">✕ Close</button>
-          <div className="flex-1 overflow-hidden">
-            <SourcePanel data={source.data} loading={source.loading} error={source.error} />
-          </div>
+          <button onClick={() => setMobileOpen(false)} className="self-end p-3 text-neutral-500">✕ Close</button>
+          <div className="min-h-0 flex-1">{sourceArea}</div>
         </div>
       </div>
     </div>

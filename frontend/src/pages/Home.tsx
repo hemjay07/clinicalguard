@@ -63,11 +63,11 @@ export function Home() {
           16 Kenyan primary care clinics, harmful AI recommendations were adopted by clinicians at
           roughly four times the rate of beneficial ones, with 25% of encounters containing
           beneficial guidance that clinicians ignored entirely{" "}
-          <Cite href={PENDA_URL}>[Korom et al., Nature Health 2026]</Cite>. The NOHARM benchmark,
+          <Cite href={PENDA_URL}>[1]</Cite>. The NOHARM benchmark,
           built from 12,747 physician annotations across 100 cases, found that 76.6% of severely
           harmful errors in clinical LLM outputs come from omission — things the AI failed to say —
           rather than from inappropriately recommending harmful actions{" "}
-          <Cite href={NOHARM_URL}>[Wu et al., 2025]</Cite>. Most clinical AI evaluation today is not
+          <Cite href={NOHARM_URL}>[2]</Cite>. Most clinical AI evaluation today is not
           designed to catch these failure modes: it either does not exist, uses circular
           LLM-as-judge approaches that grade models against themselves, or relies on generic
           benchmarks that test medical knowledge without testing whether the AI follows the specific
@@ -146,19 +146,17 @@ export function Home() {
       {/* Section 4: Current status */}
       <Section title="Current status">
         <p>
-          ClinicalGuard is currently in Phase A: minimum viable authoring. Two NSTG-trained MDs are
-          authoring the first batch of NSTG-derived evaluation cases through this interface. The
-          cases will form the corpus for an upcoming methodology paper on auto-authoring workflows
-          for clinical AI evaluation cases in resource-constrained settings.
+          ClinicalGuard is currently in Phase A: minimum viable authoring. The framework was built
+          by Mujeeb Opabode, MD (University of Ibadan, 2025). The first batch of NSTG-derived
+          evaluation cases is being co-authored with Abdulquddus Ajibade, MD (Senior AI Engineer at
+          Ciba Health), whose independent clinical review strengthens the validation methodology. The
+          cases will form the corpus for an upcoming methodology paper on auto-authoring workflows for
+          clinical AI evaluation cases in resource-constrained settings.
         </p>
         <p>
           The framework currently ingests <strong className="font-semibold text-neutral-900">{nConditions} NSTG conditions</strong> and
           enforces <strong className="font-semibold text-neutral-900">{nSafety} verified safety rules</strong>. The case corpus is
           being built; <strong className="font-semibold text-neutral-900">{nCases} cases</strong> have been submitted so far.
-        </p>
-        <p className="text-base text-neutral-500">
-          Authored by Mujeeb Opabode, MD (University of Ibadan, 2025) and Abdulquddus Ajibade, MD
-          (Lead AI Engineer at HelpMum Africa, AI Researcher at Emory HITI Lab).
         </p>
       </Section>
 
@@ -169,6 +167,46 @@ export function Home() {
         <p><strong className="font-semibold text-neutral-900">Phase D (after C):</strong> Multi-contributor pipeline. Other MD contributors will be able to author cases through a moderated workflow with auth, review queues, and inter-rater agreement tracking. The evaluation dashboard for running cases against AI systems will ship in this phase.</p>
         <p><strong className="font-semibold text-neutral-900">Phase E (longer term):</strong> Cross-guideline support. Extending the framework to ingest WHO Standard Treatment Guidelines, NICE guidelines, and other national/international guidelines. Demonstrating cross-guideline workflows with collaborators in different healthcare contexts.</p>
         <p><strong className="font-semibold text-neutral-900">Context layer implementation:</strong> The deployment-context grounding layer is roadmapped pending real institutional partnerships. The architecture supports it; the implementation awaits actual deployment contexts to design against.</p>
+      </Section>
+
+      {/* How to contribute */}
+      <Section title="How to contribute">
+        <p>
+          ClinicalGuard's value depends on physicians authoring high-quality evaluation cases
+          grounded in the clinical guidelines they know. Contribution is currently closed during
+          Phase A while the first batch of NSTG-derived cases is authored. The contribution pipeline
+          opens to external contributors in Phase D, which includes the moderated multi-contributor
+          workflow with review queues and inter-rater agreement tracking.
+        </p>
+        <p>When contribution opens, the path will be:</p>
+        <ul className="list-disc space-y-2 pl-6">
+          <li>
+            <strong className="font-semibold text-neutral-900">Case authoring</strong> — MDs use this
+            interface to author evaluation cases for conditions they have clinical expertise in. The
+            cases become part of the public ClinicalGuard corpus.
+          </li>
+          <li>
+            <strong className="font-semibold text-neutral-900">Case review</strong> — MDs
+            independently review cases authored by others, providing the second-reviewer validation
+            that the methodology requires.
+          </li>
+          <li>
+            <strong className="font-semibold text-neutral-900">Methodology contribution</strong> —
+            Experienced contributors can propose changes to the case structure, scoring dimensions, or
+            workflow itself, with input weighted into the next framework version.
+          </li>
+        </ul>
+        <p>
+          Contributors receive named credit on the framework, co-authorship on the methodology paper
+          for substantive contributions, and a public artifact for their own clinical AI work. The
+          workflow itself documents clinical AI evaluation methodology in a way few resources
+          currently do, which contributors find useful for their own understanding of the field.
+        </p>
+        <p>
+          Interested clinicians can express early interest via{" "}
+          <Cite href={GITHUB_URL}>GitHub</Cite> or by opening an issue on the{" "}
+          <Cite href={`${GITHUB_URL}/issues`}>GitHub repo</Cite>.
+        </p>
       </Section>
 
       {/* Section 7: Resources */}
@@ -201,8 +239,8 @@ export function Home() {
       <footer className="border-t border-neutral-200 pt-8 text-sm text-neutral-500">
         <p>MIT License.</p>
         <p className="mt-1">
-          Mujeeb Opabode, MD (University of Ibadan, 2025) · Abdulquddus Ajibade, MD (Lead AI Engineer
-          at HelpMum Africa, AI Researcher at Emory HITI Lab)
+          Mujeeb Opabode, MD (University of Ibadan, 2025) · Abdulquddus Ajibade, MD (Senior AI
+          Engineer at Ciba Health)
         </p>
         <p className="mt-1">Last updated 15 June 2026.</p>
       </footer>

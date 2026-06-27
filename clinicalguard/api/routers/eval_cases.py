@@ -53,7 +53,7 @@ def validate_case(payload: EvalCaseCreate) -> tuple[list[str], list[str]]:
         warnings.append(
             "'What this case evaluates' is empty — recommended for interpretability."
         )
-    if not payload.monitoring.required_elements and not payload.monitoring.required_principle.strip():
+    if not payload.monitoring.required_elements:
         warnings.append("No monitoring plan provided.")
     if not payload.escalation.required:
         warnings.append("No required escalation triggers provided.")
@@ -138,7 +138,6 @@ def build_expected_response(
         },
         "complications": payload.complications,
         "required_monitoring": {
-            "required_principle": payload.monitoring.required_principle.strip(),
             "required_elements": payload.monitoring.required_elements,
             "expected_elements": payload.monitoring.expected_elements,
         },
@@ -146,6 +145,8 @@ def build_expected_response(
             "required": payload.escalation.required,
             "expected": payload.escalation.expected,
         },
+        "reasoning_archetypes": payload.reasoning_archetypes,
+        "other_archetypes": payload.other_archetypes,
         "required_safety_flags": {
             "selected_rule_ids": payload.safety.selected_rule_ids,
             "rules": resolved_rules,

@@ -2,6 +2,9 @@ import { useParams, Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { PageContainer, Spinner, ErrorBox, SectionCard } from "../components/ui";
+import { ARCHETYPES } from "../guidance";
+
+const ARCHETYPE_LABELS: Record<string, string> = Object.fromEntries(ARCHETYPES.map((a) => [a.value, a.label]));
 
 function TierBlock({ label, items }: { label: string; items?: string[] }) {
   if (!items || items.length === 0) return null;
@@ -68,6 +71,23 @@ export function CaseDetail() {
                   <p className="mt-2 text-sm text-slate-500"><span className="font-medium">Scope: </span>{data.query_scope}</p>
                 )}
               </SectionCard>
+
+              {((e.reasoning_archetypes?.length ?? 0) > 0 || (e.other_archetypes?.length ?? 0) > 0) && (
+                <SectionCard title="Reasoning patterns">
+                  <div className="flex flex-wrap gap-2">
+                    {(e.reasoning_archetypes ?? []).map((v: string) => (
+                      <span key={v} className="rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-700">
+                        {ARCHETYPE_LABELS[v] ?? v}
+                      </span>
+                    ))}
+                    {(e.other_archetypes ?? []).map((v: string, i: number) => (
+                      <span key={`o${i}`} className="rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-700">
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                </SectionCard>
+              )}
 
               <SectionCard title="Expected diagnoses">
                 <TierBlock label="Primary" items={e.expected_diagnoses?.required?.primary ? [e.expected_diagnoses.required.primary] : []} />

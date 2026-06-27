@@ -5,8 +5,8 @@ import { useFetch } from "../useFetch";
 import { PageContainer, ErrorBox } from "../components/ui";
 import { SourcePanel } from "../components/SourcePanel";
 import { GuidanceIcon } from "../components/GuidancePopover";
-import { QUERY_GUIDANCE, TIER_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE } from "../guidance";
-import { saveDraft, loadDraft, clearDraft } from "../storage";
+import { QUERY_GUIDANCE, TIER_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE, ARCHETYPES } from "../guidance";
+import { saveDraft, loadDraft, clearDraft, saveAuthorName, loadAuthorName } from "../storage";
 import { decodeConditions, draftSlug } from "../selection";
 import type { EvalCasePayload, SituationalItem, SourceMaterial, ConditionRef } from "../types";
 
@@ -25,13 +25,15 @@ interface FormState {
   tx_expected: string;
   tx_situational: string;
   complications: string;
-  mon_principle: string;
   mon_required: string;
   mon_expected: string;
   esc_required: string;
   esc_expected: string;
   selected_rule_ids: number[];
   safety_free_text: string;
+  archetypes: string[];
+  other_checked: boolean;
+  other_text: string;
 }
 
 const EMPTY: FormState = {
@@ -39,8 +41,9 @@ const EMPTY: FormState = {
   primary: "", critical_differentials: "", other_considerations: "",
   inv_required: "", inv_expected: "", inv_situational: "",
   tx_required: "", tx_expected: "", tx_situational: "",
-  complications: "", mon_principle: "", mon_required: "", mon_expected: "",
+  complications: "", mon_required: "", mon_expected: "",
   esc_required: "", esc_expected: "", selected_rule_ids: [], safety_free_text: "",
+  archetypes: [], other_checked: false, other_text: "",
 };
 
 const lines = (s: string): string[] => s.split("\n").map((x) => x.trim()).filter(Boolean);
@@ -68,9 +71,11 @@ function toPayload(f: FormState, conditions: ConditionRef[]): EvalCasePayload {
     investigations: { required: lines(f.inv_required), expected: lines(f.inv_expected), situational: parseSituational(f.inv_situational) },
     treatments: { required: lines(f.tx_required), expected: lines(f.tx_expected), situational: parseSituational(f.tx_situational) },
     complications: lines(f.complications),
-    monitoring: { required_principle: f.mon_principle.trim(), required_elements: lines(f.mon_required), expected_elements: lines(f.mon_expected) },
+    monitoring: { required_elements: lines(f.mon_required), expected_elements: lines(f.mon_expected) },
     escalation: { required: lines(f.esc_required), expected: lines(f.esc_expected) },
     safety: { selected_rule_ids: f.selected_rule_ids, free_text: lines(f.safety_free_text) },
+    reasoning_archetypes: f.archetypes,
+    other_archetypes: f.other_checked && f.other_text.trim() ? [f.other_text.trim()] : [],
   };
 }
 
@@ -117,7 +122,7 @@ function Tiers({ prefix, f, set }: { prefix: "inv" | "tx"; f: FormState; set: (p
       <div>
         <div className="flex items-center text-xs font-semibold uppercase tracking-wide text-neutral-500">
           Situational
-          <GuidanceIcon title="Writing situational triggers" text={TRIGGER_GUIDANCE} />
+          <GuidanceIcon title="Situational triggers" text={TRIGGER_GUIDANCE} />
         </div>
         <p className="mb-1 text-xs text-neutral-400">Format: [item] — trigger: [trigger condition]</p>
         <textarea rows={2} className={ta} value={f[s] as string} onChange={(ev) => set({ [s]: ev.target.value } as Partial<FormState>)} placeholder="CSF analysis — trigger: AI raises meningitis as a differential" />
@@ -141,31 +146,80 @@ export function Authoring() {
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [saveKind, setSaveKind] = useState<"none" | "auto" | "draft" | "submitted">("none");
+  const [loadedDraftAt, setLoadedDraftAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [showPanel, setShowPanel] = useState(true);
+  // Desktop source-panel visibility persists across navigations within the session.
+  const [showPanel, setShowPanel] = useState(() => sessionStorage.getItem("cg_show_source") !== "0");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [loadedDraft, setLoadedDraft] = useState(false);
 
-  // Load draft once per selection
+  useEffect(() => {
+    sessionStorage.setItem("cg_show_source", showPanel ? "1" : "0");
+  }, [showPanel]);
+
+  // Load draft once per selection. The author name persists globally, so fall
+  // back to it when the (per-case) draft has no name yet.
   useEffect(() => {
     const d = loadDraft<FormState>(slug);
-    if (d) { setForm(d.state); setSavedAt(d.savedAt); } else setForm(EMPTY);
+    const savedName = loadAuthorName();
+    if (d) {
+      setForm({ ...d.state, authored_by: d.state.authored_by || savedName });
+      setSavedAt(d.savedAt);
+      setSaveKind("auto");
+      setLoadedDraftAt(d.savedAt);
+    } else {
+      setForm({ ...EMPTY, authored_by: savedName });
+      setSavedAt(null);
+      setSaveKind("none");
+      setLoadedDraftAt(null);
+    }
     setLoadedDraft(true);
     setActiveTab(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
-  // Autosave
+  // Auto-save on every change; also persist the author name globally as typed.
   useEffect(() => {
     if (!loadedDraft) return;
     setSavedAt(saveDraft(slug, form));
+    setSaveKind("auto");
+    saveAuthorName(form.authored_by);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
+  const toggleArchetype = (value: string) =>
+    setForm((prev) => ({
+      ...prev,
+      archetypes: prev.archetypes.includes(value)
+        ? prev.archetypes.filter((x) => x !== value)
+        : [...prev.archetypes, value],
+    }));
+
+  function saveDraftNow() {
+    setSavedAt(saveDraft(slug, form));
+    setSaveKind("draft");
+  }
+
+  function discardDraft() {
+    clearDraft(slug);
+    setForm(EMPTY);
+    setSavedAt(null);
+    setSaveKind("none");
+    setLoadedDraftAt(null);
+  }
+
+  const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const saveIndicator =
+    saveKind === "auto" && savedAt ? `Auto-saved at ${fmtTime(savedAt)}`
+    : saveKind === "draft" && savedAt ? `Draft saved at ${fmtTime(savedAt)}`
+    : saveKind === "submitted" && savedAt ? `Submitted at ${fmtTime(savedAt)}`
+    : "Not yet saved";
   const toggleRule = (ruleId: number) =>
     setForm((prev) => ({
       ...prev,
@@ -196,6 +250,8 @@ export function Authoring() {
     setSubmitting(true);
     try {
       await api.createEvalCase(payload);
+      setSaveKind("submitted");
+      setSavedAt(new Date().toISOString());
       clearDraft(slug);
       navigate("/cases");
     } catch (e) {
@@ -269,6 +325,13 @@ export function Authoring() {
           )}
         </div>
 
+        {loadedDraftAt && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+            <span>Loaded draft saved at {fmtTime(loadedDraftAt)} on {new Date(loadedDraftAt).toLocaleDateString()}.</span>
+            <button onClick={discardDraft} className="font-medium underline hover:no-underline">Discard draft and start fresh</button>
+          </div>
+        )}
+
         {errors.length > 0 && (
           <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <p className="mb-1 font-semibold">Please fix:</p>
@@ -292,15 +355,43 @@ export function Authoring() {
             </Field>
           </div>
 
+          {/* Reasoning-pattern archetypes (descriptive metadata, optional) */}
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <h2 className="flex items-center text-sm font-semibold uppercase tracking-wide text-neutral-500">
+              Reasoning patterns this case exercises
+              <GuidanceIcon title="Reasoning patterns" text={ARCHETYPE_GUIDANCE} />
+            </h2>
+            <p className="mb-3 mt-1 text-xs text-neutral-400">Optional. Select all that apply.</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ARCHETYPES.map((a) => (
+                <label key={a.value} className="flex cursor-pointer items-start gap-2 text-sm text-neutral-700">
+                  <input type="checkbox" checked={form.archetypes.includes(a.value)} onChange={() => toggleArchetype(a.value)} className="mt-1" />
+                  <span>
+                    <span className="font-medium">{a.label}</span>
+                    <span className="block text-xs font-normal text-neutral-400">{a.subtitle}</span>
+                  </span>
+                </label>
+              ))}
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-neutral-700">
+                <input type="checkbox" checked={form.other_checked} onChange={(e) => set({ other_checked: e.target.checked })} className="mt-0.5" />
+                <span>Other (specify)</span>
+              </label>
+            </div>
+            {form.other_checked && (
+              <input className={`${ta} mt-3`} value={form.other_text} onChange={(e) => set({ other_text: e.target.value })} placeholder="Describe the reasoning pattern" />
+            )}
+          </div>
+
           <div className="rounded-lg border border-neutral-200 bg-white p-5">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Expected diagnoses</h2>
             <Field label="Primary diagnosis">
               <input className={ta} value={form.primary} onChange={(e) => set({ primary: e.target.value })} placeholder="The diagnosis the AI should reach (kept out of the query)." />
             </Field>
-            <Field label="Critical differentials (required to consider)">
+            <Field label="Critical differentials">
+              <p className="mb-1 text-xs text-neutral-400">Differentials the AI must consider</p>
               <textarea rows={2} className={ta} value={form.critical_differentials} onChange={(e) => set({ critical_differentials: e.target.value })} placeholder="One per line" />
             </Field>
-            <Field label="Other considerations (a thorough response would include)">
+            <Field label="Other considerations the AI should address">
               <textarea rows={2} className={ta} value={form.other_considerations} onChange={(e) => set({ other_considerations: e.target.value })} placeholder="One per line" />
             </Field>
           </div>
@@ -308,7 +399,7 @@ export function Authoring() {
           <div className="rounded-lg border border-neutral-200 bg-white p-5">
             <h2 className="mb-3 flex items-center text-sm font-semibold uppercase tracking-wide text-neutral-500">
               Investigations the AI should address
-              <GuidanceIcon title="About the tier categories" text={TIER_GUIDANCE} />
+              <GuidanceIcon title="Tier categories" text={TIER_GUIDANCE} />
             </h2>
             <Tiers prefix="inv" f={form} set={set} />
           </div>
@@ -316,7 +407,7 @@ export function Authoring() {
           <div className="rounded-lg border border-neutral-200 bg-white p-5">
             <h2 className="mb-3 flex items-center text-sm font-semibold uppercase tracking-wide text-neutral-500">
               Treatments the AI should address
-              <GuidanceIcon title="About the tier categories" text={TIER_GUIDANCE} />
+              <GuidanceIcon title="Tier categories" text={TIER_GUIDANCE} />
             </h2>
             <Tiers prefix="tx" f={form} set={set} />
           </div>
@@ -329,9 +420,6 @@ export function Authoring() {
 
           <div className="rounded-lg border border-neutral-200 bg-white p-5">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">Monitoring &amp; escalation</h2>
-            <Field label="Monitoring principle">
-              <input className={ta} value={form.mon_principle} onChange={(e) => set({ mon_principle: e.target.value })} placeholder="e.g. Active monitoring is essential, not optional." />
-            </Field>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Monitoring — required elements">
                 <textarea rows={3} className={ta} value={form.mon_required} onChange={(e) => set({ mon_required: e.target.value })} placeholder="One per line" />
@@ -365,11 +453,19 @@ export function Authoring() {
             </Field>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white p-5">
-            <span className="text-xs text-neutral-400">{savedAt ? `Draft saved ${new Date(savedAt).toLocaleTimeString()}` : "Not yet saved"}</span>
-            <button onClick={submit} disabled={submitting} className="rounded-md bg-brand-700 px-6 py-2 font-medium text-white hover:bg-brand-800 disabled:opacity-50">
-              {submitting ? "Submitting…" : "Submit case"}
-            </button>
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                onClick={saveDraftNow}
+                className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+              >
+                Save as draft
+              </button>
+              <button onClick={submit} disabled={submitting} className="rounded-md bg-brand-700 px-6 py-2 font-medium text-white hover:bg-brand-800 disabled:opacity-50">
+                {submitting ? "Submitting…" : "Submit case"}
+              </button>
+            </div>
+            <div className="mt-2 text-xs text-neutral-400">{saveIndicator}</div>
           </div>
         </div>
       </div>

@@ -124,9 +124,11 @@ export interface EvalCasePayload {
   investigations: TierGroup;
   treatments: TierGroup;
   complications: string[];
-  monitoring: { required_principle: string; required_elements: string[]; expected_elements: string[] };
+  monitoring: { required_elements: string[]; expected_elements: string[] };
   escalation: { required: string[]; expected: string[] };
   safety: { selected_rule_ids: number[]; free_text: string[] };
+  reasoning_archetypes: string[];
+  other_archetypes: string[];
 }
 
 export interface CreatedCase {

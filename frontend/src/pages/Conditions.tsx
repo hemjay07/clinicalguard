@@ -16,7 +16,7 @@ export function Conditions() {
 
   return (
     <PageContainer>
-      <h1 className="text-2xl font-bold text-slate-800">NSTG Conditions</h1>
+      <h1 className="text-2xl font-semibold text-neutral-900">NSTG Conditions</h1>
       <p className="mt-1 text-slate-600">
         Browse the {data?.length ?? "…"} conditions ingested from the NSTG and the structured
         data available for each. Click a condition to view its full structured data.
@@ -26,7 +26,7 @@ export function Conditions() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search conditions…"
-        className="mt-4 w-full max-w-md rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+        className="cg-input mt-4 max-w-md"
       />
 
       {loading && <div className="mt-6"><Spinner /></div>}

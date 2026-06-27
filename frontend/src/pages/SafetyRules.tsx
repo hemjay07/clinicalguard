@@ -24,7 +24,7 @@ export function SafetyRules() {
 
   return (
     <PageContainer>
-      <h1 className="text-2xl font-bold text-slate-800">Safety Rules</h1>
+      <h1 className="text-2xl font-semibold text-neutral-900">Safety Rules</h1>
       <p className="mt-1 text-slate-600">
         The deterministic safety engine fires verified rules against AI responses. This is a
         read-only view of all active rules in the database.

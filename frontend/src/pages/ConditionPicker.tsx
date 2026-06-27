@@ -61,7 +61,7 @@ export function ConditionPicker() {
       {/* Selected chips */}
       {selected.length > 0 && (
         <div className="mt-4 rounded-lg border border-neutral-200 bg-white p-4">
-          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+          <div className="mb-2 text-xs font-medium tracking-wide text-neutral-500">
             Selected: {selected.length} condition{selected.length > 1 ? "s" : ""}
           </div>
           <div className="space-y-2">
@@ -90,7 +90,7 @@ export function ConditionPicker() {
           </div>
           <button
             onClick={proceed}
-            className="mt-4 rounded-md bg-brand-700 px-5 py-2 text-sm font-medium text-white hover:bg-brand-800"
+            className="cg-btn-primary mt-4"
           >
             Author case →
           </button>
@@ -101,7 +101,7 @@ export function ConditionPicker() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search conditions… (e.g. Malaria)"
-        className="mt-4 w-full max-w-md rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-brand-700 focus:outline-none"
+        className="cg-input mt-4 max-w-md"
       />
 
       {loading && <div className="mt-6"><Spinner /></div>}

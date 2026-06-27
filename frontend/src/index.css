@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   ClinicalGuard design system
+   - Type scale (6 steps, no ad-hoc px): xs(12) · sm(14) · base(16) · lg(18) ·
+     2xl(24) · 4xl(36). Serif (IBM Plex Serif) for headings, Sans for body.
+   - Weight discipline: body normal, labels medium, headings semibold. No bold
+     except the hero display.
+   - Hierarchy via size + color + space, not weight.
+   - Radius: lg for surfaces/controls, full for pills (2 values).
+   - Motion: ease-out, 150ms. Visible focus rings everywhere.
+   ============================================================================ */
+
 :root {
   color-scheme: light;
 }
@@ -10,16 +21,55 @@ html {
   scroll-behavior: smooth;
 }
 
-body {
-  @apply bg-neutral-50 font-sans text-neutral-800 antialiased;
-  line-height: 1.65;
+@layer base {
+  body {
+    @apply bg-neutral-50 font-sans text-[15px] leading-relaxed text-neutral-800 antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-serif text-neutral-900;
+  }
+  /* One consistent, visible keyboard-focus treatment for everything. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-600/40 ring-offset-1 ring-offset-neutral-50;
+  }
 }
 
-h1, h2, h3 {
-  @apply font-serif;
+@layer components {
+  /* Surfaces */
+  .cg-card { @apply rounded-lg border border-neutral-200 bg-white; }
+
+  /* Form controls — 16px text (no iOS zoom), calm borders, clear focus. */
+  .cg-input,
+  .cg-textarea {
+    @apply w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-base text-neutral-800
+           placeholder:text-neutral-400 transition-colors duration-150 ease-out
+           focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20;
+  }
+  .cg-textarea { @apply leading-relaxed; }
+
+  /* Labels & supporting text */
+  .cg-label { @apply mb-1 block text-sm font-medium text-neutral-700; }
+  .cg-help { @apply text-xs leading-relaxed text-neutral-400; }
+  /* Group/eyebrow label — restrained, NOT shouty, never inherited into modals. */
+  .cg-eyebrow { @apply text-xs font-medium tracking-wide text-neutral-400; text-transform: none; }
+
+  /* Buttons — press + hover + focus feedback. */
+  .cg-btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium
+           transition-all duration-150 ease-out
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40
+           active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+  }
+  .cg-btn-primary { @apply cg-btn bg-brand-700 text-white hover:bg-brand-800; }
+  .cg-btn-secondary { @apply cg-btn border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100; }
+  .cg-btn-ghost { @apply cg-btn text-neutral-600 hover:bg-neutral-100; }
+
+  /* Pills / badges */
+  .cg-badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium; }
+
+  /* Inline link */
+  .cg-link { @apply font-medium text-brand-700 underline decoration-neutral-300 underline-offset-2 transition-colors hover:decoration-brand-700; }
 }
 
-/* Prose column width for the landing page's long-form sections. */
-.prose-measure {
-  max-width: 68ch;
-}
+/* Reading-measure helper for long-form prose (landing, methodology). */
+.prose-measure { max-width: 68ch; }

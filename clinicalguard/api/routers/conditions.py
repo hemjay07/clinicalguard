@@ -23,6 +23,12 @@ from clinicalguard.generation.template_extractor import extract_skeleton
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/conditions", tags=["conditions"])
 
+# The conditions list + counts are static for a deployment (ingested data does
+# not change at runtime), so the result is cached in-process after the first
+# build. This keeps the picker/overview snappy without re-running the grouped
+# count queries on every load.
+_conditions_cache: list[dict] | None = None
+
 
 def _counts_by_condition(db: Session, model, col_label: str) -> dict[int, int]:
     rows = (
@@ -37,7 +43,11 @@ def _counts_by_condition(db: Session, model, col_label: str) -> dict[int, int]:
 def list_conditions(db: Session = Depends(get_db)):
     """All conditions with per-table data counts (powers both the picker and
     the read-only conditions overview). Counts come from grouped aggregates so
-    this is a handful of queries, not one-per-condition."""
+    this is a handful of queries, not one-per-condition. Cached in-process."""
+    global _conditions_cache
+    if _conditions_cache is not None:
+        return _conditions_cache
+
     conditions = db.query(Condition.id, Condition.name).order_by(Condition.name).all()
 
     findings = _counts_by_condition(db, ConditionFinding, "findings")
@@ -47,7 +57,7 @@ def list_conditions(db: Session = Depends(get_db)):
     complications = _counts_by_condition(db, ConditionComplication, "complications")
     safety_rules = _counts_by_condition(db, ConditionSafetyRule, "safety_rules")
 
-    return [
+    _conditions_cache = [
         {
             "id": c.id,
             "name": c.name,
@@ -62,6 +72,7 @@ def list_conditions(db: Session = Depends(get_db)):
         }
         for c in conditions
     ]
+    return _conditions_cache
 
 
 def _require_condition(condition_id: int, db: Session) -> Condition:

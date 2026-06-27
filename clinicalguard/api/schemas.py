@@ -33,7 +33,6 @@ class Diagnoses(BaseModel):
 
 
 class Monitoring(BaseModel):
-    required_principle: str = ""
     required_elements: list[str] = Field(default_factory=list)
     expected_elements: list[str] = Field(default_factory=list)
 
@@ -69,6 +68,10 @@ class EvalCaseCreate(BaseModel):
     monitoring: Monitoring = Field(default_factory=Monitoring)
     escalation: Escalation = Field(default_factory=Escalation)
     safety: SafetyFlags = Field(default_factory=SafetyFlags)
+    # Reasoning-pattern archetypes the case exercises (descriptive metadata, not
+    # prescriptive). Canonical snake_case enums plus free-form "other" entries.
+    reasoning_archetypes: list[str] = Field(default_factory=list)
+    other_archetypes: list[str] = Field(default_factory=list)
 
 
 # --- responses ----------------------------------------------------------------

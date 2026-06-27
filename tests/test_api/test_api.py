@@ -79,7 +79,6 @@ def valid_payload(**overrides):
         },
         "complications": ["Cerebral malaria"],
         "monitoring": {
-            "required_principle": "Active monitoring is essential.",
             "required_elements": ["Level of consciousness", "Blood glucose"],
             "expected_elements": ["Temperature"],
         },
@@ -88,6 +87,8 @@ def valid_payload(**overrides):
             "expected": ["Anuria"],
         },
         "safety": {"selected_rule_ids": [], "free_text": ["Mefloquine cautions"]},
+        "reasoning_archetypes": ["severity_stratification", "critical_red_flag_recognition"],
+        "other_archetypes": ["a custom reasoning pattern"],
     }
     payload.update(overrides)
     return payload
@@ -204,10 +205,15 @@ def test_create_then_list_and_get(client):
     body = one.json()
     assert body["ground_truth_source"] == "md_authored_via_ui"
     assert [c["name"] for c in body["conditions"]] == ["Malaria"]
-    assert body["expected_response"]["expected_diagnoses"]["required"]["primary"] == "Severe (complicated) malaria"
+    exp = body["expected_response"]
+    assert exp["expected_diagnoses"]["required"]["primary"] == "Severe (complicated) malaria"
     # situational item mapped to the stored {test, trigger} shape
-    sit = body["expected_response"]["required_investigations"]["situational"]
+    sit = exp["required_investigations"]["situational"]
     assert sit and sit[0]["test"] == "CSF analysis" and sit[0]["trigger"]
+    # reasoning archetypes stored; monitoring principle no longer present
+    assert exp["reasoning_archetypes"] == ["severity_stratification", "critical_red_flag_recognition"]
+    assert exp["other_archetypes"] == ["a custom reasoning pattern"]
+    assert "required_principle" not in exp["required_monitoring"]
 
 
 def test_create_multi_condition(client):

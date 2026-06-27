@@ -69,11 +69,11 @@ export function GuidanceIcon({ title, text }: { title: string; text: string }) {
       </button>
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4 normal-case tracking-normal"
           onClick={() => setOpen(false)}
         >
           <div
-            className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+            className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex items-start justify-between">

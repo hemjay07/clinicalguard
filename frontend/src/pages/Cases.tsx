@@ -12,7 +12,7 @@ export function Cases() {
 
   return (
     <PageContainer>
-      <h1 className="text-2xl font-bold text-slate-800">Submitted Cases</h1>
+      <h1 className="text-2xl font-semibold text-neutral-900">Submitted Cases</h1>
       <p className="mt-1 text-slate-600">Evaluation cases authored so far. Click a case to view it.</p>
 
       {loading && <div className="mt-6"><Spinner /></div>}

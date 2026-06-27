@@ -27,10 +27,10 @@ export function ConditionDetail() {
       {data && (
         <>
           <div className="mb-2 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-slate-800">{data.name}</h1>
+            <h1 className="text-2xl font-semibold text-neutral-900">{data.name}</h1>
             <Link
               to={`/author/compose?conditions=${encodeConditions([{ condition_id: data.id, subtype: null }])}`}
-              className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+              className="cg-btn-primary"
             >
               Author case for this condition
             </Link>

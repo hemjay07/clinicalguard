@@ -10,7 +10,7 @@ function TierBlock({ label, items }: { label: string; items?: string[] }) {
   if (!items || items.length === 0) return null;
   return (
     <div className="mb-2">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="text-xs font-medium tracking-wide text-neutral-400">{label}</div>
       <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
         {items.map((t, i) => <li key={i}>{t}</li>)}
       </ul>
@@ -22,7 +22,7 @@ function SituationalBlock({ items, valueKey }: { items?: { trigger: string; [k: 
   if (!items || items.length === 0) return null;
   return (
     <div className="mb-2">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Situational</div>
+      <div className="text-xs font-medium tracking-wide text-neutral-400">Situational</div>
       <ul className="space-y-1 pl-5 text-sm text-slate-700">
         {items.map((s, i) => (
           <li key={i} className="list-disc">
@@ -48,7 +48,7 @@ export function CaseDetail() {
         return (
           <>
             <Link to="/cases" className="text-sm text-brand-700 hover:underline">← Submitted cases</Link>
-            <h1 className="mt-2 text-2xl font-bold text-slate-800">{e.case_id ?? `Case #${data.id}`}</h1>
+            <h1 className="mt-2 text-2xl font-semibold text-neutral-900">{e.case_id ?? `Case #${data.id}`}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
               <span>Conditions:</span>
               {data.conditions.map((c, i) => (

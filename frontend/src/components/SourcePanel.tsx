@@ -52,7 +52,7 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
               ) : (
                 Object.entries(data.findings.by_subtype).map(([subtype, items]) => (
                   <div key={subtype} className="mb-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{subtype}</div>
+                    <div className="text-xs font-medium tracking-wide text-neutral-400">{subtype}</div>
                     <PlainList items={items} />
                   </div>
                 ))
@@ -69,7 +69,7 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
               ) : (
                 Object.entries(data.treatments_pool.by_type).map(([type, items]) => (
                   <div key={type} className="mb-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{type}</div>
+                    <div className="text-xs font-medium tracking-wide text-neutral-400">{type}</div>
                     <PlainList items={items} />
                   </div>
                 ))
@@ -90,7 +90,7 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
             >
               {data.safety_signals.verified_safety_rules.length > 0 && (
                 <div className="mb-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Verified rules</div>
+                  <div className="text-xs font-medium tracking-wide text-neutral-400">Verified rules</div>
                   <ul className="space-y-1">
                     {data.safety_signals.verified_safety_rules.map((r) => (
                       <li key={r.rule_id}><SeverityBadge severity={r.severity} /> {r.description}</li>
@@ -98,7 +98,7 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
                   </ul>
                 </div>
               )}
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Adverse reactions (NSTG)</div>
+              <div className="text-xs font-medium tracking-wide text-neutral-400">Adverse reactions (NSTG)</div>
               <PlainList items={data.safety_signals.adverse_reactions_from_nstg} />
             </Collapsible>
           </>

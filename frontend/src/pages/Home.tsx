@@ -3,7 +3,6 @@ import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 
 const GITHUB_URL = "https://github.com/hemjay07/clinicalguard";
-const METHODOLOGY_URL = `${GITHUB_URL}/blob/main/docs/methodology.md`;
 const ADR_URL = `${GITHUB_URL}/tree/main/docs/adr`;
 const BLOG_URL = "https://medium.com/@mujeebopabode07/the-eval-was-wrong-not-the-ai-041869fad2f7";
 const PENDA_URL = "https://www.nature.com/articles/s44360-026-00082-5";
@@ -44,6 +43,9 @@ export function Home() {
           A framework for evaluating clinical AI systems against structured clinical guidelines and
           deployment-specific rules.
         </p>
+        <p className="mt-3 text-sm font-medium text-brand-700">
+          Phase A — first batch of NSTG-derived cases being authored
+        </p>
         <div className="mt-7 flex items-center gap-5">
           <Link to="/author" className="rounded bg-brand-700 px-5 py-2.5 font-medium text-white hover:bg-brand-800">
             Author a case
@@ -59,6 +61,7 @@ export function Home() {
         {[
           ["#why", "Why this matters"],
           ["#framework", "The framework"],
+          ["#how-it-works", "How it works"],
           ["#status", "Current status"],
           ["#roadmap", "Roadmap"],
           ["#contribute", "How to contribute"],
@@ -74,29 +77,39 @@ export function Home() {
       {/* Section 2: Why this matters */}
       <Section id="why" title="Why this matters">
         <p>
-          Clinical AI systems are being deployed in healthcare settings where the consequences of
-          error are serious. Recent research documents two specific failure modes. In a
-          1,469-encounter evaluation of an LLM-based clinical decision support system deployed across
-          16 Kenyan primary care clinics, harmful AI recommendations were adopted by clinicians at
-          roughly four times the rate of beneficial ones, with 25% of encounters containing
-          beneficial guidance that clinicians ignored entirely{" "}
-          <Cite href={PENDA_URL}>[1]</Cite>. The NOHARM benchmark,
-          built from 12,747 physician annotations across 100 cases, found that 76.6% of severely
-          harmful errors in clinical LLM outputs come from omission — things the AI failed to say —
-          rather than from inappropriately recommending harmful actions{" "}
-          <Cite href={NOHARM_URL}>[2]</Cite>. Most clinical AI evaluation today is not
-          designed to catch these failure modes: it either does not exist, uses circular
-          LLM-as-judge approaches that grade models against themselves, or relies on generic
-          benchmarks that test medical knowledge without testing whether the AI follows the specific
-          guidelines a deployment is built on.
+          Clinical AI is being deployed where the consequences of error are serious. Recent research
+          documents two specific failure modes that most evaluation does not catch.
         </p>
+        <div className="not-prose my-6 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <div className="font-serif text-3xl font-bold text-neutral-900">~4×</div>
+            <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+              In a 1,469-encounter evaluation across 16 Kenyan primary care clinics, clinicians
+              adopted <strong className="font-semibold text-neutral-900">harmful</strong> AI
+              recommendations at roughly four times the rate of beneficial ones — and ignored
+              beneficial guidance entirely in 25% of encounters.
+            </p>
+            <p className="mt-2 text-xs text-neutral-400"><Cite href={PENDA_URL}>Korom et al., Nature Health 2026 [1]</Cite></p>
+          </div>
+          <div className="rounded-lg border border-neutral-200 bg-white p-5">
+            <div className="font-serif text-3xl font-bold text-neutral-900">76.6%</div>
+            <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+              Across 12,747 physician annotations, 76.6% of <strong className="font-semibold text-neutral-900">severely
+              harmful</strong> errors in clinical LLM outputs came from omission — what the AI failed
+              to say — not from recommending harmful actions.
+            </p>
+            <p className="mt-2 text-xs text-neutral-400"><Cite href={NOHARM_URL}>Wu et al., NOHARM, arXiv:2512.01241 [2]</Cite></p>
+          </div>
+        </div>
         <p>
-          The problem is most acute in LMIC clinical AI deployments and in any institutional setting
-          where the AI is expected to follow specific protocols, formularies, or constraints.
-          Physician panel validation is the gold standard but inaccessible to most teams building
-          clinical AI in these contexts. ClinicalGuard proposes a credible intermediate path: a
-          structured workflow for MD-authored ground truth grounded in specific guidelines and
-          institutional rules, designed to be feasible for teams that cannot afford physician panels.
+          Most clinical AI evaluation today is not designed to catch these failure modes. It either
+          does not exist, uses circular LLM-as-judge approaches that grade models against themselves,
+          or relies on generic benchmarks that test medical knowledge without testing whether the AI
+          follows the specific guidelines a deployment is built on. Physician panel validation is the
+          gold standard but inaccessible to most teams building clinical AI in resource-constrained
+          settings. ClinicalGuard proposes a credible intermediate path: a structured workflow for
+          MD-authored ground truth grounded in specific guidelines, designed to be feasible for teams
+          that cannot afford physician panels.
         </p>
         <p className="text-base text-neutral-500">
           More on why evaluation is the bottleneck for clinical AI:{" "}
@@ -157,20 +170,44 @@ export function Home() {
         </p>
       </Section>
 
+      {/* How it works */}
+      <Section id="how-it-works" title="How it works">
+        <p>What authoring a case actually looks like, in three steps:</p>
+        <div className="not-prose mt-2 space-y-4">
+          {[
+            ["1", "Choose conditions", "Select one or more NSTG conditions the case spans. The framework shows you structured source material extracted from the guideline."],
+            ["2", "Frame the case", "Pick the reasoning patterns the case exercises. Write the clinical query and define its scope."],
+            ["3", "Author the ground truth", "Mark required, expected, and situational items for diagnoses, investigations, treatments, complications, and monitoring. Select the safety rules that apply."],
+          ].map(([n, title, body]) => (
+            <div key={n} className="flex gap-4">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 font-serif text-sm font-semibold text-brand-700">{n}</div>
+              <div>
+                <div className="font-serif text-base font-semibold text-neutral-900">{title}</div>
+                <p className="mt-0.5 text-[15px] leading-relaxed text-neutral-600">{body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
       {/* Section 4: Current status */}
       <Section id="status" title="Current status">
-        <p>
-          ClinicalGuard is currently in Phase A: minimum viable authoring. The framework was built
-          by Mujeeb Opabode, MD (University of Ibadan, 2025). The first batch of NSTG-derived
-          evaluation cases is being co-authored with Abdulquddus Ajibade, MD (Senior AI Engineer at
-          Ciba Health), whose independent clinical review strengthens the validation methodology. The
-          cases will form the corpus for an upcoming methodology paper on auto-authoring workflows for
-          clinical AI evaluation cases in resource-constrained settings.
-        </p>
-        <p>
-          The framework currently ingests <strong className="font-semibold text-neutral-900">{nConditions} NSTG conditions</strong> and
-          enforces <strong className="font-semibold text-neutral-900">{nSafety} verified safety rules</strong>. The case corpus is
-          being built; <strong className="font-semibold text-neutral-900">{nCases} cases</strong> have been submitted so far.
+        <div className="not-prose grid grid-cols-3 gap-4">
+          {[
+            [nConditions, "NSTG conditions ingested"],
+            [nSafety, "Verified safety rules"],
+            [nCases, "Cases authored"],
+          ].map(([value, label]) => (
+            <div key={label} className="rounded-lg border border-neutral-200 bg-white p-5 text-center">
+              <div className="font-serif text-3xl font-bold text-brand-700">{value}</div>
+              <div className="mt-1 text-xs text-neutral-500">{label}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4">
+          Phase A is in progress. The first batch of NSTG-derived cases is being co-authored by the
+          two reviewers, targeting 10-15 cases before opening contribution to external clinicians in
+          Phase D.
         </p>
       </Section>
 
@@ -196,7 +233,11 @@ export function Home() {
                 <tr key={phase} className="border-b border-neutral-200">
                   <td className="py-3 pr-4 font-medium text-neutral-900 whitespace-nowrap">{phase}</td>
                   <td className="py-3 pr-4">
-                    <span className="inline-block rounded-full border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 whitespace-nowrap">{status}</span>
+                    <span className={`inline-block rounded-full border px-2 py-0.5 text-xs whitespace-nowrap ${
+                      status === "In progress" ? "border-brand-200 bg-brand-50 text-brand-700"
+                      : status === "Next" || status === "After C" ? "border-neutral-200 bg-neutral-100 text-neutral-600"
+                      : "border-neutral-200 bg-neutral-50 text-neutral-400"
+                    }`}>{status}</span>
                   </td>
                   <td className="py-3 leading-relaxed">{what}</td>
                 </tr>
@@ -234,8 +275,8 @@ export function Home() {
       <Section id="resources" title="Resources">
         <ul className="not-prose space-y-3 text-[15px]">
           <li>
-            <Cite href={METHODOLOGY_URL}>Methodology document</Cite>
-            <span className="text-neutral-500"> — evaluation methodology, scoring formulas, measured variance, and acknowledged limitations.</span>
+            <Link to="/methodology" className="text-brand-700 underline decoration-neutral-300 underline-offset-2 hover:decoration-brand-700">Methodology</Link>
+            <span className="text-neutral-500"> — how cases are framed and authored, the scoring rubric, measured variance, and acknowledged limitations.</span>
           </li>
           <li>
             <Cite href={BLOG_URL}>The eval was wrong, not the AI</Cite>
@@ -258,6 +299,11 @@ export function Home() {
 
       {/* Section 8: Footer */}
       <footer className="border-t border-neutral-200 pt-8 text-sm text-neutral-500">
+        <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1">
+          <Link to="/methodology" className="hover:text-brand-700">Methodology</Link>
+          <Cite href={GITHUB_URL}>GitHub</Cite>
+          <Cite href={ADR_URL}>ADRs</Cite>
+        </div>
         <p>MIT License.</p>
         <p className="mt-1">
           Mujeeb Opabode, MD (University of Ibadan, 2025) · Abdulquddus Ajibade, MD (Senior AI

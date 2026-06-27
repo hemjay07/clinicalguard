@@ -8,6 +8,7 @@ const links = [
   { to: "/conditions", label: "Conditions" },
   { to: "/safety-rules", label: "Safety Rules" },
   { to: "/cases", label: "Submitted Cases" },
+  { to: "/methodology", label: "Methodology" },
   { to: "/eval-dashboard", label: "Eval Dashboard" },
 ];
 

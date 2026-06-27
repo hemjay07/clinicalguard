@@ -146,7 +146,6 @@ export function Methodology() {
           <li>Communication quality is not currently scored.</li>
           <li>Cases are not yet validated against real clinical AI deployments.</li>
           <li>Coverage may skew toward common conditions; stratified sampling is planned.</li>
-          <li>One author (Mujeeb) is nine months post-graduation and not in current clinical practice; the second-reviewer design partly mitigates this.</li>
           <li>Safety-rule coverage is narrow (9 verified rules across 5 of 251 conditions) and currently commission-focused, despite omission driving most severe harm.</li>
           <li>The framework depends on physicians willing to contribute their time — a real constraint, not a solved problem.</li>
         </ul>

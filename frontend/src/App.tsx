@@ -9,6 +9,7 @@ import { Authoring } from "./pages/Authoring";
 import { Cases } from "./pages/Cases";
 import { CaseDetail } from "./pages/CaseDetail";
 import { EvalDashboard } from "./pages/EvalDashboard";
+import { Methodology } from "./pages/Methodology";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/cases" element={<Cases />} />
           <Route path="/cases/:caseId" element={<CaseDetail />} />
           <Route path="/eval-dashboard" element={<EvalDashboard />} />
+          <Route path="/methodology" element={<Methodology />} />
         </Routes>
       </main>
     </div>

@@ -70,6 +70,9 @@ export function CaseDetail() {
                 {data.query_scope && (
                   <p className="mt-2 text-sm text-slate-500"><span className="font-medium">Scope: </span>{data.query_scope}</p>
                 )}
+                {e.provenance_notes && (
+                  <p className="mt-2 text-sm text-slate-500"><span className="font-medium">Ground truth provenance: </span>{e.provenance_notes}</p>
+                )}
               </SectionCard>
 
               {((e.reasoning_archetypes?.length ?? 0) > 0 || (e.other_archetypes?.length ?? 0) > 0) && (

@@ -8,7 +8,12 @@ from sqlalchemy.orm import Session
 
 from clinicalguard.api.deps import get_db
 from clinicalguard.api.schemas import EvalCaseCreate, EvalCaseCreated
-from clinicalguard.db.models import Condition, ConditionSafetyRule, EvalCase
+from clinicalguard.db.models import (
+    CandidateSafetyRule,
+    Condition,
+    ConditionSafetyRule,
+    EvalCase,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/eval-cases", tags=["eval-cases"])
@@ -112,6 +117,7 @@ def build_expected_response(
         "conditions": conds,
         "derived_from": [f"NSTG 2022 {c['condition_name']} section" for c in conds],
         "query_scope": payload.query_scope.strip(),
+        "provenance_notes": payload.provenance_notes.strip(),
         "scoring_dimensions": SCORING_DIMENSIONS,
         "expected_diagnoses": {
             "required": {
@@ -199,6 +205,27 @@ def create_eval_case(payload: EvalCaseCreate, db: Session = Depends(get_db)):
     db.add(row)
     db.commit()
     db.refresh(row)
+
+    # Collect free-text safety flags as candidates for the verified rule
+    # library (Phase D reviews them; ADR-027). Runs after the case commit and
+    # never blocks authoring — a failure here is logged, not surfaced.
+    if payload.safety.free_text:
+        try:
+            for text in payload.safety.free_text:
+                db.add(
+                    CandidateSafetyRule(
+                        rule_text=text,
+                        eval_case_id=row.id,
+                        condition_ids=json.dumps(ids),
+                        proposed_by=payload.authored_by.strip() or None,
+                    )
+                )
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.warning(
+                "Failed to record candidate safety rules for case %s", row.id, exc_info=True
+            )
 
     return EvalCaseCreated(id=row.id, case_id=case_id, warnings=warnings)
 

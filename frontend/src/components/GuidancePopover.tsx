@@ -24,7 +24,9 @@ function renderInline(s: string, keyPrefix: string): React.ReactNode[] {
 }
 
 // Render a guidance body: blank-line-separated blocks; "- " lines become a list.
-function renderGuidance(text: string): React.ReactNode {
+// Exported so other guidance surfaces (safety learn-more modal) render the
+// same markdown subset identically.
+export function renderGuidance(text: string): React.ReactNode {
   const lines = text.split("\n");
   const blocks: React.ReactNode[] = [];
   let bullets: string[] = [];

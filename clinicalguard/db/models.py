@@ -336,6 +336,26 @@ class EvalCase(Base):
     )
 
 
+class CandidateSafetyRule(Base):
+    """Free-text safety flags authored by MDs, collected as candidates for the
+    verified rule library. Background collection only for now — the review UI
+    that consumes this table is Phase D (ADR-027)."""
+
+    __tablename__ = "candidate_safety_rules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    rule_text: Mapped[str] = mapped_column(Text, nullable=False)
+    eval_case_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("eval_cases.id"), nullable=True
+    )
+    # JSON array of condition ids — the condition context the flag was raised in.
+    condition_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
+    proposed_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

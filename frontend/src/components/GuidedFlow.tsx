@@ -33,7 +33,7 @@ interface Props {
 
 function PhaseBar({ current, goTo, form }: { current: ScreenDef; goTo: (id: string) => void; form: FormState }) {
   return (
-    <div className="cg-card px-4 py-3 sm:px-5">
+    <div className="px-1">
       <div className="grid grid-cols-3 gap-2">
         {PHASES.map((p) => {
           const screens = phaseScreens(p.n);
@@ -315,17 +315,17 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, to
   const isReview = screen.kind === "review";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PhaseBar current={screen} goTo={goTo} form={form} />
 
       {/* key= remounts on navigation so the enter animation replays and
           per-screen local state (example toggles, learn-more) resets. */}
-      <div key={screen.id} className="cg-screen-enter cg-card px-5 py-6 sm:px-8 sm:py-8">
+      <div key={screen.id} className="cg-screen-enter cg-card px-5 py-7 sm:px-10 sm:py-9">
         <p className="cg-eyebrow">Phase {screen.phase} · {phaseTitle} — question {posInPhase} of {inPhase.length}</p>
-        <h2 className="mt-1.5 font-serif text-xl font-semibold leading-snug text-neutral-900">{screen.question}</h2>
-        {screen.help && <p className="mt-2 max-w-prose text-sm leading-relaxed text-neutral-500">{screen.help}</p>}
+        <h2 className="mt-2 font-serif text-2xl font-semibold leading-snug text-neutral-900">{screen.question}</h2>
+        {screen.help && <p className="mt-2.5 max-w-prose text-sm leading-relaxed text-neutral-500">{screen.help}</p>}
 
-        <div className="mt-5">
+        <div className="mt-6">
           {isReview ? (
             <ReviewScreen form={form} goTo={goTo} issues={issues} onSubmit={onSubmit} onSaveDraft={onSaveDraft} submitting={submitting} saveIndicator={saveIndicator} />
           ) : (
@@ -334,7 +334,7 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, to
         </div>
 
         {!isReview && fragment && (
-          <div className="mt-5 border-t border-neutral-100 pt-3">
+          <div className="mt-6">
             <button type="button" onClick={toggleFit} className="text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600">
               {showFit ? "▾" : "▸"} How this fits into the case
             </button>
@@ -345,28 +345,27 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, to
             )}
           </div>
         )}
-      </div>
 
-      {/* Bottom controls */}
-      <div className="flex items-center justify-between gap-3">
-        <button type="button" onClick={goBack} disabled={idx === 0} className="cg-btn-secondary" aria-label="Previous question">
-          ← Back
-        </button>
-        <div className="flex items-center gap-4">
-          <span className="hidden text-xs text-neutral-400 sm:inline">{saveIndicator}</span>
-          {!isReview && (
+        {/* Navigation lives in the card footer — one row, not three. */}
+        <div className="mt-8 flex items-center justify-between gap-3 border-t border-neutral-100 pt-5">
+          <button type="button" onClick={goBack} disabled={idx === 0} className="cg-btn-ghost -ml-2" aria-label="Previous question">
+            ← Back
+          </button>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-neutral-400">
+            {!isReview && !screenFilled(screen.kind, form) && (
+              <button type="button" onClick={goNext} className="transition-colors hover:text-neutral-600">Skip this question</button>
+            )}
+            <button type="button" onClick={onOpenFullCase} className="transition-colors hover:text-neutral-600">See full case</button>
+            <button type="button" onClick={onSaveDraft} className="transition-colors hover:text-neutral-600">Save draft</button>
+          </div>
+          {!isReview ? (
             <button type="button" onClick={goNext} className="cg-btn-primary px-6" aria-label="Next question">
               {idx === SCREENS.length - 2 ? "Review case →" : "Next →"}
             </button>
+          ) : (
+            <span aria-hidden className="w-[104px]" />
           )}
         </div>
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-neutral-400">
-        {!isReview && !screenFilled(screen.kind, form) && (
-          <button type="button" onClick={goNext} className="transition-colors hover:text-neutral-600">Skip this question</button>
-        )}
-        <button type="button" onClick={onOpenFullCase} className="transition-colors hover:text-neutral-600">See full case</button>
-        <button type="button" onClick={onSaveDraft} className="transition-colors hover:text-neutral-600">Save draft</button>
       </div>
     </div>
   );

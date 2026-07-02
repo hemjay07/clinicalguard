@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, useLocation, Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { PageContainer, Spinner, ErrorBox, SectionCard } from "../components/ui";
@@ -38,16 +38,29 @@ export function CaseDetail() {
   const { caseId } = useParams();
   const id = Number(caseId);
   const { data, error, loading } = useFetch(() => api.evalCase(id), [id]);
+  // Set when the author was just redirected here from a successful submit.
+  const location = useLocation();
+  const submitted = (location.state as { submitted?: boolean; warnings?: string[] } | null) ?? null;
 
   return (
     <PageContainer>
+      {submitted?.submitted && (
+        <div className="mb-5 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800">
+          <p className="font-medium">Case submitted. This is your case as it now exists in the corpus.</p>
+          {(submitted.warnings?.length ?? 0) > 0 && (
+            <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-brand-800/80">
+              {submitted.warnings!.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
       {loading && <Spinner />}
       {error && <ErrorBox message={error} />}
       {data && (() => {
         const e = data.expected_response ?? {};
         return (
           <>
-            <Link to="/cases" className="text-sm text-brand-700 hover:underline">← Submitted cases</Link>
+            <Link to="/cases" className="text-sm text-brand-700 hover:underline">← Cases</Link>
             <h1 className="mt-2 text-2xl font-semibold text-neutral-900">{e.case_id ?? `Case #${data.id}`}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
               <span>Conditions:</span>

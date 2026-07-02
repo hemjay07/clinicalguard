@@ -66,7 +66,6 @@ export function Authoring() {
   const [submitting, setSubmitting] = useState(false);
   const [showPanel, setShowPanel] = useState(() => sessionStorage.getItem("cg_show_source") !== "0");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [introOpen, setIntroOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [loadedDraft, setLoadedDraft] = useState(false);
   const [showTop, setShowTop] = useState(false);
@@ -161,10 +160,12 @@ export function Authoring() {
     }
     setSubmitting(true);
     try {
-      await api.createEvalCase(payload);
+      const created = await api.createEvalCase(payload);
       setSaveKind("submitted"); setSavedAt(new Date().toISOString());
       clearDraft(slug);
-      navigate("/cases");
+      // Land the author on their own case, with a success banner (and any
+      // server warnings) — not on an anonymous list.
+      navigate(`/cases/${created.id}`, { state: { submitted: true, warnings: created.warnings } });
     } catch (e) {
       if (e instanceof ApiError && e.detail && typeof e.detail === "object" && "errors" in (e.detail as any))
         setIssues(((e.detail as any).errors as string[]).map((m) => ({ message: m, screenId: null })));
@@ -184,8 +185,6 @@ export function Authoring() {
       </PageContainer>
     );
   }
-
-  const intro = sources.data?.[0]?.data.condition.introduction;
 
   const sourceArea = (
     <div className="flex h-full flex-col">
@@ -255,16 +254,9 @@ export function Authoring() {
           </div>
         </div>
 
-        {intro && (
-          <div className="mb-4">
-            <button onClick={() => setIntroOpen((o) => !o)} className="cg-link text-xs">{introOpen ? "Hide" : "Show"} NSTG introduction</button>
-            {introOpen && <p className="mt-2 text-sm leading-relaxed text-neutral-600">{intro}</p>}
-          </div>
-        )}
-
         {loadedDraftAt && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
-            <span>Loaded draft saved at {fmtTime(loadedDraftAt)} on {new Date(loadedDraftAt).toLocaleDateString()}.</span>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200/70 bg-amber-50/70 px-3.5 py-1.5 text-xs text-amber-800">
+            <span>Resumed draft from {fmtTime(loadedDraftAt)} on {new Date(loadedDraftAt).toLocaleDateString()}.</span>
             <button onClick={discardDraft} className="font-medium underline hover:no-underline">Discard and start fresh</button>
           </div>
         )}

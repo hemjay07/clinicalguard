@@ -21,12 +21,9 @@ interface Props {
   safetyRules: RuleInfo[];
   toggleRule: (id: number) => void;
   toggleArchetype: (value: string) => void;
-  onOpenFullCase: () => void;
-  onSaveDraft: () => void;
   onSubmit: () => void;
   submitting: boolean;
   issues: ValidationIssue[];
-  saveIndicator: string;
 }
 
 // --- phase bar ---------------------------------------------------------------
@@ -232,14 +229,10 @@ function ScreenBody({ screen, form, set, safetyRules, toggleRule, toggleArchetyp
 
 // --- review screen -------------------------------------------------------------
 
-function ReviewScreen({ form, goTo, issues, onSubmit, onSaveDraft, submitting, saveIndicator }: {
+function ReviewScreen({ form, goTo, issues }: {
   form: FormState;
   goTo: (id: string) => void;
   issues: ValidationIssue[];
-  onSubmit: () => void;
-  onSaveDraft: () => void;
-  submitting: boolean;
-  saveIndicator: string;
 }) {
   return (
     <div>
@@ -283,21 +276,13 @@ function ReviewScreen({ form, goTo, issues, onSubmit, onSaveDraft, submitting, s
           </div>
         ))}
       </div>
-
-      <div className="cg-card mt-4 flex items-center justify-between gap-3 p-4">
-        <div className="flex items-center gap-3">
-          <button onClick={onSaveDraft} className="cg-btn-secondary">Save as draft</button>
-          <span className="text-xs text-neutral-400">{saveIndicator}</span>
-        </div>
-        <button onClick={onSubmit} disabled={submitting} className="cg-btn-primary px-6">{submitting ? "Submitting…" : "Submit case"}</button>
-      </div>
     </div>
   );
 }
 
 // --- the flow ------------------------------------------------------------------
 
-export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, toggleRule, toggleArchetype, onOpenFullCase, onSaveDraft, onSubmit, submitting, issues, saveIndicator }: Props) {
+export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, toggleRule, toggleArchetype, onSubmit, submitting, issues }: Props) {
   const idx = screenIndex(screenId);
   const screen = SCREENS[idx];
   const inPhase = phaseScreens(screen.phase);
@@ -327,7 +312,7 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, to
 
         <div className="mt-6">
           {isReview ? (
-            <ReviewScreen form={form} goTo={goTo} issues={issues} onSubmit={onSubmit} onSaveDraft={onSaveDraft} submitting={submitting} saveIndicator={saveIndicator} />
+            <ReviewScreen form={form} goTo={goTo} issues={issues} />
           ) : (
             <ScreenBody screen={screen} form={form} set={set} safetyRules={safetyRules} toggleRule={toggleRule} toggleArchetype={toggleArchetype} onEnter={goNext} />
           )}
@@ -346,24 +331,20 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, to
           </div>
         )}
 
-        {/* Navigation lives in the card footer — one row, not three. */}
+        {/* One navigation row: Back on the left, the single forward action on
+            the right. Optional questions are skipped by pressing Next. */}
         <div className="mt-8 flex items-center justify-between gap-3 border-t border-neutral-100 pt-5">
           <button type="button" onClick={goBack} disabled={idx === 0} className="cg-btn-ghost -ml-2" aria-label="Previous question">
             ← Back
           </button>
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-neutral-400">
-            {!isReview && !screenFilled(screen.kind, form) && (
-              <button type="button" onClick={goNext} className="transition-colors hover:text-neutral-600">Skip this question</button>
-            )}
-            <button type="button" onClick={onOpenFullCase} className="transition-colors hover:text-neutral-600">See full case</button>
-            <button type="button" onClick={onSaveDraft} className="transition-colors hover:text-neutral-600">Save draft</button>
-          </div>
           {!isReview ? (
             <button type="button" onClick={goNext} className="cg-btn-primary px-6" aria-label="Next question">
               {idx === SCREENS.length - 2 ? "Review case →" : "Next →"}
             </button>
           ) : (
-            <span aria-hidden className="w-[104px]" />
+            <button type="button" onClick={onSubmit} disabled={submitting} className="cg-btn-primary px-6">
+              {submitting ? "Submitting…" : "Submit case"}
+            </button>
           )}
         </div>
       </div>

@@ -60,7 +60,7 @@ export function Authoring() {
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [saveKind, setSaveKind] = useState<"none" | "auto" | "draft" | "submitted">("none");
+  const [saveKind, setSaveKind] = useState<"none" | "auto" | "submitted">("none");
   const [loadedDraftAt, setLoadedDraftAt] = useState<string | null>(null);
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -69,7 +69,7 @@ export function Authoring() {
   const [activeTab, setActiveTab] = useState(0);
   const [loadedDraft, setLoadedDraft] = useState(false);
   const [showTop, setShowTop] = useState(false);
-  const [fullCaseOpen, setFullCaseOpen] = useState(false);
+  const [draftDismissed, setDraftDismissed] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"source" | "preview">(() =>
     sessionStorage.getItem("cg_sidebar_tab") === "preview" ? "preview" : "source");
   const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) === "form" ? "form" : "guided"));
@@ -126,13 +126,15 @@ export function Authoring() {
   const toggleRule = (ruleId: number) =>
     setForm((prev) => ({ ...prev, selected_rule_ids: prev.selected_rule_ids.includes(ruleId) ? prev.selected_rule_ids.filter((x) => x !== ruleId) : [...prev.selected_rule_ids, ruleId] }));
 
-  function saveDraftNow() { setSavedAt(saveDraft(slug, form)); setSaveKind("draft"); }
-  function discardDraft() { clearDraft(slug); setForm(EMPTY); setSavedAt(null); setSaveKind("none"); setLoadedDraftAt(null); }
+  function discardDraft() {
+    // The one destructive control on this page — always confirm.
+    if (!window.confirm("Discard this draft and start fresh? Everything entered for this case will be cleared.")) return;
+    clearDraft(slug); setForm(EMPTY); setSavedAt(null); setSaveKind("none"); setLoadedDraftAt(null);
+  }
 
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   const saveIndicator =
     saveKind === "auto" && savedAt ? `Auto-saved at ${fmtTime(savedAt)}`
-    : saveKind === "draft" && savedAt ? `Draft saved at ${fmtTime(savedAt)}`
     : saveKind === "submitted" && savedAt ? `Submitted at ${fmtTime(savedAt)}`
     : "Not yet saved";
 
@@ -254,10 +256,13 @@ export function Authoring() {
           </div>
         </div>
 
-        {loadedDraftAt && (
+        {loadedDraftAt && !draftDismissed && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200/70 bg-amber-50/70 px-3.5 py-1.5 text-xs text-amber-800">
             <span>Resumed draft from {fmtTime(loadedDraftAt)} on {new Date(loadedDraftAt).toLocaleDateString()}.</span>
-            <button onClick={discardDraft} className="font-medium underline hover:no-underline">Discard and start fresh</button>
+            <span className="flex items-center gap-3">
+              <button onClick={discardDraft} className="font-medium underline hover:no-underline">Discard and start fresh</button>
+              <button onClick={() => setDraftDismissed(true)} aria-label="Dismiss" className="font-medium hover:text-amber-950">✕</button>
+            </span>
           </div>
         )}
 
@@ -273,16 +278,13 @@ export function Authoring() {
             form={form} set={set} payload={payload}
             screenId={screenId} goTo={goTo}
             safetyRules={safetyRules} toggleRule={toggleRule} toggleArchetype={toggleArchetype}
-            onOpenFullCase={() => setFullCaseOpen(true)}
-            onSaveDraft={saveDraftNow} onSubmit={submit}
-            submitting={submitting} issues={issues} saveIndicator={saveIndicator}
+            onSubmit={submit} submitting={submitting} issues={issues}
           />
         ) : (
           <FullForm
             form={form} set={set}
             safetyRules={safetyRules} toggleRule={toggleRule} toggleArchetype={toggleArchetype}
-            onSubmit={submit} onSaveDraft={saveDraftNow}
-            saveIndicator={saveIndicator} submitting={submitting}
+            onSubmit={submit} submitting={submitting}
           />
         )}
       </div>
@@ -291,25 +293,6 @@ export function Authoring() {
         <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-[40%] overflow-hidden rounded-lg border border-neutral-200 bg-white lg:block">
           {sourceArea}
         </aside>
-      )}
-
-      {/* "See full case" — the full form in a modal, editing the same state. */}
-      {fullCaseOpen && (
-        <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-neutral-900/40 p-4 sm:p-8" onClick={() => setFullCaseOpen(false)}>
-          <div className="w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-2 flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-4 py-2.5">
-              <span className="font-serif text-sm font-semibold text-neutral-900">Full case</span>
-              <button onClick={() => setFullCaseOpen(false)} className="cg-btn-ghost px-2 py-1 text-xs">✕ Back to guided flow</button>
-            </div>
-            <FullForm
-              form={form} set={set}
-              safetyRules={safetyRules} toggleRule={toggleRule} toggleArchetype={toggleArchetype}
-              onSubmit={submit} onSaveDraft={saveDraftNow}
-              saveIndicator={saveIndicator} submitting={submitting}
-              forceOpen
-            />
-          </div>
-        </div>
       )}
 
       {showIntro && view === "guided" && (

@@ -26,8 +26,14 @@ Author the expected response, Safety layer), one clinical question per screen
 - A final review screen with per-question summaries, jump-to-fix validation,
   and submit.
 - The v1.2.1 three-section form is retained as the "Full form" view (header
-  toggle, persisted preference) and as the "See full case" modal. Both views
-  edit the same `FormState`, so they can never diverge.
+  toggle, persisted preference). Both views edit the same `FormState`, so they
+  can never diverge.
+
+  *Amended 2026-07-02 (v1.3.1):* one mechanism per job. The "See full case"
+  modal, "Save draft"/"Save as draft" buttons, and "Skip this question" link
+  were removed — the header toggle is the one route to the full form, auto-save
+  (with its single header indicator) is the one save mechanism, and Next always
+  advances. Draft-resume banner is dismissible; discarding a draft confirms.
 - The right sidebar toggles between NSTG source material and a live case
   preview whose rows jump to the corresponding screen.
 - A one-time intro overlay appears on the first-ever guided session.

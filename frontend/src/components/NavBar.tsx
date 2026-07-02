@@ -1,4 +1,4 @@
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useLocation } from "react-router-dom";
 
 const GITHUB_URL = "https://github.com/hemjay07/clinicalguard";
 
@@ -15,6 +15,8 @@ const links = [
 ];
 
 export function NavBar() {
+  // Don't advertise "Author a case" while the user is already authoring one.
+  const authoring = useLocation().pathname.startsWith("/author");
   return (
     <header className="border-b border-neutral-200 bg-neutral-50/80 backdrop-blur">
       <nav className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3.5">
@@ -44,9 +46,11 @@ export function NavBar() {
           >
             GitHub ↗
           </a>
-          <NavLink to="/author" className="cg-btn-primary px-4 py-1.5">
-            Author a case
-          </NavLink>
+          {!authoring && (
+            <NavLink to="/author" className="cg-btn-primary px-4 py-1.5">
+              Author a case
+            </NavLink>
+          )}
         </div>
       </nav>
     </header>

@@ -97,27 +97,23 @@ function TierGroup({ prefix, form, set, revealed, reveal }: {
   );
 }
 
-export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, onSubmit, onSaveDraft, saveIndicator, submitting, forceOpen = false }: {
+export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, onSubmit, submitting }: {
   form: FormState;
   set: (patch: Partial<FormState>) => void;
   safetyRules: RuleInfo[];
   toggleRule: (id: number) => void;
   toggleArchetype: (value: string) => void;
   onSubmit: () => void;
-  onSaveDraft: () => void;
-  saveIndicator: string;
   submitting: boolean;
-  forceOpen?: boolean;
 }) {
-  // Collapsed by default except the first section; the modal opens everything.
+  // Collapsed by default except the first section.
   const [sectionsOpen, setSectionsOpen] = useState<Record<number, boolean>>(() => {
-    if (forceOpen) return { 1: true, 2: true, 3: true };
     try { return { 1: true, 2: false, 3: false, ...JSON.parse(sessionStorage.getItem("cg_sections2") || "{}") }; }
     catch { return { 1: true, 2: false, 3: false }; }
   });
   const toggleSection = (n: number) => setSectionsOpen((p) => {
     const next = { ...p, [n]: !p[n] };
-    if (!forceOpen) sessionStorage.setItem("cg_sections2", JSON.stringify(next));
+    sessionStorage.setItem("cg_sections2", JSON.stringify(next));
     return next;
   });
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
@@ -198,12 +194,8 @@ export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, 
         <div className="mt-4"><Field label="Additional free-text safety flags" hint="Optional."><textarea rows={2} className="cg-textarea" value={form.safety_free_text} onChange={(e) => set({ safety_free_text: e.target.value })} placeholder="One per line" /></Field></div>
       </Section>
 
-      {/* Submit bar */}
-      <div className="cg-card flex items-center justify-between gap-3 p-4">
-        <div className="flex items-center gap-3">
-          <button onClick={onSaveDraft} className="cg-btn-secondary">Save as draft</button>
-          <span className="text-xs text-neutral-400">{saveIndicator}</span>
-        </div>
+      {/* Submit bar — saving is automatic (indicator lives in the page header). */}
+      <div className="cg-card flex items-center justify-end p-4">
         <button onClick={onSubmit} disabled={submitting} className="cg-btn-primary px-6">{submitting ? "Submitting…" : "Submit case"}</button>
       </div>
     </div>

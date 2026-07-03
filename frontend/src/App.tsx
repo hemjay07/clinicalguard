@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
+import { warmUpApi } from "./api/client";
 import { NavBar } from "./components/NavBar";
 import { Home } from "./pages/Home";
 import { Conditions } from "./pages/Conditions";
@@ -12,6 +14,9 @@ import { EvalDashboard } from "./pages/EvalDashboard";
 import { Methodology } from "./pages/Methodology";
 
 export default function App() {
+  // Start waking the free-tier backend the moment any page loads, so it's
+  // usually warm by the time the user reaches a data page.
+  useEffect(() => { warmUpApi(); }, []);
   return (
     <div className="min-h-screen">
       <NavBar />

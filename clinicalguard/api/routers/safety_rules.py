@@ -8,12 +8,18 @@ from clinicalguard.db.models import Condition, ConditionSafetyRule
 
 router = APIRouter(prefix="/safety-rules", tags=["safety-rules"])
 
+# Ingested data is static for a deployment — cache in-process like /conditions.
+_rules_cache: list[dict] | None = None
+
 
 @router.get("")
 def list_safety_rules(db: Session = Depends(get_db)):
     """All active safety rules with their condition name. Returns verified and
     unverified active rules so the browser can filter by verification status;
     universal rules (condition_id is NULL) are labelled 'Universal'."""
+    global _rules_cache
+    if _rules_cache is not None:
+        return _rules_cache
     rules = (
         db.query(ConditionSafetyRule)
         .filter(ConditionSafetyRule.is_active == True)  # noqa: E712 (SQLAlchemy needs ==)
@@ -26,7 +32,7 @@ def list_safety_rules(db: Session = Depends(get_db)):
         for c in db.query(Condition.id, Condition.name).filter(Condition.id.in_(cond_ids)).all()
     } if cond_ids else {}
 
-    return [
+    _rules_cache = [
         {
             "id": r.id,
             "condition_id": r.condition_id,
@@ -42,3 +48,4 @@ def list_safety_rules(db: Session = Depends(get_db)):
         }
         for r in rules
     ]
+    return _rules_cache

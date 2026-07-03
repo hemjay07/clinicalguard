@@ -26,8 +26,11 @@ router = APIRouter(prefix="/conditions", tags=["conditions"])
 # The conditions list + counts are static for a deployment (ingested data does
 # not change at runtime), so the result is cached in-process after the first
 # build. This keeps the picker/overview snappy without re-running the grouped
-# count queries on every load.
+# count queries on every load. Subtypes and source-material are static for the
+# same reason and get keyed caches below.
 _conditions_cache: list[dict] | None = None
+_subtypes_cache: dict[int, list[str]] = {}
+_source_material_cache: dict[tuple[int, str | None], dict] = {}
 
 
 def _counts_by_condition(db: Session, model, col_label: str) -> dict[int, int]:
@@ -85,6 +88,8 @@ def _require_condition(condition_id: int, db: Session) -> Condition:
 @router.get("/{condition_id}/subtypes")
 def get_subtypes(condition_id: int, db: Session = Depends(get_db)):
     """Distinct findings.subtype values available for this condition."""
+    if condition_id in _subtypes_cache:
+        return _subtypes_cache[condition_id]
     _require_condition(condition_id, db)
     rows = (
         db.query(ConditionFinding.subtype)
@@ -92,7 +97,8 @@ def get_subtypes(condition_id: int, db: Session = Depends(get_db)):
         .distinct()
         .all()
     )
-    return sorted({r.subtype for r in rows if r.subtype})
+    _subtypes_cache[condition_id] = sorted({r.subtype for r in rows if r.subtype})
+    return _subtypes_cache[condition_id]
 
 
 @router.get("/{condition_id}/source-material")
@@ -109,9 +115,13 @@ def get_source_material(
     investigations, treatments by type, differentials, complications, safety
     signals).
     """
+    key = (condition_id, subtype)
+    if key in _source_material_cache:
+        return _source_material_cache[key]
     _require_condition(condition_id, db)
     try:
-        return extract_skeleton(condition_id, subtype, db)
+        _source_material_cache[key] = extract_skeleton(condition_id, subtype, db)
+        return _source_material_cache[key]
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 

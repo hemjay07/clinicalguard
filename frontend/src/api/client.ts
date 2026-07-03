@@ -43,19 +43,53 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// Session cache for endpoints whose data is static per backend deployment
+// (guideline data: conditions, subtypes, source material, safety rules).
+// Repeat navigation renders instantly instead of re-crossing the network.
+const CACHE_PREFIX = "cg_api:";
+const CACHE_TTL_MS = 30 * 60 * 1000;
+
+async function cachedRequest<T>(path: string): Promise<T> {
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + path);
+    if (raw) {
+      const { at, data } = JSON.parse(raw);
+      if (Date.now() - at < CACHE_TTL_MS) return data as T;
+    }
+  } catch {
+    /* corrupt cache entry — fall through to network */
+  }
+  const data = await request<T>(path);
+  try {
+    sessionStorage.setItem(CACHE_PREFIX + path, JSON.stringify({ at: Date.now(), data }));
+  } catch {
+    /* quota exceeded — serve uncached */
+  }
+  return data;
+}
+
+// Fire-and-forget wake-up call. The Render free tier spins the backend down
+// when idle; pinging from the app shell on first load means it starts booting
+// while the user is still reading the landing page.
+export function warmUpApi(): void {
+  fetch(`${BASE}/health`).catch(() => {
+    /* backend waking up or offline — data fetches surface real errors */
+  });
+}
+
 export const api = {
   baseUrl: BASE,
   health: () => request<{ status: string }>("/health"),
-  listConditions: () => request<ConditionListItem[]>("/api/v1/conditions"),
+  listConditions: () => cachedRequest<ConditionListItem[]>("/api/v1/conditions"),
   subtypes: (id: number) =>
-    request<string[]>(`/api/v1/conditions/${id}/subtypes`),
+    cachedRequest<string[]>(`/api/v1/conditions/${id}/subtypes`),
   conditionDetails: (id: number) =>
-    request<ConditionDetails>(`/api/v1/conditions/${id}/details`),
+    cachedRequest<ConditionDetails>(`/api/v1/conditions/${id}/details`),
   sourceMaterial: (id: number, subtype: string | null) => {
     const qs = subtype ? `?subtype=${encodeURIComponent(subtype)}` : "";
-    return request<SourceMaterial>(`/api/v1/conditions/${id}/source-material${qs}`);
+    return cachedRequest<SourceMaterial>(`/api/v1/conditions/${id}/source-material${qs}`);
   },
-  safetyRules: () => request<SafetyRule[]>("/api/v1/safety-rules"),
+  safetyRules: () => cachedRequest<SafetyRule[]>("/api/v1/safety-rules"),
   listEvalCases: () => request<EvalCaseListItem[]>("/api/v1/eval-cases"),
   evalCase: (id: number) =>
     request<EvalCaseDetail>(`/api/v1/eval-cases/${id}`),

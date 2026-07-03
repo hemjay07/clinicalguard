@@ -1,5 +1,6 @@
 // Shared UI primitives, built on the design system (see index.css).
 
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 export function PageContainer({ children }: { children: ReactNode }) {
@@ -7,10 +8,24 @@ export function PageContainer({ children }: { children: ReactNode }) {
 }
 
 export function Spinner({ label = "Loading…" }: { label?: string }) {
+  // The free-tier backend cold-starts in 30-60s after idle. If loading drags
+  // past a few seconds, say so — a silent spinner reads as "broken".
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
   return (
-    <div className="flex items-center gap-2.5 text-sm text-neutral-500">
-      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-neutral-200 border-t-brand-600" />
-      <span>{label}</span>
+    <div className="text-sm text-neutral-500">
+      <div className="flex items-center gap-2.5">
+        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-neutral-200 border-t-brand-600" />
+        <span>{label}</span>
+      </div>
+      {slow && (
+        <p className="mt-2 text-xs text-neutral-400">
+          The server is waking up from sleep — this first load can take up to a minute. Subsequent pages will be fast.
+        </p>
+      )}
     </div>
   );
 }

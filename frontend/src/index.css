@@ -73,3 +73,10 @@ html {
 
 /* Reading-measure helper for long-form prose (landing, methodology). */
 .prose-measure { max-width: 68ch; }
+
+/* Guided-flow screen transition: one subtle fade-up per navigation. */
+@keyframes cg-fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cg-screen-enter { animation: cg-fade-up 200ms ease-out; }

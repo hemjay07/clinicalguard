@@ -21,6 +21,24 @@ function Collapsible({ title, count, children, defaultOpen = true }: { title: st
   );
 }
 
+// The guideline's introduction for the condition — collapsed by default so it
+// doesn't push the structured data below the fold.
+function IntroBlock({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+      >
+        <span>NSTG introduction</span>
+        <span className="text-slate-400">{open ? "−" : "+"}</span>
+      </button>
+      {open && <p className="px-4 pb-3 text-sm leading-relaxed text-slate-600">{text}</p>}
+    </div>
+  );
+}
+
 function PlainList({ items }: { items: string[] }) {
   if (items.length === 0) return <p className="text-slate-400">None recorded.</p>;
   return (
@@ -46,6 +64,12 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
 
         {data && (
           <>
+            {data.condition.introduction && (
+              <div className="border-b border-slate-200">
+                <IntroBlock text={data.condition.introduction} />
+              </div>
+            )}
+
             <Collapsible title="Findings" count={Object.values(data.findings.by_subtype).flat().length}>
               {Object.keys(data.findings.by_subtype).length === 0 ? (
                 <p className="text-slate-400">None recorded.</p>

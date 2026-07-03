@@ -61,6 +61,9 @@ class EvalCaseCreate(BaseModel):
     query: str
     what_this_evaluates: str = ""
     query_scope: str = ""
+    # Graduated-provenance transparency: what parts of the ground truth are
+    # guideline-grounded vs authored from clinical judgment (ADR-026).
+    provenance_notes: str = ""
     diagnoses: Diagnoses = Field(default_factory=Diagnoses)
     investigations: TierGroup = Field(default_factory=TierGroup)
     treatments: TierGroup = Field(default_factory=TierGroup)

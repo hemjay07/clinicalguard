@@ -1,0 +1,17 @@
+# Pings the Render free-tier backend so it doesn't spin down after 15 minutes
+# of idle (cold starts take 30-60s+ and read as "the site is broken" to MDs).
+# GitHub cron isn't exact — occasional cold starts can still happen; the
+# frontend shows a wake-up notice for those.
+name: keep-backend-warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: curl -sS --max-time 90 https://clinicalguard-api.onrender.com/health

@@ -62,6 +62,7 @@ def valid_payload(**overrides):
         "query": "Adult with high fever, altered consciousness, recent travel to endemic area — diagnosis and management",
         "what_this_evaluates": "Recognition of severe malaria features.",
         "query_scope": "diagnosis + acute management",
+        "provenance_notes": "Fully NSTG-grounded; severity thresholds from clinical judgment.",
         "diagnoses": {
             "primary": "Severe (complicated) malaria",
             "critical_differentials": ["Meningitis"],
@@ -214,6 +215,25 @@ def test_create_then_list_and_get(client):
     assert exp["reasoning_archetypes"] == ["severity_stratification", "critical_red_flag_recognition"]
     assert exp["other_archetypes"] == ["a custom reasoning pattern"]
     assert "required_principle" not in exp["required_monitoring"]
+    # provenance notes stored in the blob (ADR-026)
+    assert exp["provenance_notes"] == "Fully NSTG-grounded; severity thresholds from clinical judgment."
+
+
+def test_create_collects_candidate_safety_rules(client, db_session):
+    """Free-text safety flags are also collected into candidate_safety_rules
+    (ADR-027) with the case, condition context, and author recorded."""
+    from clinicalguard.db.models import CandidateSafetyRule
+
+    created = client.post("/api/v1/eval-cases", json=valid_payload()).json()
+    rows = (
+        db_session.query(CandidateSafetyRule)
+        .filter(CandidateSafetyRule.eval_case_id == created["id"])
+        .all()
+    )
+    assert [r.rule_text for r in rows] == ["Mefloquine cautions"]
+    assert rows[0].proposed_by == "Dr Test"
+    import json as _json
+    assert _json.loads(rows[0].condition_ids) == [MALARIA_ID]
 
 
 def test_create_multi_condition(client):

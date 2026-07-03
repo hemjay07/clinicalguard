@@ -120,6 +120,7 @@ export interface EvalCasePayload {
   query: string;
   what_this_evaluates: string;
   query_scope: string;
+  provenance_notes: string;
   diagnoses: { primary: string; critical_differentials: string[]; other_considerations: string[] };
   investigations: TierGroup;
   treatments: TierGroup;

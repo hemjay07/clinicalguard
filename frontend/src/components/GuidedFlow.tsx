@@ -149,8 +149,8 @@ function ScreenBody({ screen, form, set, safetyRules, toggleRule, toggleArchetyp
     case "provenance":
       return (
         <div>
-          <textarea {...textareaProps("provenance_notes", 3, '"General diabetes management from NSTG. DKA protocol from ADA 2024, as NSTG does not cover DKA specifically."')} />
-          <div className="mt-2"><GuidanceIcon title="Ground truth provenance" text={PROVENANCE_GUIDANCE} /> <span className="text-xs text-neutral-400">Why provenance matters</span></div>
+          <textarea {...textareaProps("provenance_notes", 3, "TB diagnosis and regimen from NSTG. HIV co-management (cotrimoxazole, CD4, coordinated ART) from WHO TB-HIV guidance, which NSTG doesn't cover.")} />
+          <div className="mt-2"><GuidanceIcon title="Provenance notes" text={PROVENANCE_GUIDANCE} /> <span className="text-xs text-neutral-400">Why provenance matters</span></div>
         </div>
       );
     case "primary":
@@ -195,15 +195,9 @@ function ScreenBody({ screen, form, set, safetyRules, toggleRule, toggleArchetyp
       );
     case "escalation":
       return (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <div className="cg-label">Required</div>
-            <textarea {...textareaProps("esc_required", 4, "One per line — e.g. Blood glucose not falling despite adequate therapy")} />
-          </div>
-          <div>
-            <div className="cg-label">Expected</div>
-            <textarea {...textareaProps("esc_expected", 4, "One per line — e.g. Persistent vomiting compromising airway safety")} />
-          </div>
+        <div>
+          <p className="cg-help mb-1.5">Format: [finding] — [escalation action]</p>
+          <textarea {...textareaProps("escalation", 4, "Rifampicin resistance on GeneXpert — escalate to MDR-TB pathway")} />
         </div>
       );
     case "safety_rules":

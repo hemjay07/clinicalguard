@@ -63,9 +63,9 @@ export const SCREENS: ScreenDef[] = [
     help: "Bounds what the AI is graded on — e.g. “diagnosis and initial management; excludes long-term glycaemic control planning”.",
   },
   {
-    id: "1.6", phase: 1, kind: "provenance", crumb: "Provenance", optional: true,
+    id: "1.6", phase: 1, kind: "provenance", crumb: "Provenance notes", optional: true,
     question: "What is the provenance of this case’s ground truth?",
-    help: "Explain what parts of the case are guideline-grounded and what parts are authored from clinical judgment. Example: “General diabetes management from NSTG. DKA protocol from ADA 2024, as NSTG does not cover DKA specifically.”",
+    help: "Two sentences: what traces to the guideline, and what is authored from clinical judgment or another standard. This tells a reviewer what to verify against what. Not a decision journal.",
   },
 
   // --- Phase 2: Author the expected response ---
@@ -125,9 +125,9 @@ export const SCREENS: ScreenDef[] = [
     help: "Required: monitoring without which management is unsafe. Expected: monitoring a thorough plan would include.",
   },
   {
-    id: "2.12", phase: 2, kind: "escalation", crumb: "Escalation", optional: true,
+    id: "2.12", phase: 2, kind: "escalation", crumb: "Escalation triggers", optional: true,
     question: "What escalation triggers should the AI address?",
-    help: "Required: escalation triggers the AI must state. Expected: triggers a thorough response would also cover.",
+    help: "One per line, as [finding] — [escalation action]. A finding either warrants escalation or it does not — there is no required/expected tier here.",
   },
 
   // --- Phase 3: Safety layer ---
@@ -177,7 +177,7 @@ export function screenFilled(kind: ScreenKind, form: FormState): boolean {
     case "tx_situational": return !!form.tx_situational.trim();
     case "complications": return !!form.complications.trim();
     case "monitoring": return !!(form.mon_required.trim() || form.mon_expected.trim());
-    case "escalation": return !!(form.esc_required.trim() || form.esc_expected.trim());
+    case "escalation": return !!form.escalation.trim();
     case "safety_rules": return form.selected_rule_ids.length > 0;
     case "safety_flags": return !!form.safety_free_text.trim();
     case "review": return false;
@@ -219,10 +219,7 @@ export function screenSummary(kind: ScreenKind, form: FormState): string {
       const parts = [count(form.mon_required, "required item"), count(form.mon_expected, "expected item")].filter(Boolean);
       return parts.join(" · ");
     }
-    case "escalation": {
-      const parts = [count(form.esc_required, "required trigger"), count(form.esc_expected, "expected trigger")].filter(Boolean);
-      return parts.join(" · ");
-    }
+    case "escalation": return count(form.escalation, "trigger");
     case "safety_rules": {
       const n = form.selected_rule_ids.length;
       return n === 0 ? "" : `${n} rule${n === 1 ? "" : "s"} selected`;
@@ -254,7 +251,7 @@ export function previewFragment(kind: ScreenKind, p: EvalCasePayload): object | 
     case "tx_situational": return { treatments: { situational: p.treatments.situational } };
     case "complications": return { complications: p.complications };
     case "monitoring": return { monitoring: p.monitoring };
-    case "escalation": return { escalation: p.escalation };
+    case "escalation": return { escalation_triggers: p.escalation };
     case "safety_rules": return { safety: { selected_rule_ids: p.safety.selected_rule_ids } };
     case "safety_flags": return { safety: { free_text: p.safety.free_text } };
     case "review": return null;

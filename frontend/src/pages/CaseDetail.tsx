@@ -133,8 +133,13 @@ export function CaseDetail() {
                 )}
                 <TierBlock label="Monitoring — required" items={e.required_monitoring?.required_elements} />
                 <TierBlock label="Monitoring — expected" items={e.required_monitoring?.expected_elements} />
-                <TierBlock label="Escalation — required" items={e.required_escalation_triggers?.required} />
-                <TierBlock label="Escalation — expected" items={e.required_escalation_triggers?.expected} />
+                {/* Escalation is flat (ADR-028); legacy blobs may still carry the old tiered shape. */}
+                <TierBlock label="Escalation triggers" items={
+                  e.escalation_triggers
+                  ?? (e.required_escalation_triggers
+                    ? [...(e.required_escalation_triggers.required ?? []), ...(e.required_escalation_triggers.expected ?? [])]
+                    : undefined)
+                } />
               </SectionCard>
 
               <SectionCard title="Safety flags">

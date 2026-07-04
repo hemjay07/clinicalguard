@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
@@ -6,13 +6,15 @@ import { PageContainer, Spinner, ErrorBox } from "../components/ui";
 import { encodeConditions } from "../selection";
 import type { SelectedCondition } from "../types";
 
+// No subtype selector here (PRD v1.3.1 §2): the NSTG "subtype" field is
+// overloaded with document-structure headings ("Signs", "General"), and in
+// practice the clinical variant is expressed in the query and ground truth,
+// not at selection time. Headings remain as grouping inside the source panel.
 export function ConditionPicker() {
   const { data, error, loading } = useFetch(() => api.listConditions(), []);
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<SelectedCondition[]>([]);
-  // subtype options per condition id, fetched lazily when a condition is added
-  const [subtypeOpts, setSubtypeOpts] = useState<Record<number, string[]>>({});
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -29,25 +31,10 @@ export function ConditionPicker() {
   function removeCondition(id: number) {
     setSelected((prev) => prev.filter((s) => s.condition_id !== id));
   }
-  function setSubtype(id: number, subtype: string | null) {
-    setSelected((prev) => prev.map((s) => (s.condition_id === id ? { ...s, subtype } : s)));
-  }
-
-  // Fetch subtype options for any selected condition we haven't loaded yet.
-  useEffect(() => {
-    selected.forEach((s) => {
-      if (subtypeOpts[s.condition_id] === undefined) {
-        api
-          .subtypes(s.condition_id)
-          .then((opts) => setSubtypeOpts((prev) => ({ ...prev, [s.condition_id]: opts })))
-          .catch(() => setSubtypeOpts((prev) => ({ ...prev, [s.condition_id]: [] })));
-      }
-    });
-  }, [selected, subtypeOpts]);
 
   function proceed() {
     if (selected.length === 0) return;
-    const refs = selected.map((s) => ({ condition_id: s.condition_id, subtype: s.subtype }));
+    const refs = selected.map((s) => ({ condition_id: s.condition_id, subtype: null }));
     navigate(`/author/compose?conditions=${encodeConditions(refs)}`);
   }
 
@@ -55,7 +42,7 @@ export function ConditionPicker() {
     <PageContainer>
       <h1 className="font-serif text-2xl font-semibold text-neutral-900">Author a case</h1>
       <p className="mt-1 text-neutral-600">
-        Select one or more conditions the case spans. Each condition can have its own subtype.
+        Select one or more conditions the case spans.
       </p>
 
       {/* Selected chips */}
@@ -68,16 +55,6 @@ export function ConditionPicker() {
             {selected.map((s) => (
               <div key={s.condition_id} className="flex flex-wrap items-center gap-2 rounded-md bg-neutral-50 px-3 py-2">
                 <span className="font-medium text-neutral-800">{s.name}</span>
-                <select
-                  value={s.subtype ?? ""}
-                  onChange={(e) => setSubtype(s.condition_id, e.target.value || null)}
-                  className="rounded border border-neutral-300 px-2 py-1 text-xs"
-                >
-                  <option value="">— whole condition —</option>
-                  {(subtypeOpts[s.condition_id] ?? []).map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
                 <button
                   onClick={() => removeCondition(s.condition_id)}
                   className="ml-auto rounded px-2 py-0.5 text-xs text-neutral-500 hover:bg-neutral-200"

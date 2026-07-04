@@ -126,7 +126,8 @@ export interface EvalCasePayload {
   treatments: TierGroup;
   complications: string[];
   monitoring: { required_elements: string[]; expected_elements: string[] };
-  escalation: { required: string[]; expected: string[] };
+  // Flat by design (ADR-028): a finding either warrants escalation or not.
+  escalation: string[];
   safety: { selected_rule_ids: number[]; free_text: string[] };
   reasoning_archetypes: string[];
   other_archetypes: string[];

@@ -120,10 +120,10 @@ export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, 
   const reveal = (k: string) => setRevealed((p) => ({ ...p, [k]: true }));
 
   const s1Status = statusOf([form.authored_by, form.archetypes.length || form.other_checked ? "x" : "", form.query, form.what_this_evaluates, form.query_scope, form.provenance_notes]);
-  const s2Status = statusOf([form.primary, form.critical_differentials, form.other_considerations, form.inv_required, form.inv_expected, form.inv_situational, form.tx_required, form.tx_expected, form.tx_situational, form.complications, form.mon_required, form.mon_expected, form.esc_required, form.esc_expected]);
+  const s2Status = statusOf([form.primary, form.critical_differentials, form.other_considerations, form.inv_required, form.inv_expected, form.inv_situational, form.tx_required, form.tx_expected, form.tx_situational, form.complications, form.mon_required, form.mon_expected, form.escalation]);
   const s3Status = statusOf([form.selected_rule_ids.length ? "x" : "", form.safety_free_text]);
 
-  const s2Count = [form.primary, form.critical_differentials, form.other_considerations, form.inv_required, form.inv_expected, form.inv_situational, form.tx_required, form.tx_expected, form.tx_situational, form.complications, form.mon_required, form.mon_expected, form.esc_required, form.esc_expected]
+  const s2Count = [form.primary, form.critical_differentials, form.other_considerations, form.inv_required, form.inv_expected, form.inv_situational, form.tx_required, form.tx_expected, form.tx_situational, form.complications, form.mon_required, form.mon_expected, form.escalation]
     .reduce((a, v) => a + lines(v).length, 0);
   const s1Summary = form.query ? `"${truncate(form.query, 56)}"` : "What the case is about and what reasoning it tests";
   const s2Summary = form.primary ? `${truncate(form.primary, 36)} · ${s2Count} item${s2Count === 1 ? "" : "s"}` : "What a competent AI should address";
@@ -145,8 +145,8 @@ export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, 
           <textarea rows={2} className="cg-textarea" value={form.what_this_evaluates} onChange={(e) => set({ what_this_evaluates: e.target.value })} placeholder="Optional but recommended." />
         </Field>
         <Field label="Query scope" hint="Optional."><input className="cg-input" value={form.query_scope} onChange={(e) => set({ query_scope: e.target.value })} placeholder="e.g. diagnosis + initial management; excludes long-term follow-up" /></Field>
-        <Field label="Ground truth provenance" guidance={{ title: "Ground truth provenance", text: PROVENANCE_GUIDANCE }} hint="Optional. What is guideline-grounded vs authored from clinical judgment.">
-          <textarea rows={2} className="cg-textarea" value={form.provenance_notes} onChange={(e) => set({ provenance_notes: e.target.value })} placeholder='e.g. "General diabetes management from NSTG. DKA protocol from ADA 2024, as NSTG does not cover DKA specifically."' />
+        <Field label="Provenance notes" guidance={{ title: "Provenance notes", text: PROVENANCE_GUIDANCE }} hint="Two sentences: what traces to the guideline, and what is authored from clinical judgment or another standard. This tells a reviewer what to verify against what. Not a decision journal.">
+          <textarea rows={2} className="cg-textarea" value={form.provenance_notes} onChange={(e) => set({ provenance_notes: e.target.value })} placeholder="TB diagnosis and regimen from NSTG. HIV co-management (cotrimoxazole, CD4, coordinated ART) from WHO TB-HIV guidance, which NSTG doesn't cover." />
         </Field>
       </Section>
 
@@ -178,9 +178,10 @@ export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, 
             <div className="grid gap-x-4 sm:grid-cols-2">
               <Field label="Monitoring — required"><textarea rows={2} className="cg-textarea" value={form.mon_required} onChange={(e) => set({ mon_required: e.target.value })} placeholder="One per line" /></Field>
               <Field label="Monitoring — expected"><textarea rows={2} className="cg-textarea" value={form.mon_expected} onChange={(e) => set({ mon_expected: e.target.value })} placeholder="One per line" /></Field>
-              <Field label="Escalation — required"><textarea rows={2} className="cg-textarea" value={form.esc_required} onChange={(e) => set({ esc_required: e.target.value })} placeholder="One per line" /></Field>
-              <Field label="Escalation — expected"><textarea rows={2} className="cg-textarea" value={form.esc_expected} onChange={(e) => set({ esc_expected: e.target.value })} placeholder="One per line" /></Field>
             </div>
+            <Field label="Escalation triggers" hint="One per line: [finding] — [escalation action]. Flat — a finding either warrants escalation or it does not.">
+              <textarea rows={2} className="cg-textarea" value={form.escalation} onChange={(e) => set({ escalation: e.target.value })} placeholder="Rifampicin resistance on GeneXpert — escalate to MDR-TB pathway" />
+            </Field>
           </div>
         </div>
       </Section>

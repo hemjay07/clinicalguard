@@ -37,9 +37,8 @@ class Monitoring(BaseModel):
     expected_elements: list[str] = Field(default_factory=list)
 
 
-class Escalation(BaseModel):
-    required: list[str] = Field(default_factory=list)
-    expected: list[str] = Field(default_factory=list)
+# Escalation is deliberately flat (ADR-028): a finding either warrants
+# escalation or it does not — "expected escalation" is not a meaningful tier.
 
 
 class SafetyFlags(BaseModel):
@@ -69,7 +68,7 @@ class EvalCaseCreate(BaseModel):
     treatments: TierGroup = Field(default_factory=TierGroup)
     complications: list[str] = Field(default_factory=list)
     monitoring: Monitoring = Field(default_factory=Monitoring)
-    escalation: Escalation = Field(default_factory=Escalation)
+    escalation: list[str] = Field(default_factory=list)
     safety: SafetyFlags = Field(default_factory=SafetyFlags)
     # Reasoning-pattern archetypes the case exercises (descriptive metadata, not
     # prescriptive). Canonical snake_case enums plus free-form "other" entries.

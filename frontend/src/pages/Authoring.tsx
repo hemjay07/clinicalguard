@@ -14,7 +14,7 @@ import { GuidedFlow } from "../components/GuidedFlow";
 import { CasePreview } from "../components/CasePreview";
 import { saveDraft, loadDraft, clearDraft, saveAuthorName, loadAuthorName } from "../storage";
 import { decodeConditions, draftSlug } from "../selection";
-import { EMPTY, toPayload, validateCase } from "../caseForm";
+import { EMPTY, toPayload } from "../caseForm";
 import type { FormState, RuleInfo, ValidationIssue } from "../caseForm";
 import { SCREENS } from "../flow";
 import type { SourceMaterial, ConditionRef } from "../types";
@@ -103,6 +103,11 @@ export function Authoring() {
     const d = loadDraft<FormState>(slug);
     const savedName = loadAuthorName();
     const base = d ? { ...EMPTY, ...d.state, authored_by: d.state.authored_by || savedName } : { ...EMPTY, authored_by: savedName };
+    // Drafts saved before v1.3.1 carried tiered escalation — merge into the flat field.
+    const legacy = d?.state as (FormState & { esc_required?: string; esc_expected?: string }) | undefined;
+    if (legacy && !base.escalation && (legacy.esc_required || legacy.esc_expected)) {
+      base.escalation = [legacy.esc_required, legacy.esc_expected].filter(Boolean).join("\n");
+    }
     setForm(base);
     setSavedAt(d ? d.savedAt : null);
     setSaveKind(d ? "auto" : "none");
@@ -153,13 +158,9 @@ export function Authoring() {
   const payload = useMemo(() => toPayload(form, refs), [form, refs]);
 
   async function submit() {
-    const errs = validateCase(payload);
-    setIssues(errs);
-    if (errs.length) {
-      if (view === "guided") goTo(REVIEW_SCREEN);
-      else window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
+    // No client-side gating (v1.3.1 §4): no field is required at submission.
+    // The author decides what a case needs. Issues only carry server errors.
+    setIssues([]);
     setSubmitting(true);
     try {
       const created = await api.createEvalCase(payload);

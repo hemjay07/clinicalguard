@@ -28,31 +28,23 @@ SCORING_DIMENSIONS = [
 ]
 
 
-def validate_case(payload: EvalCaseCreate) -> tuple[list[str], list[str]]:
+def validate_case(payload: EvalCaseCreate) -> list[str]:
     """
-    Structural validation. Returns (errors, warnings).
+    Advisory validation only. Returns warnings; nothing blocks submission.
 
-    Errors block submission (the case is structurally incomplete). Warnings are
-    surfaced to the author but do not block — they flag thinness, not breakage.
-    The frontend mirrors these checks; the server is the source of truth.
+    Per the v1.3.1 decision: no field is required at submission — the author
+    decides what a case needs, the tool does not enforce. Empty safety layer,
+    empty differentials, and skipped enrichment fields are all valid states.
+    Warnings flag formatting or thinness the author may want to know about.
     """
-    errors: list[str] = []
     warnings: list[str] = []
 
-    if not payload.query.strip():
-        errors.append("Clinical query is required.")
-    if not payload.diagnoses.primary.strip():
-        errors.append("Expected primary diagnosis is required.")
-    if not payload.investigations.required and not payload.treatments.required:
-        errors.append(
-            "At least one required investigation or one required treatment is needed."
-        )
     for sit in payload.investigations.situational:
         if not sit.trigger.strip():
-            errors.append(f"Situational investigation '{sit.item}' is missing a trigger.")
+            warnings.append(f"Situational investigation '{sit.item}' has no trigger.")
     for sit in payload.treatments.situational:
         if not sit.trigger.strip():
-            errors.append(f"Situational treatment '{sit.item}' is missing a trigger.")
+            warnings.append(f"Situational treatment '{sit.item}' has no trigger.")
 
     if not payload.what_this_evaluates.strip():
         warnings.append(
@@ -60,10 +52,10 @@ def validate_case(payload: EvalCaseCreate) -> tuple[list[str], list[str]]:
         )
     if not payload.monitoring.required_elements:
         warnings.append("No monitoring plan provided.")
-    if not payload.escalation.required:
-        warnings.append("No required escalation triggers provided.")
+    if not payload.escalation:
+        warnings.append("No escalation triggers provided.")
 
-    return errors, warnings
+    return warnings
 
 
 def _slug(text: str) -> str:
@@ -147,10 +139,9 @@ def build_expected_response(
             "required_elements": payload.monitoring.required_elements,
             "expected_elements": payload.monitoring.expected_elements,
         },
-        "required_escalation_triggers": {
-            "required": payload.escalation.required,
-            "expected": payload.escalation.expected,
-        },
+        # Flat list (ADR-028): a finding either warrants escalation or it
+        # does not. Format per line: "[finding] — [escalation action]".
+        "escalation_triggers": payload.escalation,
         "reasoning_archetypes": payload.reasoning_archetypes,
         "other_archetypes": payload.other_archetypes,
         "required_safety_flags": {
@@ -175,10 +166,7 @@ def create_eval_case(payload: EvalCaseCreate, db: Session = Depends(get_db)):
     if missing:
         raise HTTPException(status_code=404, detail=f"Condition(s) not found: {missing}")
 
-    errors, warnings = validate_case(payload)
-    if errors:
-        # 422 = the submission is structurally incomplete.
-        raise HTTPException(status_code=422, detail={"errors": errors})
+    warnings = validate_case(payload)
 
     # Ordered list of referenced conditions, each with its name and subtype.
     conds = [

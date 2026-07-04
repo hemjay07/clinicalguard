@@ -83,10 +83,7 @@ def valid_payload(**overrides):
             "required_elements": ["Level of consciousness", "Blood glucose"],
             "expected_elements": ["Temperature"],
         },
-        "escalation": {
-            "required": ["Deep coma"],
-            "expected": ["Anuria"],
-        },
+        "escalation": ["Deep coma — escalate to ICU", "Anuria — renal review"],
         "safety": {"selected_rule_ids": [], "free_text": ["Mefloquine cautions"]},
         "reasoning_archetypes": ["severity_stratification", "critical_red_flag_recognition"],
         "other_archetypes": ["a custom reasoning pattern"],
@@ -217,6 +214,9 @@ def test_create_then_list_and_get(client):
     assert "required_principle" not in exp["required_monitoring"]
     # provenance notes stored in the blob (ADR-026)
     assert exp["provenance_notes"] == "Fully NSTG-grounded; severity thresholds from clinical judgment."
+    # escalation is flat (ADR-028)
+    assert exp["escalation_triggers"] == ["Deep coma — escalate to ICU", "Anuria — renal review"]
+    assert "required_escalation_triggers" not in exp
 
 
 def test_create_collects_candidate_safety_rules(client, db_session):
@@ -263,23 +263,24 @@ def test_create_partially_unknown_conditions_404(client):
     assert r.status_code == 404
 
 
-def test_create_missing_primary_diagnosis_422(client):
-    payload = valid_payload(diagnoses={"primary": "", "critical_differentials": [], "other_considerations": []})
-    r = client.post("/api/v1/eval-cases", json=payload)
-    assert r.status_code == 422
-    assert any("diagnosis" in e.lower() for e in r.json()["detail"]["errors"])
-
-
-def test_create_no_required_inv_or_treatment_422(client):
+def test_create_empty_fields_still_submits(client):
+    """v1.3.1 §4: no field is required at submission. Empty diagnosis, empty
+    safety layer, no required investigations/treatments — all valid states."""
     payload = valid_payload(
+        diagnoses={"primary": "", "critical_differentials": [], "other_considerations": []},
         investigations={"required": [], "expected": [], "situational": []},
         treatments={"required": [], "expected": [], "situational": []},
+        safety={"selected_rule_ids": [], "free_text": []},
+        escalation=[],
     )
     r = client.post("/api/v1/eval-cases", json=payload)
-    assert r.status_code == 422
+    assert r.status_code == 201, r.text
+    # thinness surfaces as warnings, never as blocks — and never for safety
+    warnings = r.json()["warnings"]
+    assert not any("safety" in w.lower() for w in warnings)
 
 
-def test_create_situational_missing_trigger_422(client):
+def test_create_situational_missing_trigger_warns_not_blocks(client):
     payload = valid_payload(
         investigations={
             "required": ["Blood smear"],
@@ -288,8 +289,8 @@ def test_create_situational_missing_trigger_422(client):
         }
     )
     r = client.post("/api/v1/eval-cases", json=payload)
-    assert r.status_code == 422
-    assert any("trigger" in e.lower() for e in r.json()["detail"]["errors"])
+    assert r.status_code == 201, r.text
+    assert any("trigger" in w.lower() for w in r.json()["warnings"])
 
 
 def test_create_unknown_condition_404(client):

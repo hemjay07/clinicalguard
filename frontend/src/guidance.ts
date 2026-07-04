@@ -80,19 +80,18 @@ Select all that apply to your case. A case can exercise multiple patterns.
 
 Pick "Other" if your case exercises a pattern not in this list, and describe it briefly.`;
 
-export const PROVENANCE_GUIDANCE = `Cases are strongest when their ground truth is traceable. Provenance notes record where each part of the case comes from.
+export const PROVENANCE_GUIDANCE = `Provenance is source attribution in the fewest words that let a reviewer know what to verify against what.
 
-**Explain:**
-
-- What parts are grounded in the guideline (NSTG for this corpus)
-- What parts come from another named source (specify which, and why)
-- What parts are authored from your clinical judgment
+**Two sentences:** what traces to the guideline, and what is authored from clinical judgment or another standard.
 
 **Example:**
 
-"General diabetes management from NSTG. DKA protocol from ADA 2024, as NSTG does not cover DKA specifically. Escalation thresholds from clinical judgment."
+"TB diagnosis and regimen from NSTG. HIV co-management (cotrimoxazole, CD4, coordinated ART) from WHO TB-HIV guidance, which NSTG doesn't cover."
 
-This matters for mixed-source cases: a reviewer (or a future you) can see exactly which claims trace to a guideline and which rest on authorial judgment.`;
+**Not:**
+
+- An enumeration of every item
+- A record of what you considered and rejected (that belongs in a reviewer comment)`;
 
 // Shown as an always-visible card at the top of the safety layer phase — the
 // safety-vs-rubric distinction is the most misunderstood part of the framework.

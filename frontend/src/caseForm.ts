@@ -19,7 +19,7 @@ export interface FormState {
   tx_required: string; tx_expected: string; tx_situational: string;
   complications: string;
   mon_required: string; mon_expected: string;
-  esc_required: string; esc_expected: string;
+  escalation: string;
   selected_rule_ids: number[];
   safety_free_text: string;
   archetypes: string[];
@@ -33,7 +33,7 @@ export const EMPTY: FormState = {
   inv_required: "", inv_expected: "", inv_situational: "",
   tx_required: "", tx_expected: "", tx_situational: "",
   complications: "", mon_required: "", mon_expected: "",
-  esc_required: "", esc_expected: "", selected_rule_ids: [], safety_free_text: "",
+  escalation: "", selected_rule_ids: [], safety_free_text: "",
   archetypes: [], other_checked: false, other_text: "",
 };
 
@@ -61,7 +61,7 @@ export function toPayload(f: FormState, conditions: ConditionRef[]): EvalCasePay
     treatments: { required: lines(f.tx_required), expected: lines(f.tx_expected), situational: parseSituational(f.tx_situational) },
     complications: lines(f.complications),
     monitoring: { required_elements: lines(f.mon_required), expected_elements: lines(f.mon_expected) },
-    escalation: { required: lines(f.esc_required), expected: lines(f.esc_expected) },
+    escalation: lines(f.escalation),
     safety: { selected_rule_ids: f.selected_rule_ids, free_text: lines(f.safety_free_text) },
     reasoning_archetypes: f.archetypes,
     other_archetypes: f.other_checked && f.other_text.trim() ? [f.other_text.trim()] : [],
@@ -71,23 +71,13 @@ export function toPayload(f: FormState, conditions: ConditionRef[]): EvalCasePay
 // A validation issue knows which guided-flow screen fixes it, so the review
 // screen can offer a direct jump. screenId is null for server-side errors that
 // don't map to one screen.
+//
+// No field is required at submission (v1.3.1 §4): the author decides what a
+// case needs, the tool does not enforce. Issues now only carry server-side
+// errors (e.g. unknown condition); there is no client-side gating.
 export interface ValidationIssue {
   message: string;
   screenId: string | null;
-}
-
-export function validateCase(p: EvalCasePayload): ValidationIssue[] {
-  const issues: ValidationIssue[] = [];
-  if (!p.authored_by) issues.push({ message: "Your name (authored by) is required.", screenId: "1.1" });
-  if (!p.query) issues.push({ message: "Clinical query is required.", screenId: "1.3" });
-  if (!p.diagnoses.primary) issues.push({ message: "Expected primary diagnosis is required.", screenId: "2.1" });
-  if (p.investigations.required.length === 0 && p.treatments.required.length === 0)
-    issues.push({ message: "At least one required investigation or one required treatment is needed.", screenId: "2.4" });
-  for (const s of p.investigations.situational)
-    if (!s.trigger) issues.push({ message: `Situational investigation "${s.item}" is missing a trigger (use: item — trigger: …).`, screenId: "2.6" });
-  for (const s of p.treatments.situational)
-    if (!s.trigger) issues.push({ message: `Situational treatment "${s.item}" is missing a trigger (use: item — trigger: …).`, screenId: "2.9" });
-  return issues;
 }
 
 // Verified safety rule as flattened for the authoring UI (deduped across the

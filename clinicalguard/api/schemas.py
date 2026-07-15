@@ -41,9 +41,16 @@ class Monitoring(BaseModel):
 # escalation or it does not — "expected escalation" is not a meaningful tier.
 
 
+# v1.4: the author answers a single harm question (ADR-029) — no rule
+# selection. `free_text` holds the danger-level constraints the author wrote;
+# `none_declared` is the explicit "I considered harm and there is none"
+# escape, distinct from an unanswered section. Exactly one of
+# (free_text non-empty, none_declared) must hold — enforced in
+# routers/eval_cases.py, the one deliberate exception to v1.3.1's
+# "nothing is required at submission."
 class SafetyFlags(BaseModel):
-    selected_rule_ids: list[int] = Field(default_factory=list)
     free_text: list[str] = Field(default_factory=list)
+    none_declared: bool = False
 
 
 class ConditionRef(BaseModel):
@@ -56,7 +63,8 @@ class ConditionRef(BaseModel):
 class EvalCaseCreate(BaseModel):
     # A case references one or more conditions; each carries its own subtype.
     conditions: list[ConditionRef] = Field(default_factory=list)
-    authored_by: str
+    # No authored_by field (ADR-030): identity comes from the authenticated
+    # session (Depends(get_current_user)) in the router, never the client body.
     query: str
     what_this_evaluates: str = ""
     query_scope: str = ""

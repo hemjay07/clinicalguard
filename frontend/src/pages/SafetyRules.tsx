@@ -2,25 +2,23 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
-import { PageContainer, Spinner, ErrorBox, SeverityBadge } from "../components/ui";
+import { PageContainer, Spinner, ErrorBox } from "../components/ui";
 
 export function SafetyRules() {
   const { data, error, loading } = useFetch(() => api.safetyRules(), []);
   const [q, setQ] = useState("");
-  const [severity, setSeverity] = useState("ALL");
   const [verified, setVerified] = useState("ALL");
 
   const filtered = useMemo(() => {
     if (!data) return [];
     return data.filter((r) => {
-      if (severity !== "ALL" && r.severity?.toUpperCase() !== severity) return false;
       if (verified === "VERIFIED" && !r.is_verified) return false;
       if (verified === "UNVERIFIED" && r.is_verified) return false;
       const needle = q.trim().toLowerCase();
       if (needle && !r.description.toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [data, q, severity, verified]);
+  }, [data, q, verified]);
 
   return (
     <PageContainer>
@@ -37,12 +35,6 @@ export function SafetyRules() {
           placeholder="Search descriptions…"
           className="w-64 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
         />
-        <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
-          <option value="ALL">All severities</option>
-          <option value="CRITICAL">Critical</option>
-          <option value="WARNING">Warning</option>
-          <option value="INFO">Info</option>
-        </select>
         <select value={verified} onChange={(e) => setVerified(e.target.value)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
           <option value="ALL">All</option>
           <option value="VERIFIED">Verified</option>
@@ -59,7 +51,6 @@ export function SafetyRules() {
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2">Condition</th>
-                <th className="px-3 py-2">Severity</th>
                 <th className="px-3 py-2">Description</th>
                 <th className="px-3 py-2">Source</th>
                 <th className="px-3 py-2">Active</th>
@@ -78,7 +69,6 @@ export function SafetyRules() {
                       <span className="text-slate-500">{r.condition_name}</span>
                     )}
                   </td>
-                  <td className="px-3 py-2"><SeverityBadge severity={r.severity} /></td>
                   <td className="px-3 py-2 text-slate-700">{r.description}</td>
                   <td className="px-3 py-2 text-xs text-slate-400">{r.source}</td>
                   <td className="px-3 py-2">{r.is_active ? "✓" : "—"}</td>
@@ -87,7 +77,7 @@ export function SafetyRules() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-slate-400">No rules match the filters.</td>
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">No rules match the filters.</td>
                 </tr>
               )}
             </tbody>

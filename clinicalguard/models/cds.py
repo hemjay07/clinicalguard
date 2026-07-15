@@ -9,9 +9,7 @@ class Citation(BaseModel):
 
 
 class SafetyFlag(BaseModel):
-    rule_type: str
     description: str
-    severity: str
     verified: bool
 
 

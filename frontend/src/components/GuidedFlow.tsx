@@ -4,13 +4,14 @@
 // the shared FormState + autosave in the Authoring shell.
 
 import { useState } from "react";
-import type { FormState, RuleInfo, ValidationIssue } from "../caseForm";
+import type { FormState, ValidationIssue } from "../caseForm";
+import { SAFETY_PROMPT } from "../caseForm";
 import type { EvalCasePayload } from "../types";
 import { PHASES, SCREENS, screenIndex, phaseScreens, screenFilled, screenSummary, previewFragment } from "../flow";
 import type { ScreenDef } from "../flow";
-import { ArchetypePicker, SafetyRuleList, TextModal, ExampleToggle } from "./fields";
+import { ArchetypePicker, ExampleToggle } from "./fields";
 import { GuidanceIcon } from "./GuidancePopover";
-import { QUERY_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE, PROVENANCE_GUIDANCE, SAFETY_EXPLAINER_CARD, SAFETY_LEARN_MORE, QUERY_EXAMPLE } from "../guidance";
+import { QUERY_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE, PROVENANCE_GUIDANCE, QUERY_EXAMPLE } from "../guidance";
 
 interface Props {
   form: FormState;
@@ -18,8 +19,6 @@ interface Props {
   payload: EvalCasePayload;
   screenId: string;
   goTo: (id: string) => void;
-  safetyRules: RuleInfo[];
-  toggleRule: (id: number) => void;
   toggleArchetype: (value: string) => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -94,16 +93,14 @@ const SITUATIONAL_PLACEHOLDER: Record<string, string> = {
   tx_situational: "IV sodium bicarbonate — trigger: AI raises severe acidosis with pH < 7.0",
 };
 
-function ScreenBody({ screen, form, set, safetyRules, toggleRule, toggleArchetype, onEnter }: {
+function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPrompt }: {
   screen: ScreenDef;
   form: FormState;
   set: (patch: Partial<FormState>) => void;
-  safetyRules: RuleInfo[];
-  toggleRule: (id: number) => void;
   toggleArchetype: (value: string) => void;
   onEnter: () => void;
+  showSafetyPrompt: boolean;
 }) {
-  const [learnMore, setLearnMore] = useState(false);
   const inputProps = (key: keyof FormState, placeholder: string) => ({
     className: "cg-input",
     value: form[key] as string,
@@ -120,8 +117,6 @@ function ScreenBody({ screen, form, set, safetyRules, toggleRule, toggleArchetyp
   });
 
   switch (screen.kind) {
-    case "author":
-      return <input {...inputProps("authored_by", "Your name")} autoFocus />;
     case "archetypes":
       return (
         <div>
@@ -200,22 +195,29 @@ function ScreenBody({ screen, form, set, safetyRules, toggleRule, toggleArchetyp
           <textarea {...textareaProps("escalation", 4, "Rifampicin resistance on GeneXpert — escalate to MDR-TB pathway")} />
         </div>
       );
-    case "safety_rules":
+    case "safety_harm": {
+      const checked = form.safety_none_declared;
       return (
         <div>
-          <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3">
-            <p className="text-sm font-medium text-brand-800">Safety rules score separately from the clinical rubric.</p>
-            <p className="mt-1 text-sm leading-relaxed text-brand-800/80">{SAFETY_EXPLAINER_CARD}</p>
-            <button type="button" onClick={() => setLearnMore(true)} className="mt-2 text-xs font-medium text-brand-700 underline decoration-brand-300 underline-offset-2 hover:decoration-brand-700">
-              Learn more about safety rules
-            </button>
-          </div>
-          <SafetyRuleList rules={safetyRules} selectedIds={form.selected_rule_ids} toggleRule={toggleRule} />
-          {learnMore && <TextModal title="How safety rules work" text={SAFETY_LEARN_MORE} onClose={() => setLearnMore(false)} />}
+          <textarea
+            {...textareaProps("safety_harm_text", 4, "One per line — e.g. Insulin should not be initiated without first confirming serum potassium above 3.3 mmol/L")}
+            autoFocus
+          />
+          <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-neutral-700">
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={(e) => set({ safety_none_declared: e.target.checked })}
+              className="mt-0.5 accent-brand-700"
+            />
+            <span>No danger-level constraints apply to this patient.</span>
+          </label>
+          {showSafetyPrompt && (
+            <p className="mt-3 text-sm text-amber-700">{SAFETY_PROMPT}</p>
+          )}
         </div>
       );
-    case "safety_flags":
-      return <textarea {...textareaProps("safety_free_text", 3, "One per line — e.g. Insulin should not be initiated without first confirming serum potassium above 3.3 mmol/L…")} />;
+    }
     case "review":
       return null; // rendered by ReviewScreen
   }
@@ -276,12 +278,13 @@ function ReviewScreen({ form, goTo, issues }: {
 
 // --- the flow ------------------------------------------------------------------
 
-export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, toggleRule, toggleArchetype, onSubmit, submitting, issues }: Props) {
+export function GuidedFlow({ form, set, payload, screenId, goTo, toggleArchetype, onSubmit, submitting, issues }: Props) {
   const idx = screenIndex(screenId);
   const screen = SCREENS[idx];
   const inPhase = phaseScreens(screen.phase);
   const posInPhase = inPhase.findIndex((s) => s.id === screen.id) + 1;
   const phaseTitle = PHASES.find((p) => p.n === screen.phase)!.title;
+  const showSafetyPrompt = issues.some((i) => i.screenId === screen.id);
 
   // "How this fits into the case" open-state persists for the session so the
   // MD opts in once, not on every screen.
@@ -308,7 +311,7 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, safetyRules, to
           {isReview ? (
             <ReviewScreen form={form} goTo={goTo} issues={issues} />
           ) : (
-            <ScreenBody screen={screen} form={form} set={set} safetyRules={safetyRules} toggleRule={toggleRule} toggleArchetype={toggleArchetype} onEnter={goNext} />
+            <ScreenBody screen={screen} form={form} set={set} toggleArchetype={toggleArchetype} onEnter={goNext} showSafetyPrompt={showSafetyPrompt} />
           )}
         </div>
 

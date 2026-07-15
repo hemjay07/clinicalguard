@@ -32,3 +32,25 @@ verified candidates join the rule library.
 - Phase D starts with a populated candidate queue instead of a cold start.
 - Duplicate content exists (blob + table) by design; the table is the queryable
   index, the blob remains the case's source of truth.
+
+## Addendum (2026-07-14): manual promotion stopgap
+
+`get_relevant_rules()` (safety/engine.py) only ever reads `condition_safety_rules`
+— it has never read `candidate_safety_rules`. Since Phase D's review UI (the
+intended candidate → verified promotion path) is still deferred, every
+MD-authored free-text flag was unreachable by the safety engine from the
+moment it was authored, for every case, not just newly authored ones.
+
+As a stopgap, the 9 candidate rows for the first 3 authored cases (DKA/103,
+TB/119, heart failure/139) were promoted directly into `condition_safety_rules`
+by a one-off script, mapped to each case's own `condition_id` and verified
+against `get_relevant_rules()` returning them per case. `rule_type`, `severity`,
+and `action` were dropped from the schema in the same pass (Alembic
+`0920942cf2ee`) — they carried no methodological signal (unused by any logic,
+or in severity's case, a CRITICAL-only scoring distinction that has been
+replaced with a uniform per-fired-rule deduction).
+
+This is not the Phase D workflow — it was a manual, one-time promotion for 3
+specific cases, not a general candidate → verified pipeline. Future authored
+cases still need either a real Phase D review UI or a repeat of this manual
+step until that UI exists.

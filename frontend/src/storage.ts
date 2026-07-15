@@ -29,15 +29,3 @@ export function loadDraft<T>(slug: string): Draft<T> | null {
 export function clearDraft(slug: string): void {
   localStorage.removeItem(PREFIX + slug);
 }
-
-// The author's name persists globally (not per-case) so they don't retype it for
-// every case in an authoring session.
-const AUTHOR_KEY = "clinicalguard_author_name";
-
-export function saveAuthorName(name: string): void {
-  if (name.trim()) localStorage.setItem(AUTHOR_KEY, name.trim());
-}
-
-export function loadAuthorName(): string {
-  return localStorage.getItem(AUTHOR_KEY) ?? "";
-}

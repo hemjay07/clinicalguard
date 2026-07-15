@@ -201,17 +201,17 @@ class ConditionDifferential(Base):
 class ConditionSafetyRule(Base):
     __tablename__ = "condition_safety_rules"
 
+    # rule_type, severity, and action were removed (see safety/engine.py
+    # comment): they carried no methodological signal in the current design.
+    # Any future reintroduction should be a deliberate, classified decision.
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     condition_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("conditions.id"), nullable=True
     )
-    rule_type: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    severity: Mapped[str] = mapped_column(String(20), nullable=False)
     is_universal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     rule_logic: Mapped[str | None] = mapped_column(Text, nullable=True)
-    action: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -309,7 +309,23 @@ class ConditionInvestigation(Base):
         "Condition", back_populates="investigations"
     )
 
-    
+
+class User(Base):
+    """A known, seeded author (ADR-030). No self-signup — accounts are
+    created via clinicalguard.auth.seed_user. Minimal identity, not a
+    permissions system: every authenticated user has the same capabilities."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+
+
 class EvalCase(Base):
     __tablename__ = "eval_cases"
 
@@ -333,6 +349,24 @@ class EvalCase(Base):
     query_scope_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
+    )
+    # True only when the author actively ticked "no danger-level constraints
+    # apply" (ADR-029). False covers both "not yet answered" (legacy rows,
+    # pre-v1.4) and "answered with constraints" — those are distinguished by
+    # whether required_safety_flags.free_text is non-empty in expected_response.
+    safety_none_declared: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    # Nullable: rows predating auth (v1.3.1 and earlier) have no session-backed
+    # author. A legacy case must go through the one-time backfill (matching
+    # its free-text authored_by against a seeded user) before it's editable —
+    # NULL is never silently treated as "editable by anyone" (see the
+    # ownership check in the PUT endpoint).
+    author_user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, onupdate=datetime.utcnow
     )
 
 

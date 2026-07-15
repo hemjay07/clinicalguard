@@ -1,0 +1,994 @@
+{
+  "date": "2026-07-13",
+  "n_runs": 30,
+  "case_ids": [
+    103,
+    119,
+    139
+  ],
+  "judge_model": "gpt-4o-mini",
+  "scoring_version": "2.0-required-expected-split",
+  "cases": [
+    {
+      "case_id": "heart_failure",
+      "db_id": 139,
+      "runs": [
+        {
+          "run": 1,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 2,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 3,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 4,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 5,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 6,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 7,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 8,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 9,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 10,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 11,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 12,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 13,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 14,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 15,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 16,
+          "overall_score": 0.9,
+          "treatment_correctness": 0.875,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 17,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 18,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 19,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 20,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 21,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 22,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 23,
+          "overall_score": 0.894,
+          "treatment_correctness": 0.875,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.85,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 24,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 25,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 26,
+          "overall_score": 0.894,
+          "treatment_correctness": 0.875,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.85,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 27,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 28,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 29,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 30,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        }
+      ],
+      "statistics": {
+        "overall_score": {
+          "mean": 0.9254,
+          "sigma": 0.012,
+          "cv": 0.013,
+          "min": 0.894,
+          "max": 0.939
+        },
+        "treatment_correctness": {
+          "mean": 0.9393,
+          "sigma": 0.0224,
+          "cv": 0.0239,
+          "min": 0.875,
+          "max": 0.95
+        },
+        "investigation_appropriateness": {
+          "mean": 0.9,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.9,
+          "max": 0.9
+        },
+        "completeness": {
+          "mean": 0.8867,
+          "sigma": 0.0243,
+          "cv": 0.0274,
+          "min": 0.85,
+          "max": 0.925
+        },
+        "safety_adherence": {
+          "mean": 1.0,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        }
+      },
+      "rule_fire_rates": []
+    },
+    {
+      "case_id": "diabetes_mellitus",
+      "db_id": 103,
+      "runs": [
+        {
+          "run": 1,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 2,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 3,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 4,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 5,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 6,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 7,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 8,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 9,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 10,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 11,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 12,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 13,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 14,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 15,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 16,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 17,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 18,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 19,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 20,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 21,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 22,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 23,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 24,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 25,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 26,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 27,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 28,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 29,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 30,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.925,
+          "completeness": 0.9,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        }
+      ],
+      "statistics": {
+        "overall_score": {
+          "mean": 0.939,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.939,
+          "max": 0.939
+        },
+        "treatment_correctness": {
+          "mean": 0.95,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.95,
+          "max": 0.95
+        },
+        "investigation_appropriateness": {
+          "mean": 0.925,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.925,
+          "max": 0.925
+        },
+        "completeness": {
+          "mean": 0.9,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.9,
+          "max": 0.9
+        },
+        "safety_adherence": {
+          "mean": 1.0,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        }
+      },
+      "rule_fire_rates": [
+        {
+          "rule_id": 2,
+          "description": "Oral antidiabetic medications are not indicated for Type 1 diabetes and should n",
+          "severity": "CRITICAL",
+          "fired_in": 0,
+          "total_runs": 30,
+          "fire_rate": 0.0
+        },
+        {
+          "rule_id": 3,
+          "description": "Metformin and long-acting sulphonylureas including glibenclamide are contraindic",
+          "severity": "CRITICAL",
+          "fired_in": 0,
+          "total_runs": 30,
+          "fire_rate": 0.0
+        },
+        {
+          "rule_id": 4,
+          "description": "Insulin and all sulphonylureas carry significant risk of hypoglycemia. Patients ",
+          "severity": "WARNING",
+          "fired_in": 0,
+          "total_runs": 30,
+          "fire_rate": 0.0
+        }
+      ]
+    },
+    {
+      "case_id": "pulmonary_tuberculosis",
+      "db_id": 119,
+      "runs": [
+        {
+          "run": 1,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 2,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 3,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 4,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 5,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 6,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 7,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 8,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 9,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 10,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 11,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 12,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 13,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 14,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 15,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 16,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 17,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 18,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 19,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 20,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 21,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 22,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 23,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 24,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 25,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 26,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 27,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 28,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 29,
+          "overall_score": 0.939,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.925,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 30,
+          "overall_score": 0.926,
+          "treatment_correctness": 0.95,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        }
+      ],
+      "statistics": {
+        "overall_score": {
+          "mean": 0.9377,
+          "sigma": 0.004,
+          "cv": 0.0042,
+          "min": 0.926,
+          "max": 0.939
+        },
+        "treatment_correctness": {
+          "mean": 0.95,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.95,
+          "max": 0.95
+        },
+        "investigation_appropriateness": {
+          "mean": 0.9,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.9,
+          "max": 0.9
+        },
+        "completeness": {
+          "mean": 0.92,
+          "sigma": 0.0153,
+          "cv": 0.0166,
+          "min": 0.875,
+          "max": 0.925
+        },
+        "safety_adherence": {
+          "mean": 1.0,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        }
+      },
+      "rule_fire_rates": []
+    }
+  ],
+  "summary": {
+    "judge_scoring_variance": {
+      "max_sigma": 0.0243,
+      "worst_pair": "heart_failure:completeness",
+      "note": "Variance in LLM judge scores (treatment, investigation, completeness). Cause: LLM non-determinism despite temperature=0. Mitigation: multi-judge cross-family scoring."
+    },
+    "safety_detection_variance": {
+      "max_sigma": 0.0,
+      "worst_pair": "",
+      "inconsistent_rules": {},
+      "note": "Variance in safety rule firing. Formula is deterministic (0.5 per CRITICAL). Detection uses LLM so input to formula is stochastic. Mitigation: multiple sampling with majority vote, or deterministic rule matching. Fire rate measures detector consistency only, not correctness \u2014 whether a rule *should* fire on a given response is not evaluated here."
+    },
+    "interpretation": "sigma < 0.05 indicates stable scoring. sigma 0.05-0.1 indicates moderate variance. sigma > 0.1 indicates the scorer is unreliable for that dimension on this case."
+  }
+}

@@ -14,12 +14,15 @@ from fastapi.testclient import TestClient
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 
-from clinicalguard.api.deps import get_db
+from clinicalguard.api.deps import get_current_user, get_db
 from clinicalguard.api.main import app
+from clinicalguard.auth.hashing import hash_password
+from clinicalguard.db.models import User
 from clinicalguard.db.session import engine
 
 MALARIA_ID = 149
 MALARIA_SUBTYPE = "Severe (Complicated) malaria"
+TEST_AUTHOR_NAME = "Dr Test"
 
 
 @pytest.fixture
@@ -45,7 +48,37 @@ def db_session():
 
 
 @pytest.fixture
-def client(db_session):
+def test_user(db_session):
+    """A seeded-style user (ADR-030), created inside the same rolled-back
+    transaction as everything else in the test."""
+    user = User(username="drtest", password_hash=hash_password("x"), display_name=TEST_AUTHOR_NAME)
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def client(db_session, test_user):
+    """Authenticated client — most endpoints under test require a session.
+    Unauthenticated behavior is covered separately (test_create_requires_auth)."""
+    def _override_get_db():
+        yield db_session
+
+    def _override_get_current_user():
+        return test_user
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+def unauthenticated_client(db_session):
+    """Same DB session, no auth override — for testing the 401 path."""
     def _override_get_db():
         yield db_session
 
@@ -58,7 +91,6 @@ def client(db_session):
 def valid_payload(**overrides):
     payload = {
         "conditions": [{"condition_id": MALARIA_ID, "subtype": MALARIA_SUBTYPE}],
-        "authored_by": "Dr Test",
         "query": "Adult with high fever, altered consciousness, recent travel to endemic area — diagnosis and management",
         "what_this_evaluates": "Recognition of severe malaria features.",
         "query_scope": "diagnosis + acute management",
@@ -84,7 +116,7 @@ def valid_payload(**overrides):
             "expected_elements": ["Temperature"],
         },
         "escalation": ["Deep coma — escalate to ICU", "Anuria — renal review"],
-        "safety": {"selected_rule_ids": [], "free_text": ["Mefloquine cautions"]},
+        "safety": {"free_text": ["Mefloquine cautions"], "none_declared": False},
         "reasoning_archetypes": ["severity_stratification", "critical_red_flag_recognition"],
         "other_archetypes": ["a custom reasoning pattern"],
     }
@@ -173,7 +205,7 @@ def test_safety_rules(client):
     data = r.json()
     assert len(data) >= 1
     rule = data[0]
-    assert {"id", "condition_name", "severity", "description", "is_verified"} <= rule.keys()
+    assert {"id", "condition_name", "description", "is_verified"} <= rule.keys()
 
 
 # --- eval cases ---------------------------------------------------------------
@@ -231,7 +263,7 @@ def test_create_collects_candidate_safety_rules(client, db_session):
         .all()
     )
     assert [r.rule_text for r in rows] == ["Mefloquine cautions"]
-    assert rows[0].proposed_by == "Dr Test"
+    assert rows[0].proposed_by == TEST_AUTHOR_NAME
     import json as _json
     assert _json.loads(rows[0].condition_ids) == [MALARIA_ID]
 
@@ -264,20 +296,39 @@ def test_create_partially_unknown_conditions_404(client):
 
 
 def test_create_empty_fields_still_submits(client):
-    """v1.3.1 §4: no field is required at submission. Empty diagnosis, empty
-    safety layer, no required investigations/treatments — all valid states."""
+    """v1.3.1 §4: no field is required at submission except safety (ADR-029,
+    the one deliberate exception — see test_create_safety_unanswered_422).
+    Empty diagnosis, no required investigations/treatments — all valid states
+    as long as safety is actively resolved (here, declared empty)."""
     payload = valid_payload(
         diagnoses={"primary": "", "critical_differentials": [], "other_considerations": []},
         investigations={"required": [], "expected": [], "situational": []},
         treatments={"required": [], "expected": [], "situational": []},
-        safety={"selected_rule_ids": [], "free_text": []},
+        safety={"free_text": [], "none_declared": True},
         escalation=[],
     )
     r = client.post("/api/v1/eval-cases", json=payload)
     assert r.status_code == 201, r.text
-    # thinness surfaces as warnings, never as blocks — and never for safety
     warnings = r.json()["warnings"]
     assert not any("safety" in w.lower() for w in warnings)
+
+
+def test_create_safety_unanswered_422(client):
+    """ADR-029: submission is blocked unless the author either lists a harm
+    constraint or ticks the declared-empty checkbox — both empty is invalid."""
+    payload = valid_payload(safety={"free_text": [], "none_declared": False})
+    r = client.post("/api/v1/eval-cases", json=payload)
+    assert r.status_code == 422
+    assert "safety question" in r.json()["detail"]["errors"][0].lower()
+
+
+def test_create_safety_both_filled_422(client):
+    """Ticking declared-empty while also listing constraints is not a valid
+    submit state either — exactly one of the two must hold."""
+    payload = valid_payload(safety={"free_text": ["Mefloquine cautions"], "none_declared": True})
+    r = client.post("/api/v1/eval-cases", json=payload)
+    assert r.status_code == 422
+    assert "safety question" in r.json()["detail"]["errors"][0].lower()
 
 
 def test_create_situational_missing_trigger_warns_not_blocks(client):
@@ -300,4 +351,90 @@ def test_create_unknown_condition_404(client):
 
 def test_get_eval_case_404(client):
     r = client.get("/api/v1/eval-cases/999999999")
+    assert r.status_code == 404
+
+
+# --- auth (ADR-030) ------------------------------------------------------------
+
+def test_create_requires_auth(unauthenticated_client):
+    r = unauthenticated_client.post("/api/v1/eval-cases", json=valid_payload())
+    assert r.status_code == 401
+
+
+def test_login_success_and_me(unauthenticated_client, db_session):
+    user = User(username="loginuser", password_hash=hash_password("correct-horse"), display_name="Login User")
+    db_session.add(user)
+    db_session.commit()
+
+    r = unauthenticated_client.post("/api/v1/auth/login", json={"username": "loginuser", "password": "correct-horse"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["username"] == "loginuser"
+    assert body["display_name"] == "Login User"
+
+    me = unauthenticated_client.get("/api/v1/auth/me")
+    assert me.status_code == 200
+    assert me.json()["username"] == "loginuser"
+
+
+def test_login_wrong_password_401(unauthenticated_client, db_session):
+    user = User(username="loginuser2", password_hash=hash_password("correct-horse"), display_name="Login User 2")
+    db_session.add(user)
+    db_session.commit()
+
+    r = unauthenticated_client.post("/api/v1/auth/login", json={"username": "loginuser2", "password": "wrong"})
+    assert r.status_code == 401
+
+
+def test_me_without_session_401(unauthenticated_client):
+    r = unauthenticated_client.get("/api/v1/auth/me")
+    assert r.status_code == 401
+
+
+def test_created_case_stamped_with_author_user_id(client, test_user):
+    created = client.post("/api/v1/eval-cases", json=valid_payload()).json()
+    body = client.get(f"/api/v1/eval-cases/{created['id']}").json()
+    assert body["author_user_id"] == test_user.id
+    assert body["expected_response"]["authored_by"] == TEST_AUTHOR_NAME
+
+
+# --- case editing (ADR-030) ------------------------------------------------
+
+def test_update_own_case_succeeds(client):
+    created = client.post("/api/v1/eval-cases", json=valid_payload()).json()
+
+    r = client.put(f"/api/v1/eval-cases/{created['id']}", json=valid_payload(query="Updated query text."))
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == created["id"]
+
+    body = client.get(f"/api/v1/eval-cases/{created['id']}").json()
+    assert body["query"] == "Updated query text."
+    assert body["updated_at"] is not None
+
+
+def test_update_other_users_case_403(client, db_session, test_user):
+    created = client.post("/api/v1/eval-cases", json=valid_payload()).json()
+
+    other = User(username="other_author", password_hash=hash_password("x"), display_name="Other Doctor")
+    db_session.add(other)
+    db_session.commit()
+
+    app.dependency_overrides[get_current_user] = lambda: other
+    r = client.put(f"/api/v1/eval-cases/{created['id']}", json=valid_payload())
+    app.dependency_overrides[get_current_user] = lambda: test_user
+    assert r.status_code == 403
+
+
+def test_update_requires_auth(client):
+    created = client.post("/api/v1/eval-cases", json=valid_payload()).json()
+    # Both fixtures share the same global `app` (dependency_overrides is
+    # process-wide), so drop the auth override in place rather than mixing
+    # in a second client fixture — that ordering is undefined and flaky.
+    app.dependency_overrides.pop(get_current_user, None)
+    r = client.put(f"/api/v1/eval-cases/{created['id']}", json=valid_payload())
+    assert r.status_code == 401
+
+
+def test_update_unknown_case_404(client):
+    r = client.put("/api/v1/eval-cases/999999999", json=valid_payload())
     assert r.status_code == 404

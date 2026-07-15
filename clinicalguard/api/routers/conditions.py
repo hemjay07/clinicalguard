@@ -199,10 +199,7 @@ def get_condition_details(condition_id: int, db: Session = Depends(get_db)):
         "safety_rules": [
             {
                 "id": r.id,
-                "rule_type": r.rule_type,
                 "description": r.description,
-                "severity": r.severity,
-                "action": r.action,
                 "source": r.source,
                 "is_active": r.is_active,
                 "is_verified": r.is_verified,

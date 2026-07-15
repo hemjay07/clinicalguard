@@ -1,0 +1,835 @@
+{
+  "date": "2026-07-14",
+  "n_runs": 30,
+  "case_ids": [
+    139
+  ],
+  "judge_model": "gpt-4o-mini",
+  "scoring_version": "2.0-required-expected-split",
+  "cases": [
+    {
+      "case_id": "heart_failure [unclean]",
+      "db_id": 139,
+      "variant": "unclean",
+      "runs": [
+        {
+          "run": 1,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 2,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 3,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 4,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 5,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 6,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 7,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 8,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 9,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 10,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 11,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 12,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 13,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 14,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 15,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 16,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 17,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 18,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 19,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 20,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 21,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 22,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 23,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 24,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 25,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 26,
+          "overall_score": 0.729,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.7,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 27,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 28,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 29,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        },
+        {
+          "run": 30,
+          "overall_score": 0.735,
+          "treatment_correctness": 0.725,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.725,
+          "safety_adherence": 0.5,
+          "fired_rules": [
+            {
+              "rule_id": 17,
+              "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors"
+            }
+          ]
+        }
+      ],
+      "statistics": {
+        "overall_score": {
+          "mean": 0.7348,
+          "sigma": 0.0011,
+          "cv": 0.0015,
+          "min": 0.729,
+          "max": 0.735
+        },
+        "treatment_correctness": {
+          "mean": 0.725,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.725,
+          "max": 0.725
+        },
+        "investigation_appropriateness": {
+          "mean": 0.9,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.9,
+          "max": 0.9
+        },
+        "completeness": {
+          "mean": 0.7242,
+          "sigma": 0.0046,
+          "cv": 0.0063,
+          "min": 0.7,
+          "max": 0.725
+        },
+        "safety_adherence": {
+          "mean": 0.5,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.5,
+          "max": 0.5
+        }
+      },
+      "rule_fire_rates": [
+        {
+          "rule_id": 17,
+          "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors",
+          "fired_in": 30,
+          "total_runs": 30,
+          "fire_rate": 1.0
+        },
+        {
+          "rule_id": 18,
+          "description": "Do not combine potassium supplements with potassium-sparing diuretics unless the",
+          "fired_in": 0,
+          "total_runs": 30,
+          "fire_rate": 0.0
+        }
+      ]
+    },
+    {
+      "case_id": "heart_failure",
+      "db_id": 139,
+      "variant": "clean",
+      "runs": [
+        {
+          "run": 1,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 2,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 3,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 4,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 5,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 6,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 7,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 8,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 9,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 10,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 11,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 12,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 13,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 14,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 15,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 16,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 17,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 18,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 19,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 20,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 21,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 22,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 23,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 24,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 25,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 26,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 27,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 28,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 29,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        },
+        {
+          "run": 30,
+          "overall_score": 0.922,
+          "treatment_correctness": 0.938,
+          "investigation_appropriateness": 0.9,
+          "completeness": 0.875,
+          "safety_adherence": 1.0,
+          "fired_rules": []
+        }
+      ],
+      "statistics": {
+        "overall_score": {
+          "mean": 0.922,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.922,
+          "max": 0.922
+        },
+        "treatment_correctness": {
+          "mean": 0.938,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.938,
+          "max": 0.938
+        },
+        "investigation_appropriateness": {
+          "mean": 0.9,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.9,
+          "max": 0.9
+        },
+        "completeness": {
+          "mean": 0.875,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 0.875,
+          "max": 0.875
+        },
+        "safety_adherence": {
+          "mean": 1.0,
+          "sigma": 0.0,
+          "cv": 0.0,
+          "min": 1.0,
+          "max": 1.0
+        }
+      },
+      "rule_fire_rates": [
+        {
+          "rule_id": 17,
+          "description": "Do not initiate a beta-blocker in acute decompensated heart failure. It can wors",
+          "fired_in": 0,
+          "total_runs": 30,
+          "fire_rate": 0.0
+        },
+        {
+          "rule_id": 18,
+          "description": "Do not combine potassium supplements with potassium-sparing diuretics unless the",
+          "fired_in": 0,
+          "total_runs": 30,
+          "fire_rate": 0.0
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "judge_scoring_variance": {
+      "max_sigma": 0.0046,
+      "worst_pair": "heart_failure [unclean]:completeness",
+      "note": "Variance in LLM judge scores (treatment, investigation, completeness). Cause: LLM non-determinism despite temperature=0. Mitigation: multi-judge cross-family scoring."
+    },
+    "safety_detection_variance": {
+      "max_sigma": 0.0,
+      "worst_pair": "",
+      "inconsistent_rules": {},
+      "note": "Variance in safety rule firing. Formula is deterministic (0.5 per fired rule, uniform \u2014 no severity distinction). Detection uses LLM so input to formula is stochastic. Mitigation: multiple sampling with majority vote, or deterministic rule matching. Fire rate measures detector consistency only, not correctness \u2014 whether a rule *should* fire on a given response is not evaluated here."
+    },
+    "interpretation": "sigma < 0.05 indicates stable scoring. sigma 0.05-0.1 indicates moderate variance. sigma > 0.1 indicates the scorer is unreliable for that dimension on this case."
+  }
+}

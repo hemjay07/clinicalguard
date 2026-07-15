@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import type { SourceMaterial } from "../types";
-import { Spinner, ErrorBox, SeverityBadge } from "./ui";
+import { Spinner, ErrorBox } from "./ui";
 
 function Collapsible({ title, count, children, defaultOpen = true }: { title: string; count: number; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -110,18 +110,11 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
 
             <Collapsible
               title="Safety signals"
-              count={data.safety_signals.adverse_reactions_from_nstg.length + data.safety_signals.verified_safety_rules.length}
+              count={data.safety_signals.adverse_reactions_from_nstg.length}
             >
-              {data.safety_signals.verified_safety_rules.length > 0 && (
-                <div className="mb-2">
-                  <div className="text-xs font-medium tracking-wide text-neutral-400">Verified rules</div>
-                  <ul className="space-y-1">
-                    {data.safety_signals.verified_safety_rules.map((r) => (
-                      <li key={r.rule_id}><SeverityBadge severity={r.severity} /> {r.description}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Verified rules are deliberately not surfaced here (ADR-029)
+                  — the author answers the harm question in their own words;
+                  the framework's internal rule machinery stays invisible. */}
               <div className="text-xs font-medium tracking-wide text-neutral-400">Adverse reactions (NSTG)</div>
               <PlainList items={data.safety_signals.adverse_reactions_from_nstg} />
             </Collapsible>

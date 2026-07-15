@@ -2,9 +2,8 @@
 // these, so the two views stay visually and behaviorally identical.
 
 import { useState } from "react";
-import type { FormState, RuleInfo } from "../caseForm";
-import { GuidanceIcon, renderGuidance } from "./GuidancePopover";
-import { SeverityBadge } from "./ui";
+import type { FormState } from "../caseForm";
+import { GuidanceIcon } from "./GuidancePopover";
 import { ARCHETYPES } from "../guidance";
 
 export function Field({ label, guidance, hint, children }: { label: string; guidance?: { title: string; text: string }; hint?: string; children: React.ReactNode }) {
@@ -41,43 +40,6 @@ export function ArchetypePicker({ form, set, toggleArchetype }: {
       </div>
       {form.other_checked && <input className="cg-input mt-3" value={form.other_text} onChange={(e) => set({ other_text: e.target.value })} placeholder="Describe the reasoning pattern" />}
     </>
-  );
-}
-
-export function SafetyRuleList({ rules, selectedIds, toggleRule }: {
-  rules: RuleInfo[];
-  selectedIds: number[];
-  toggleRule: (id: number) => void;
-}) {
-  if (rules.length === 0) return <p className="text-sm text-neutral-400">No verified safety rules recorded for the selected condition(s).</p>;
-  return (
-    <div className="space-y-2">
-      {rules.map((r) => (
-        <label key={r.id} className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-200 p-3 text-sm transition-colors hover:bg-neutral-50">
-          <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={() => toggleRule(r.id)} className="mt-0.5 accent-brand-700" />
-          <span className="text-neutral-700">
-            <SeverityBadge severity={r.severity} /> {r.description}{" "}
-            {r.source && <span className="text-xs text-neutral-400">— {r.source}</span>}
-          </span>
-        </label>
-      ))}
-    </div>
-  );
-}
-
-// A dismissable modal that renders long guidance text (same markdown subset as
-// GuidancePopover) — used for "Learn more about safety rules".
-export function TextModal({ title, text, onClose }: { title: string; text: string; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4" onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-2 flex items-start justify-between">
-          <h3 className="font-serif text-lg font-semibold text-neutral-900">{title}</h3>
-          <button type="button" onClick={onClose} className="rounded p-1 text-neutral-400 hover:bg-neutral-100" aria-label="Close">✕</button>
-        </div>
-        {renderGuidance(text)}
-      </div>
-    </div>
   );
 }
 

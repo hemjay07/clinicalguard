@@ -9,6 +9,7 @@ import type {
   EvalCaseDetail,
   EvalCasePayload,
   CreatedCase,
+  AuthUser,
 } from "../types";
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8011";
@@ -26,6 +27,9 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
+    // Required for the session cookie (ADR-030) to ride cross-origin
+    // requests between the Vercel frontend and Railway backend.
+    credentials: "include",
     ...init,
   });
   if (!res.ok) {
@@ -98,4 +102,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  updateEvalCase: (id: number, payload: EvalCasePayload) =>
+    request<CreatedCase>(`/api/v1/eval-cases/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  login: (username: string, password: string) =>
+    request<AuthUser>("/api/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    }),
+  logout: () => request<{ status: string }>("/api/v1/auth/logout", { method: "POST" }),
+  me: () => request<AuthUser>("/api/v1/auth/me"),
 };

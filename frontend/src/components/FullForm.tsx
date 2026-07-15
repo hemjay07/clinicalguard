@@ -5,9 +5,9 @@
 // diverge.
 
 import { useState } from "react";
-import type { FormState, RuleInfo } from "../caseForm";
-import { lines, truncate } from "../caseForm";
-import { Field, ArchetypePicker, SafetyRuleList } from "./fields";
+import type { FormState } from "../caseForm";
+import { lines, truncate, safetyAnswered } from "../caseForm";
+import { Field, ArchetypePicker } from "./fields";
 import { GuidanceIcon } from "./GuidancePopover";
 import { QUERY_GUIDANCE, TIER_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE, PROVENANCE_GUIDANCE } from "../guidance";
 
@@ -97,11 +97,9 @@ function TierGroup({ prefix, form, set, revealed, reveal }: {
   );
 }
 
-export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, onSubmit, submitting }: {
+export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
   form: FormState;
   set: (patch: Partial<FormState>) => void;
-  safetyRules: RuleInfo[];
-  toggleRule: (id: number) => void;
   toggleArchetype: (value: string) => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -119,21 +117,25 @@ export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, 
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const reveal = (k: string) => setRevealed((p) => ({ ...p, [k]: true }));
 
-  const s1Status = statusOf([form.authored_by, form.archetypes.length || form.other_checked ? "x" : "", form.query, form.what_this_evaluates, form.query_scope, form.provenance_notes]);
+  const s1Status = statusOf([form.archetypes.length || form.other_checked ? "x" : "", form.query, form.what_this_evaluates, form.query_scope, form.provenance_notes]);
   const s2Status = statusOf([form.primary, form.critical_differentials, form.other_considerations, form.inv_required, form.inv_expected, form.inv_situational, form.tx_required, form.tx_expected, form.tx_situational, form.complications, form.mon_required, form.mon_expected, form.escalation]);
-  const s3Status = statusOf([form.selected_rule_ids.length ? "x" : "", form.safety_free_text]);
+  const s3Status: SectionStatus = safetyAnswered(form) ? "Filled" : "Not started";
 
   const s2Count = [form.primary, form.critical_differentials, form.other_considerations, form.inv_required, form.inv_expected, form.inv_situational, form.tx_required, form.tx_expected, form.tx_situational, form.complications, form.mon_required, form.mon_expected, form.escalation]
     .reduce((a, v) => a + lines(v).length, 0);
   const s1Summary = form.query ? `"${truncate(form.query, 56)}"` : "What the case is about and what reasoning it tests";
   const s2Summary = form.primary ? `${truncate(form.primary, 36)} · ${s2Count} item${s2Count === 1 ? "" : "s"}` : "What a competent AI should address";
-  const s3Summary = form.selected_rule_ids.length ? `${form.selected_rule_ids.length} safety rule${form.selected_rule_ids.length === 1 ? "" : "s"} selected` : "Guideline-grounded safety rules that apply";
+  const s3Summary = form.safety_none_declared
+    ? "No danger-level constraints declared"
+    : lines(form.safety_harm_text).length
+      ? `${lines(form.safety_harm_text).length} constraint${lines(form.safety_harm_text).length === 1 ? "" : "s"}`
+      : "What must the AI never do, or never leave out";
 
   return (
     <div className="space-y-3">
       <Section num={1} title="Frame the case" subtitle="What the case is about and what reasoning it tests" status={s1Status} summary={s1Summary} open={!!sectionsOpen[1]} onToggle={() => toggleSection(1)}>
-        <Field label="Authored by"><input className="cg-input" value={form.authored_by} onChange={(e) => set({ authored_by: e.target.value })} placeholder="Your name" /></Field>
-
+        {/* No "authored by" field (ADR-030) — identity comes from the
+            logged-in session, shown in the page header. */}
         <Field label="Reasoning patterns this case exercises" guidance={{ title: "Reasoning patterns", text: ARCHETYPE_GUIDANCE }} hint="Optional. Pick these first, then write a query that exercises them.">
           <ArchetypePicker form={form} set={set} toggleArchetype={toggleArchetype} />
         </Field>
@@ -186,13 +188,16 @@ export function FullForm({ form, set, safetyRules, toggleRule, toggleArchetype, 
         </div>
       </Section>
 
-      <Section num={3} title="Safety layer" subtitle="Guideline-grounded safety rules that apply" status={s3Status} summary={s3Summary} open={!!sectionsOpen[3]} onToggle={() => toggleSection(3)}>
-        <h3 className="cg-eyebrow">Safety rules that apply to this scenario</h3>
-        <p className="cg-help mt-1">Select the rules that apply to your query scope (drawn from all selected conditions).</p>
+      <Section num={3} title="Safety" subtitle="What must the AI never do, or never leave out" status={s3Status} summary={s3Summary} open={!!sectionsOpen[3]} onToggle={() => toggleSection(3)}>
+        <h3 className="cg-eyebrow">What must the AI never do, or never leave out, because it would harm this patient?</h3>
+        <p className="cg-help mt-1">List only things that would cause real harm — a dangerous action the AI must not take, or a critical step it must not omit. Everyday best-practice or "better choice" issues do not belong here; those belong in the response above.</p>
         <div className="mt-3">
-          <SafetyRuleList rules={safetyRules} selectedIds={form.selected_rule_ids} toggleRule={toggleRule} />
+          <textarea rows={3} className="cg-textarea" value={form.safety_harm_text} onChange={(e) => set({ safety_harm_text: e.target.value })} placeholder="One per line — e.g. Insulin should not be initiated without first confirming serum potassium above 3.3 mmol/L" />
         </div>
-        <div className="mt-4"><Field label="Additional free-text safety flags" hint="Optional."><textarea rows={2} className="cg-textarea" value={form.safety_free_text} onChange={(e) => set({ safety_free_text: e.target.value })} placeholder="One per line" /></Field></div>
+        <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-neutral-700">
+          <input type="checkbox" checked={form.safety_none_declared} onChange={(e) => set({ safety_none_declared: e.target.checked })} className="mt-0.5 accent-brand-700" />
+          <span>No danger-level constraints apply to this patient.</span>
+        </label>
       </Section>
 
       {/* Submit bar — saving is automatic (indicator lives in the page header). */}

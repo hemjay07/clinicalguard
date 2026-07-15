@@ -37,10 +37,7 @@ export interface SafetyRule {
   id: number;
   condition_id: number | null;
   condition_name?: string;
-  rule_type: string;
   description: string;
-  severity: string;
-  action: string;
   source: string | null;
   is_universal?: boolean;
   is_active: boolean;
@@ -60,10 +57,16 @@ export interface SourceMaterial {
   complications_pool: { items: string[]; source_field: string };
   safety_signals: {
     adverse_reactions_from_nstg: string[];
-    verified_safety_rules: { rule_id: number; severity: string; description: string; source: string | null }[];
+    verified_safety_rules: { rule_id: number; description: string; source: string | null }[];
     source_fields: string;
   };
   extraction_metadata: { generated_by: string; step: number; deterministic: boolean; llm_involved: boolean };
+}
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  display_name: string;
 }
 
 export interface EvalCaseListItem {
@@ -89,6 +92,8 @@ export interface EvalCaseDetail {
   query_scope: string | null;
   is_validated: boolean;
   submitted_at: string | null;
+  updated_at: string | null;
+  author_user_id: number | null;
   expected_response: any;
 }
 
@@ -116,7 +121,7 @@ export interface SelectedCondition extends ConditionRef {
 
 export interface EvalCasePayload {
   conditions: ConditionRef[];
-  authored_by: string;
+  // No authored_by (ADR-030): identity comes from the authenticated session.
   query: string;
   what_this_evaluates: string;
   query_scope: string;
@@ -128,7 +133,7 @@ export interface EvalCasePayload {
   monitoring: { required_elements: string[]; expected_elements: string[] };
   // Flat by design (ADR-028): a finding either warrants escalation or not.
   escalation: string[];
-  safety: { selected_rule_ids: number[]; free_text: string[] };
+  safety: { free_text: string[]; none_declared: boolean };
   reasoning_archetypes: string[];
   other_archetypes: string[];
 }

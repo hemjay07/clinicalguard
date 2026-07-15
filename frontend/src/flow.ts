@@ -7,17 +7,17 @@
 // scoring code.
 
 import type { FormState } from "./caseForm";
-import { lines, truncate } from "./caseForm";
+import { lines, truncate, safetyAnswered } from "./caseForm";
 import type { EvalCasePayload } from "./types";
 import { ARCHETYPES } from "./guidance";
 
 export type ScreenKind =
-  | "author" | "archetypes" | "query" | "evaluates" | "scope" | "provenance"
+  | "archetypes" | "query" | "evaluates" | "scope" | "provenance"
   | "primary" | "critical_differentials" | "other_considerations"
   | "inv_required" | "inv_expected" | "inv_situational"
   | "tx_required" | "tx_expected" | "tx_situational"
   | "complications" | "monitoring" | "escalation"
-  | "safety_rules" | "safety_flags" | "review";
+  | "safety_harm" | "review";
 
 export interface ScreenDef {
   id: string;            // "1.3" — phase.position, used in the URL ?screen= param
@@ -32,38 +32,35 @@ export interface ScreenDef {
 export const PHASES: { n: 1 | 2 | 3; title: string }[] = [
   { n: 1, title: "Frame the case" },
   { n: 2, title: "Author the expected response" },
-  { n: 3, title: "Safety layer" },
+  { n: 3, title: "Safety" },
 ];
 
 export const SCREENS: ScreenDef[] = [
   // --- Phase 1: Frame the case ---
+  // No "who is authoring" screen (ADR-030) — identity comes from the
+  // logged-in session, shown as static text in the page header, not typed.
   {
-    id: "1.1", phase: 1, kind: "author", crumb: "Authored by",
-    question: "Who is authoring this case?",
-    help: "Your name becomes the attribution in the case record.",
-  },
-  {
-    id: "1.2", phase: 1, kind: "archetypes", crumb: "Reasoning patterns", optional: true,
+    id: "1.1", phase: 1, kind: "archetypes", crumb: "Reasoning patterns", optional: true,
     question: "What kind of clinical reasoning does this case test?",
     help: "Select all that apply. These are the reasoning patterns your case will exercise — they shape how the AI is graded. Pick these first, then write a query that exercises them.",
   },
   {
-    id: "1.3", phase: 1, kind: "query", crumb: "Clinical query",
+    id: "1.2", phase: 1, kind: "query", crumb: "Clinical query",
     question: "Describe the clinical scenario.",
     help: "Write the query as if a clinician were typing it into an AI consult tool. Include demographics and presentation, and end with the scope (“diagnosis and management”, “initial management”, …). Keep it to 1–3 sentences.",
   },
   {
-    id: "1.4", phase: 1, kind: "evaluates", crumb: "What it evaluates", optional: true,
+    id: "1.3", phase: 1, kind: "evaluates", crumb: "What it evaluates", optional: true,
     question: "What does this case evaluate?",
     help: "In 1–2 sentences, describe what aspect of clinical reasoning this case tests. This helps second reviewers understand your authoring intent.",
   },
   {
-    id: "1.5", phase: 1, kind: "scope", crumb: "Query scope", optional: true,
+    id: "1.4", phase: 1, kind: "scope", crumb: "Query scope", optional: true,
     question: "What is the scope of the query?",
     help: "Bounds what the AI is graded on — e.g. “diagnosis and initial management; excludes long-term glycaemic control planning”.",
   },
   {
-    id: "1.6", phase: 1, kind: "provenance", crumb: "Provenance notes", optional: true,
+    id: "1.5", phase: 1, kind: "provenance", crumb: "Provenance notes", optional: true,
     question: "What is the provenance of this case’s ground truth?",
     help: "Two sentences: what traces to the guideline, and what is authored from clinical judgment or another standard. This tells a reviewer what to verify against what. Not a decision journal.",
   },
@@ -130,19 +127,17 @@ export const SCREENS: ScreenDef[] = [
     help: "One per line, as [finding] — [escalation action]. A finding either warrants escalation or it does not — there is no required/expected tier here.",
   },
 
-  // --- Phase 3: Safety layer ---
+  // --- Phase 3: Safety ---
+  // The one required section in the flow (ADR-029) — everything else stays
+  // optional per v1.3.1 §4. Placed last: the author needs the full clinical
+  // picture to judge what would harm this patient.
   {
-    id: "3.1", phase: 3, kind: "safety_rules", crumb: "Verified rules", optional: true,
-    question: "Which guideline-verified safety rules apply?",
-    help: "Select the rules that apply to your query scope (drawn from all selected conditions).",
+    id: "3.1", phase: 3, kind: "safety_harm", crumb: "Safety",
+    question: "What must the AI never do, or never leave out, because it would harm this patient?",
+    help: "List only things that would cause real harm — a dangerous action the AI must not take, or a critical step it must not omit. Everyday best-practice or \"better choice\" issues do not belong here; those belong in the response above.",
   },
   {
-    id: "3.2", phase: 3, kind: "safety_flags", crumb: "Safety flags", optional: true,
-    question: "What safety concerns are not covered by the verified rules?",
-    help: "One per line. Safety concerns your clinical judgment says the AI must respect that aren’t in the verified rules. These become candidates for future rule verification.",
-  },
-  {
-    id: "3.3", phase: 3, kind: "review", crumb: "Review & submit",
+    id: "3.2", phase: 3, kind: "review", crumb: "Review & submit",
     question: "Review your case before submitting.",
   },
 ];
@@ -160,7 +155,6 @@ export function phaseScreens(phase: 1 | 2 | 3): ScreenDef[] {
 // and case-preview fill state). The review screen never counts as "filled".
 export function screenFilled(kind: ScreenKind, form: FormState): boolean {
   switch (kind) {
-    case "author": return !!form.authored_by.trim();
     case "archetypes": return form.archetypes.length > 0 || (form.other_checked && !!form.other_text.trim());
     case "query": return !!form.query.trim();
     case "evaluates": return !!form.what_this_evaluates.trim();
@@ -178,8 +172,7 @@ export function screenFilled(kind: ScreenKind, form: FormState): boolean {
     case "complications": return !!form.complications.trim();
     case "monitoring": return !!(form.mon_required.trim() || form.mon_expected.trim());
     case "escalation": return !!form.escalation.trim();
-    case "safety_rules": return form.selected_rule_ids.length > 0;
-    case "safety_flags": return !!form.safety_free_text.trim();
+    case "safety_harm": return safetyAnswered(form);
     case "review": return false;
   }
 }
@@ -195,7 +188,6 @@ const count = (s: string, noun: string) => {
 // Empty string means "not answered yet" (callers render their own placeholder).
 export function screenSummary(kind: ScreenKind, form: FormState): string {
   switch (kind) {
-    case "author": return form.authored_by.trim();
     case "archetypes": {
       const parts = form.archetypes.map((v) => ARCHETYPE_LABELS[v] ?? v);
       if (form.other_checked && form.other_text.trim()) parts.push(form.other_text.trim());
@@ -220,11 +212,9 @@ export function screenSummary(kind: ScreenKind, form: FormState): string {
       return parts.join(" · ");
     }
     case "escalation": return count(form.escalation, "trigger");
-    case "safety_rules": {
-      const n = form.selected_rule_ids.length;
-      return n === 0 ? "" : `${n} rule${n === 1 ? "" : "s"} selected`;
-    }
-    case "safety_flags": return count(form.safety_free_text, "flag");
+    case "safety_harm":
+      if (form.safety_none_declared) return "No danger-level constraints declared";
+      return count(form.safety_harm_text, "constraint");
     case "review": return "";
   }
 }
@@ -234,7 +224,6 @@ export function screenSummary(kind: ScreenKind, form: FormState): string {
 // answer lands in.
 export function previewFragment(kind: ScreenKind, p: EvalCasePayload): object | null {
   switch (kind) {
-    case "author": return { authored_by: p.authored_by };
     case "archetypes": return { reasoning_archetypes: p.reasoning_archetypes, other_archetypes: p.other_archetypes };
     case "query": return { query: p.query };
     case "evaluates": return { what_this_evaluates: p.what_this_evaluates };
@@ -252,8 +241,7 @@ export function previewFragment(kind: ScreenKind, p: EvalCasePayload): object | 
     case "complications": return { complications: p.complications };
     case "monitoring": return { monitoring: p.monitoring };
     case "escalation": return { escalation_triggers: p.escalation };
-    case "safety_rules": return { safety: { selected_rule_ids: p.safety.selected_rule_ids } };
-    case "safety_flags": return { safety: { free_text: p.safety.free_text } };
+    case "safety_harm": return { safety: p.safety };
     case "review": return null;
   }
 }

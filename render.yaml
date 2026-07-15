@@ -19,3 +19,7 @@ services:
         sync: false
       - key: FRONTEND_ORIGIN
         sync: false
+      - key: SESSION_SECRET_KEY
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"

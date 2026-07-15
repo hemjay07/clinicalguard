@@ -86,7 +86,6 @@ def run_variance_measurement(n_runs: int = 10) -> dict:
                         {
                             "rule_id": r.rule_id,
                             "description": r.description[:80],
-                            "severity": r.severity,
                         }
                         for r in result.fired_rules
                     ],
@@ -177,7 +176,8 @@ def run_variance_measurement(n_runs: int = 10) -> dict:
                     "worst_pair": worst_safety_pair,
                     "inconsistent_rules": inconsistent_rules,
                     "note": (
-                        "Variance in safety rule firing. Formula is deterministic (0.5 per CRITICAL). "
+                        "Variance in safety rule firing. Formula is deterministic "
+                        "(0.5 per fired rule, uniform — no severity distinction). "
                         "Detection uses LLM so input to formula is stochastic. "
                         "Mitigation: multiple sampling with majority vote, or deterministic rule matching."
                     ),

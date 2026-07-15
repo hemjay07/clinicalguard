@@ -14,8 +14,10 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
-from clinicalguard.api.routers import conditions, eval_cases, safety_rules
+from clinicalguard.api.routers import auth, conditions, eval_cases, safety_rules
+from clinicalguard.config import settings
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,12 +36,28 @@ ALLOWED_ORIGINS = list(dict.fromkeys(_default_origins + _env_origins))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=False,
+    # True (was False): the session cookie (ADR-030) must ride cross-origin
+    # requests between the Vercel frontend and Railway backend. Safe because
+    # ALLOWED_ORIGINS is an explicit list, never "*".
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Signed-cookie sessions (ADR-030) — no session table, no JWT. same_site="none"
+# is required for the cross-origin cookie to be sent at all in production,
+# which in turn requires https_only=True (browsers reject SameSite=None
+# cookies without Secure). Locally (cookie_secure=False) same_site="lax" over
+# plain HTTP works fine for same-site dev requests.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.session_secret_key,
+    same_site="none" if settings.cookie_secure else "lax",
+    https_only=settings.cookie_secure,
+)
+
 API_PREFIX = "/api/v1"
+app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(conditions.router, prefix=API_PREFIX)
 app.include_router(eval_cases.router, prefix=API_PREFIX)
 app.include_router(safety_rules.router, prefix=API_PREFIX)

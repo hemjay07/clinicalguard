@@ -4,27 +4,28 @@
 // sidebar toggles between NSTG source material and a live case preview.
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useSearchParams, useNavigate, useParams, Link } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import { useFetch } from "../useFetch";
-import { PageContainer, ErrorBox } from "../components/ui";
+import { PageContainer, ErrorBox, Spinner } from "../components/ui";
 import { SourcePanel } from "../components/SourcePanel";
 import { FullForm } from "../components/FullForm";
 import { GuidedFlow } from "../components/GuidedFlow";
 import { CasePreview } from "../components/CasePreview";
-import { saveDraft, loadDraft, clearDraft, saveAuthorName, loadAuthorName } from "../storage";
+import { saveDraft, loadDraft, clearDraft } from "../storage";
+import { useAuth } from "../AuthContext";
 import { decodeConditions, draftSlug } from "../selection";
-import { EMPTY, toPayload } from "../caseForm";
-import type { FormState, RuleInfo, ValidationIssue } from "../caseForm";
+import { EMPTY, toPayload, fromExpectedResponse, safetyAnswered, SAFETY_PROMPT } from "../caseForm";
+import type { FormState, ValidationIssue } from "../caseForm";
 import { SCREENS } from "../flow";
-import type { SourceMaterial, ConditionRef } from "../types";
+import type { SourceMaterial, ConditionRef, EvalCaseDetail } from "../types";
 
 interface SourceEntry { ref: ConditionRef; data: SourceMaterial }
 
 type ViewMode = "guided" | "form";
 const VIEW_KEY = "cg_author_view";
 const INTRO_KEY = "cg_guided_intro_seen";
-const REVIEW_SCREEN = "3.3";
+const REVIEW_SCREEN = "3.2";
 
 // One-time introduction shown before the MD's very first guided session.
 function IntroOverlay({ onStart, onUseForm }: { onStart: () => void; onUseForm: () => void }) {
@@ -48,9 +49,33 @@ function IntroOverlay({ onStart, onUseForm }: { onStart: () => void; onUseForm: 
 }
 
 export function Authoring() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const refs = useMemo(() => decodeConditions(searchParams.get("conditions")), [searchParams]);
+
+  // Two entry points share this page: /author/compose (new case, conditions
+  // via ?conditions=) and /cases/:caseId/edit (editing an existing case —
+  // the whole point of building the safety redesign first, so it doesn't
+  // get built twice). caseId presence is what distinguishes them.
+  const { caseId: caseIdParam } = useParams();
+  const isEdit = !!caseIdParam;
+  const editCaseId = isEdit ? Number(caseIdParam) : null;
+
+  const editCase = useFetch<EvalCaseDetail | null>(
+    () => (editCaseId ? api.evalCase(editCaseId) : Promise.resolve(null)),
+    [editCaseId]
+  );
+
+  const refs: ConditionRef[] = useMemo(() => {
+    if (isEdit) {
+      const conds = editCase.data?.expected_response?.conditions ?? [];
+      return conds.map((c: { condition_id: number; subtype: string | null }) => ({
+        condition_id: c.condition_id,
+        subtype: c.subtype ?? null,
+      }));
+    }
+    return decodeConditions(searchParams.get("conditions"));
+  }, [isEdit, editCase.data, searchParams]);
   const slug = useMemo(() => draftSlug(refs), [refs]);
 
   const sources = useFetch<SourceEntry[]>(
@@ -99,10 +124,21 @@ export function Authoring() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Edit mode: seed the form from the fetched case once it arrives. No draft
+  // persistence — the server copy is the source of truth, not localStorage.
   useEffect(() => {
+    if (!isEdit) return;
+    if (!editCase.data) return;
+    setForm(fromExpectedResponse(editCase.data));
+    setActiveTab(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, editCase.data]);
+
+  // Create mode: resume an autosaved draft, if any.
+  useEffect(() => {
+    if (isEdit) return;
     const d = loadDraft<FormState>(slug);
-    const savedName = loadAuthorName();
-    const base = d ? { ...EMPTY, ...d.state, authored_by: d.state.authored_by || savedName } : { ...EMPTY, authored_by: savedName };
+    const base = d ? { ...EMPTY, ...d.state } : { ...EMPTY };
     // Drafts saved before v1.3.1 carried tiered escalation — merge into the flat field.
     const legacy = d?.state as (FormState & { esc_required?: string; esc_expected?: string }) | undefined;
     if (legacy && !base.escalation && (legacy.esc_required || legacy.esc_expected)) {
@@ -115,21 +151,18 @@ export function Authoring() {
     setLoadedDraft(true);
     setActiveTab(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [isEdit, slug]);
 
   useEffect(() => {
-    if (!loadedDraft) return;
+    if (isEdit || !loadedDraft) return;
     setSavedAt(saveDraft(slug, form));
     setSaveKind("auto");
-    saveAuthorName(form.authored_by);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
 
   const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
   const toggleArchetype = (value: string) =>
     setForm((prev) => ({ ...prev, archetypes: prev.archetypes.includes(value) ? prev.archetypes.filter((x) => x !== value) : [...prev.archetypes, value] }));
-  const toggleRule = (ruleId: number) =>
-    setForm((prev) => ({ ...prev, selected_rule_ids: prev.selected_rule_ids.includes(ruleId) ? prev.selected_rule_ids.filter((x) => x !== ruleId) : [...prev.selected_rule_ids, ruleId] }));
 
   function discardDraft() {
     // The one destructive control on this page — always confirm.
@@ -140,35 +173,38 @@ export function Authoring() {
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   const saveIndicator =
     saveKind === "auto" && savedAt ? `Auto-saved at ${fmtTime(savedAt)}`
-    : saveKind === "submitted" && savedAt ? `Submitted at ${fmtTime(savedAt)}`
-    : "Not yet saved";
+    : saveKind === "submitted" && savedAt ? `${isEdit ? "Saved" : "Submitted"} at ${fmtTime(savedAt)}`
+    : isEdit ? "No unsaved changes" : "Not yet saved";
 
   const names = useMemo(() => (sources.data ?? []).map((s) => s.data.condition.name), [sources.data]);
-
-  const safetyRules: RuleInfo[] = useMemo(() => {
-    const map = new Map<number, RuleInfo>();
-    (sources.data ?? []).forEach((s) =>
-      (s.data.safety_signals.verified_safety_rules ?? []).forEach((r) => {
-        if (!map.has(r.rule_id)) map.set(r.rule_id, { id: r.rule_id, severity: r.severity, description: r.description, source: r.source });
-      })
-    );
-    return [...map.values()];
-  }, [sources.data]);
 
   const payload = useMemo(() => toPayload(form, refs), [form, refs]);
 
   async function submit() {
-    // No client-side gating (v1.3.1 §4): no field is required at submission.
-    // The author decides what a case needs. Issues only carry server errors.
+    // No client-side gating (v1.3.1 §4) except safety (ADR-029) — the one
+    // deliberate exception. Checked before the request so an unresolved
+    // safety question never round-trips to the server.
+    if (!safetyAnswered(form)) {
+      setIssues([{ message: SAFETY_PROMPT, screenId: "3.1" }]);
+      if (view === "guided") goTo("3.1");
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setIssues([]);
     setSubmitting(true);
     try {
-      const created = await api.createEvalCase(payload);
-      setSaveKind("submitted"); setSavedAt(new Date().toISOString());
-      clearDraft(slug);
-      // Land the author on their own case, with a success banner (and any
-      // server warnings) — not on an anonymous list.
-      navigate(`/cases/${created.id}`, { state: { submitted: true, warnings: created.warnings } });
+      if (isEdit && editCaseId) {
+        const updated = await api.updateEvalCase(editCaseId, payload);
+        setSaveKind("submitted"); setSavedAt(new Date().toISOString());
+        navigate(`/cases/${editCaseId}`, { state: { updated: true, warnings: updated.warnings } });
+      } else {
+        const created = await api.createEvalCase(payload);
+        setSaveKind("submitted"); setSavedAt(new Date().toISOString());
+        clearDraft(slug);
+        // Land the author on their own case, with a success banner (and any
+        // server warnings) — not on an anonymous list.
+        navigate(`/cases/${created.id}`, { state: { submitted: true, warnings: created.warnings } });
+      }
     } catch (e) {
       if (e instanceof ApiError && e.detail && typeof e.detail === "object" && "errors" in (e.detail as any))
         setIssues(((e.detail as any).errors as string[]).map((m) => ({ message: m, screenId: null })));
@@ -180,6 +216,20 @@ export function Authoring() {
     }
   }
 
+  if (isEdit && editCase.loading) {
+    return <PageContainer><Spinner label="Loading case…" /></PageContainer>;
+  }
+  if (isEdit && editCase.error) {
+    return <PageContainer><ErrorBox message={editCase.error} /></PageContainer>;
+  }
+  if (isEdit && editCase.data && editCase.data.author_user_id !== user?.id) {
+    return (
+      <PageContainer>
+        <ErrorBox message="You can only edit your own cases." />
+        <Link to={`/cases/${editCaseId}`} className="cg-link mt-3 inline-block">← Back to case</Link>
+      </PageContainer>
+    );
+  }
   if (refs.length === 0) {
     return (
       <PageContainer>
@@ -238,7 +288,7 @@ export function Authoring() {
         <div className="sticky top-0 z-20 mb-4 flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-neutral-50/90 px-4 py-2.5 backdrop-blur">
           <div className="min-w-0">
             <h1 className="truncate font-serif text-base font-semibold text-neutral-900">{names.length ? names.join(", ") : "Loading…"}</h1>
-            <p className="truncate text-xs text-neutral-400">Authoring an eval case</p>
+            <p className="truncate text-xs text-neutral-400">{isEdit ? "Editing as" : "Authoring as"} {user?.display_name ?? "…"}</p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             {/* View switch: guided (default) vs full form */}
@@ -278,13 +328,13 @@ export function Authoring() {
           <GuidedFlow
             form={form} set={set} payload={payload}
             screenId={screenId} goTo={goTo}
-            safetyRules={safetyRules} toggleRule={toggleRule} toggleArchetype={toggleArchetype}
+            toggleArchetype={toggleArchetype}
             onSubmit={submit} submitting={submitting} issues={issues}
           />
         ) : (
           <FullForm
             form={form} set={set}
-            safetyRules={safetyRules} toggleRule={toggleRule} toggleArchetype={toggleArchetype}
+            toggleArchetype={toggleArchetype}
             onSubmit={submit} submitting={submitting}
           />
         )}

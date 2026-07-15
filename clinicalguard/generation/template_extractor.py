@@ -11,6 +11,7 @@ Step 3 (MD clinical reasonableness review).
 """
 
 import logging
+
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -110,7 +111,6 @@ def extract_skeleton(
         "verified_safety_rules": [
             {
                 "rule_id": r.id,
-                "severity": r.severity,
                 "description": r.description,
                 "source": r.source,
             }

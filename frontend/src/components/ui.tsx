@@ -38,18 +38,6 @@ export function ErrorBox({ message }: { message: string }) {
   );
 }
 
-// Muted severity colors (not full-saturation defaults).
-const SEVERITY_STYLES: Record<string, string> = {
-  CRITICAL: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200",
-  WARNING: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
-  INFO: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200",
-};
-
-export function SeverityBadge({ severity }: { severity: string }) {
-  const style = SEVERITY_STYLES[severity?.toUpperCase()] ?? "bg-neutral-100 text-neutral-600 ring-1 ring-inset ring-neutral-200";
-  return <span className={`cg-badge ${style}`}>{severity}</span>;
-}
-
 export function SectionCard({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
     <section className="cg-card p-5">

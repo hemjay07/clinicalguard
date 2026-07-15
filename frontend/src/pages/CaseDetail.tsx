@@ -1,6 +1,7 @@
 import { useParams, useLocation, Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
+import { useAuth } from "../AuthContext";
 import { PageContainer, Spinner, ErrorBox, SectionCard } from "../components/ui";
 import { ARCHETYPES } from "../guidance";
 
@@ -38,18 +39,22 @@ export function CaseDetail() {
   const { caseId } = useParams();
   const id = Number(caseId);
   const { data, error, loading } = useFetch(() => api.evalCase(id), [id]);
-  // Set when the author was just redirected here from a successful submit.
+  const { user } = useAuth();
+  // Set when the author was just redirected here from a successful submit
+  // or edit.
   const location = useLocation();
-  const submitted = (location.state as { submitted?: boolean; warnings?: string[] } | null) ?? null;
+  const nav = (location.state as { submitted?: boolean; updated?: boolean; warnings?: string[] } | null) ?? null;
 
   return (
     <PageContainer>
-      {submitted?.submitted && (
+      {(nav?.submitted || nav?.updated) && (
         <div className="mb-5 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800">
-          <p className="font-medium">Case submitted. This is your case as it now exists in the corpus.</p>
-          {(submitted.warnings?.length ?? 0) > 0 && (
+          <p className="font-medium">
+            {nav.updated ? "Case updated. This is your case as it now exists in the corpus." : "Case submitted. This is your case as it now exists in the corpus."}
+          </p>
+          {(nav.warnings?.length ?? 0) > 0 && (
             <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-brand-800/80">
-              {submitted.warnings!.map((w, i) => <li key={i}>{w}</li>)}
+              {nav.warnings!.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
           )}
         </div>
@@ -60,7 +65,12 @@ export function CaseDetail() {
         const e = data.expected_response ?? {};
         return (
           <>
-            <Link to="/cases" className="text-sm text-brand-700 hover:underline">← Cases</Link>
+            <div className="flex items-center justify-between gap-3">
+              <Link to="/cases" className="text-sm text-brand-700 hover:underline">← Cases</Link>
+              {user && data.author_user_id === user.id && (
+                <Link to={`/cases/${data.id}/edit`} className="cg-btn-secondary px-3 py-1 text-xs">Edit case</Link>
+              )}
+            </div>
             <h1 className="mt-2 text-2xl font-semibold text-neutral-900">{e.case_id ?? `Case #${data.id}`}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
               <span>Conditions:</span>
@@ -72,6 +82,7 @@ export function CaseDetail() {
               ))}
               {e.authored_by && <span>· authored by {e.authored_by}</span>}
               <span>· {data.ground_truth_source}</span>
+              {data.updated_at && <span>· edited {new Date(data.updated_at).toLocaleDateString()}</span>}
             </div>
 
             <div className="mt-5 grid gap-4">
@@ -142,9 +153,13 @@ export function CaseDetail() {
                 } />
               </SectionCard>
 
-              <SectionCard title="Safety flags">
-                <TierBlock label="Selected rules" items={(e.required_safety_flags?.rules ?? []).map((r: any) => `[${r.severity}] ${r.description}`)} />
-                <TierBlock label="Free-text flags" items={e.required_safety_flags?.free_text} />
+              <SectionCard title="Safety">
+                {e.required_safety_flags?.none_declared ? (
+                  <p className="text-sm italic text-slate-500">No danger-level constraints declared.</p>
+                ) : (
+                  <TierBlock label="Danger-level constraints" items={e.required_safety_flags?.free_text} />
+                )}
+                <TierBlock label="Applicable verified rules" items={(e.required_safety_flags?.rules ?? []).map((r: any) => r.description)} />
               </SectionCard>
             </div>
           </>

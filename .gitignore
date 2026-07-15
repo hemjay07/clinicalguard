@@ -28,3 +28,6 @@ build/
 
 data/raw/
 
+.vercel/
+evaluation/.variance_checkpoint.json
+

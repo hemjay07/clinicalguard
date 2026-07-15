@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { encodeConditions } from "../selection";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
-import { PageContainer, Spinner, ErrorBox, SectionCard, SeverityBadge } from "../components/ui";
+import { PageContainer, Spinner, ErrorBox, SectionCard } from "../components/ui";
 
 function List({ items }: { items: string[] }) {
   if (items.length === 0) return <p className="text-sm text-slate-400">None recorded.</p>;
@@ -68,7 +68,6 @@ export function ConditionDetail() {
                 <ul className="space-y-2">
                   {data.safety_rules.map((r) => (
                     <li key={r.id} className="text-sm">
-                      <SeverityBadge severity={r.severity} />{" "}
                       <span className="text-slate-700">{r.description}</span>
                     </li>
                   ))}

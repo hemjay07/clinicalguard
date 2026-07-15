@@ -1,4 +1,5 @@
-import { NavLink, Link, useLocation } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../AuthContext";
 
 const GITHUB_URL = "https://github.com/hemjay07/clinicalguard";
 
@@ -17,6 +18,8 @@ const links = [
 export function NavBar() {
   // Don't advertise "Author a case" while the user is already authoring one.
   const authoring = useLocation().pathname.startsWith("/author");
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   return (
     <header className="border-b border-neutral-200 bg-neutral-50/80 backdrop-blur">
       <nav className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3.5">
@@ -46,6 +49,21 @@ export function NavBar() {
           >
             GitHub ↗
           </a>
+          {user ? (
+            <span className="flex items-center gap-2.5 text-sm text-neutral-500">
+              {user.display_name}
+              <button
+                onClick={() => logout().then(() => navigate("/"))}
+                className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
+              >
+                Log out
+              </button>
+            </span>
+          ) : (
+            <NavLink to="/login" className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900">
+              Log in
+            </NavLink>
+          )}
           {!authoring && (
             <NavLink to="/author" className="cg-btn-primary px-4 py-1.5">
               Author a case

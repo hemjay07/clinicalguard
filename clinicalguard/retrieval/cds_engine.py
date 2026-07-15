@@ -91,9 +91,7 @@ def build_differential(
     # an AI response actually recommended. See safety/engine.py for eval mode.
     safety_flags = [
         SafetyFlag(
-            rule_type=rule.rule_type,
             description=rule.description,
-            severity=rule.severity,
             verified=rule.is_verified,
         )
         for rule in db.query(ConditionSafetyRule)

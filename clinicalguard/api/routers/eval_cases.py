@@ -2,18 +2,20 @@
 
 import json
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from clinicalguard.api.deps import get_db
+from clinicalguard.api.deps import get_current_user, get_db
 from clinicalguard.api.schemas import EvalCaseCreate, EvalCaseCreated
 from clinicalguard.db.models import (
     CandidateSafetyRule,
     Condition,
-    ConditionSafetyRule,
     EvalCase,
+    User,
 )
+from clinicalguard.safety.engine import get_relevant_rules
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/eval-cases", tags=["eval-cases"])
@@ -74,7 +76,7 @@ def build_case_id(conds: list[dict]) -> str:
 
 
 def build_expected_response(
-    payload: EvalCaseCreate, conds: list[dict], case_id: str, db: Session
+    payload: EvalCaseCreate, conds: list[dict], case_id: str, db: Session, authored_by: str
 ) -> dict:
     """Map the clean UI payload into the nstg_derived-style JSON blob stored in
     eval_cases.expected_response (the shape the rich scorer consumes).
@@ -82,30 +84,27 @@ def build_expected_response(
     `conds` is the ordered list of referenced conditions, each
     {condition_id, condition_name, subtype}. The case body itself stays singular
     (one query, one diagnosis set, one set of tiers); only the source references
-    are plural."""
-    # Resolve selected safety-rule ids into their stored detail for the blob.
-    resolved_rules = []
-    if payload.safety.selected_rule_ids:
-        rules = (
-            db.query(ConditionSafetyRule)
-            .filter(ConditionSafetyRule.id.in_(payload.safety.selected_rule_ids))
-            .all()
-        )
-        resolved_rules = [
-            {
-                "id": r.id,
-                "severity": r.severity,
-                "description": r.description,
-                "source": r.source,
-            }
-            for r in rules
-        ]
+    are plural. `authored_by` is the authenticated user's display name (ADR-030)
+    — never client-supplied."""
+    # Verified rules auto-attach by condition (ADR-029) — the author is never
+    # asked to pick them. Reuses the same filter the safety engine applies at
+    # scoring time, so this list is always exactly what would fire against
+    # these conditions.
+    condition_ids = [c["condition_id"] for c in conds]
+    resolved_rules = [
+        {
+            "id": r.id,
+            "description": r.description,
+            "source": r.source,
+        }
+        for r in get_relevant_rules(condition_ids, db)
+    ]
 
     return {
         "case_id": case_id,
         "query": payload.query.strip(),
         "what_this_evaluates": payload.what_this_evaluates.strip(),
-        "authored_by": payload.authored_by.strip(),
+        "authored_by": authored_by,
         "conditions": conds,
         "derived_from": [f"NSTG 2022 {c['condition_name']} section" for c in conds],
         "query_scope": payload.query_scope.strip(),
@@ -145,17 +144,31 @@ def build_expected_response(
         "reasoning_archetypes": payload.reasoning_archetypes,
         "other_archetypes": payload.other_archetypes,
         "required_safety_flags": {
-            "selected_rule_ids": payload.safety.selected_rule_ids,
             "rules": resolved_rules,
             "free_text": payload.safety.free_text,
+            "none_declared": payload.safety.none_declared,
         },
     }
 
 
-@router.post("", response_model=EvalCaseCreated, status_code=201)
-def create_eval_case(payload: EvalCaseCreate, db: Session = Depends(get_db)):
+def _validate_and_build(
+    payload: EvalCaseCreate, db: Session, authored_by: str
+) -> tuple[list[int], str, dict, list[str]]:
+    """Shared by create and update: condition/safety validation plus the
+    case_id + expected_response blob. Raises the same HTTPExceptions either
+    way. Returns (condition_ids, case_id, expected_response, warnings)."""
     if not payload.conditions:
         raise HTTPException(status_code=422, detail={"errors": ["At least one condition is required."]})
+
+    # The one deliberate exception to v1.3.1's "nothing is required at
+    # submission" (ADR-029): the safety harm question must be actively
+    # resolved, either with constraints or an explicit declared-empty.
+    # Both empty and both-filled are invalid — exactly one must hold.
+    if bool(payload.safety.free_text) == payload.safety.none_declared:
+        raise HTTPException(
+            status_code=422,
+            detail={"errors": ["Answer the safety question to finish — either list the dangers, or confirm there are none."]},
+        )
 
     ids = [c.condition_id for c in payload.conditions]
     name_map = {
@@ -174,7 +187,44 @@ def create_eval_case(payload: EvalCaseCreate, db: Session = Depends(get_db)):
         for c in payload.conditions
     ]
     case_id = build_case_id(conds)
-    expected = build_expected_response(payload, conds, case_id, db)
+    expected = build_expected_response(payload, conds, case_id, db, authored_by)
+    return ids, case_id, expected, warnings
+
+
+def _collect_candidate_safety_rules(
+    payload: EvalCaseCreate, db: Session, eval_case_id: int, condition_ids: list[int], proposed_by: str
+) -> None:
+    """Append candidate safety rules for the current free-text lines (Phase D
+    reviews them; ADR-027). Never blocks the request — a failure here is
+    logged, not surfaced. Called on both create and edit; edits append new
+    rows rather than deduping against a prior submission's rows."""
+    if not payload.safety.free_text:
+        return
+    try:
+        for text in payload.safety.free_text:
+            db.add(
+                CandidateSafetyRule(
+                    rule_text=text,
+                    eval_case_id=eval_case_id,
+                    condition_ids=json.dumps(condition_ids),
+                    proposed_by=proposed_by,
+                )
+            )
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.warning(
+            "Failed to record candidate safety rules for case %s", eval_case_id, exc_info=True
+        )
+
+
+@router.post("", response_model=EvalCaseCreated, status_code=201)
+def create_eval_case(
+    payload: EvalCaseCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ids, case_id, expected, warnings = _validate_and_build(payload, db, current_user.display_name)
 
     row = EvalCase(
         query=payload.query.strip(),
@@ -189,33 +239,50 @@ def create_eval_case(payload: EvalCaseCreate, db: Session = Depends(get_db)):
         expected_response=json.dumps(expected),
         query_scope=payload.query_scope.strip() or None,
         ground_truth_source=GROUND_TRUTH_SOURCE,
+        safety_none_declared=payload.safety.none_declared,
+        author_user_id=current_user.id,
     )
     db.add(row)
     db.commit()
     db.refresh(row)
 
-    # Collect free-text safety flags as candidates for the verified rule
-    # library (Phase D reviews them; ADR-027). Runs after the case commit and
-    # never blocks authoring — a failure here is logged, not surfaced.
-    if payload.safety.free_text:
-        try:
-            for text in payload.safety.free_text:
-                db.add(
-                    CandidateSafetyRule(
-                        rule_text=text,
-                        eval_case_id=row.id,
-                        condition_ids=json.dumps(ids),
-                        proposed_by=payload.authored_by.strip() or None,
-                    )
-                )
-            db.commit()
-        except Exception:
-            db.rollback()
-            logger.warning(
-                "Failed to record candidate safety rules for case %s", row.id, exc_info=True
-            )
+    _collect_candidate_safety_rules(payload, db, row.id, ids, current_user.display_name)
 
     return EvalCaseCreated(id=row.id, case_id=case_id, warnings=warnings)
+
+
+@router.put("/{case_id}", response_model=EvalCaseCreated, status_code=200)
+def update_eval_case(
+    case_id: int,
+    payload: EvalCaseCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update an author's own case in place (id preserved). Reuses the exact
+    same validation and expected_response construction as create — the only
+    difference is updating an existing row instead of inserting a new one."""
+    row = db.query(EvalCase).filter_by(id=case_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Eval case {case_id} not found")
+    # A legacy case with no author_user_id (pre-auth) is never silently
+    # editable — it must go through the one-time backfill first.
+    if row.author_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only edit your own cases")
+
+    ids, new_case_id, expected, warnings = _validate_and_build(payload, db, current_user.display_name)
+
+    row.query = payload.query.strip()
+    row.condition_ids = json.dumps(ids)
+    row.expected_response = json.dumps(expected)
+    row.query_scope = payload.query_scope.strip() or None
+    row.safety_none_declared = payload.safety.none_declared
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+
+    _collect_candidate_safety_rules(payload, db, row.id, ids, current_user.display_name)
+
+    return EvalCaseCreated(id=row.id, case_id=new_case_id, warnings=warnings)
 
 
 def _safe_load(blob: str | None) -> dict:
@@ -312,5 +379,7 @@ def get_eval_case(case_id: int, db: Session = Depends(get_db)):
         "query_scope": row.query_scope,
         "is_validated": row.is_validated,
         "submitted_at": row.created_at.isoformat() if row.created_at else None,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        "author_user_id": row.author_user_id,
         "expected_response": expected,
     }

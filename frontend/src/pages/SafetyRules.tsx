@@ -33,9 +33,9 @@ export function SafetyRules() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search descriptions…"
-          className="w-64 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+          className="cg-input max-w-xs"
         />
-        <select value={verified} onChange={(e) => setVerified(e.target.value)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+        <select value={verified} onChange={(e) => setVerified(e.target.value)} className="cg-input w-auto">
           <option value="ALL">All</option>
           <option value="VERIFIED">Verified</option>
           <option value="UNVERIFIED">Unverified</option>
@@ -46,43 +46,32 @@ export function SafetyRules() {
       {error && <div className="mt-6"><ErrorBox message={error} /></div>}
 
       {data && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-2">Condition</th>
-                <th className="px-3 py-2">Description</th>
-                <th className="px-3 py-2">Source</th>
-                <th className="px-3 py-2">Active</th>
-                <th className="px-3 py-2">Verified</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100 align-top hover:bg-slate-50">
-                  <td className="px-4 py-2">
-                    {r.condition_id ? (
-                      <Link to={`/conditions/${r.condition_id}`} className="text-brand-700 hover:underline">
-                        {r.condition_name}
-                      </Link>
-                    ) : (
-                      <span className="text-slate-500">{r.condition_name}</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-slate-700">{r.description}</td>
-                  <td className="px-3 py-2 text-xs text-slate-400">{r.source}</td>
-                  <td className="px-3 py-2">{r.is_active ? "✓" : "—"}</td>
-                  <td className="px-3 py-2">{r.is_verified ? "✓" : "—"}</td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">No rules match the filters.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <ul className="mt-5 space-y-3">
+          {filtered.map((r) => (
+            <li key={r.id} className="cg-card px-4 py-4 sm:px-5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {r.condition_id ? (
+                  <Link to={`/conditions/${r.condition_id}`} className="text-sm font-medium text-brand-700 hover:underline">
+                    {r.condition_name}
+                  </Link>
+                ) : (
+                  <span className="text-sm font-medium text-neutral-500">{r.condition_name}</span>
+                )}
+                {r.is_verified && (
+                  <span className="cg-badge border border-brand-200 bg-brand-50 text-brand-700">Verified</span>
+                )}
+                {!r.is_active && (
+                  <span className="cg-badge border border-neutral-200 bg-neutral-100 text-neutral-500">Inactive</span>
+                )}
+              </div>
+              <p className="mt-1.5 text-[15px] leading-relaxed text-neutral-800">{r.description}</p>
+              <p className="mt-2 text-xs text-neutral-400">{r.source}</p>
+            </li>
+          ))}
+          {filtered.length === 0 && (
+            <li className="cg-card px-4 py-10 text-center text-sm text-neutral-500">No rules match the filters.</li>
+          )}
+        </ul>
       )}
     </PageContainer>
   );

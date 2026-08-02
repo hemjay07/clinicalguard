@@ -37,29 +37,30 @@ export function Conditions() {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-4 py-2">Condition</th>
-                <th className="px-3 py-2 text-right">Findings</th>
-                <th className="px-3 py-2 text-right">Investigations</th>
-                <th className="px-3 py-2 text-right">Treatments</th>
-                <th className="px-3 py-2 text-right">Differentials</th>
-                <th className="px-3 py-2 text-right">Complications</th>
-                <th className="px-3 py-2 text-right">Safety rules</th>
+                <th className="px-4 py-2.5">Condition</th>
+                {/* Counts are secondary detail — desktop only; mobile gets a clean tappable list. */}
+                <th className="hidden px-3 py-2.5 text-right md:table-cell">Findings</th>
+                <th className="hidden px-3 py-2.5 text-right md:table-cell">Investigations</th>
+                <th className="hidden px-3 py-2.5 text-right md:table-cell">Treatments</th>
+                <th className="hidden px-3 py-2.5 text-right md:table-cell">Differentials</th>
+                <th className="hidden px-3 py-2.5 text-right md:table-cell">Complications</th>
+                <th className="hidden px-3 py-2.5 text-right md:table-cell">Safety rules</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((c) => (
                 <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-2.5">
                     <Link to={`/conditions/${c.id}`} className="font-medium text-brand-700 hover:underline">
                       {c.name}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.counts.findings}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.counts.investigations}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.counts.treatments}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.counts.differentials}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.counts.complications}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.counts.safety_rules}</td>
+                  <td className="hidden px-3 py-2.5 text-right tabular-nums md:table-cell">{c.counts.findings}</td>
+                  <td className="hidden px-3 py-2.5 text-right tabular-nums md:table-cell">{c.counts.investigations}</td>
+                  <td className="hidden px-3 py-2.5 text-right tabular-nums md:table-cell">{c.counts.treatments}</td>
+                  <td className="hidden px-3 py-2.5 text-right tabular-nums md:table-cell">{c.counts.differentials}</td>
+                  <td className="hidden px-3 py-2.5 text-right tabular-nums md:table-cell">{c.counts.complications}</td>
+                  <td className="hidden px-3 py-2.5 text-right tabular-nums md:table-cell">{c.counts.safety_rules}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (

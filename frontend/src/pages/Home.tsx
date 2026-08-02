@@ -35,10 +35,10 @@ export function Home() {
   const nCases = cases.data ? String(cases.data.count) : "…";
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 pb-16">
+    <div className="mx-auto w-full max-w-4xl px-4 pb-16 sm:px-6">
       {/* Section 1: Hero */}
-      <header className="py-16">
-        <h1 className="font-serif text-5xl font-bold tracking-tight text-neutral-900">ClinicalGuard</h1>
+      <header className="py-10 sm:py-16">
+        <h1 className="font-serif text-4xl font-bold tracking-tight text-neutral-900 sm:text-5xl">ClinicalGuard</h1>
         <p className="prose-measure mt-4 text-xl leading-relaxed text-neutral-600">
           A framework for evaluating clinical AI systems against structured clinical guidelines and
           deployment-specific rules.

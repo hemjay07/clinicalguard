@@ -66,9 +66,9 @@ export function CaseDetail() {
         return (
           <>
             <div className="flex items-center justify-between gap-3">
-              <Link to="/cases" className="text-sm text-brand-700 hover:underline">← Cases</Link>
+              <Link to="/cases" className="-mx-2 rounded-lg px-2 py-2 text-sm text-brand-700 hover:underline">← Cases</Link>
               {user && data.author_user_id === user.id && (
-                <Link to={`/cases/${data.id}/edit`} className="cg-btn-secondary px-3 py-1 text-xs">Edit case</Link>
+                <Link to={`/cases/${data.id}/edit`} className="cg-btn-secondary px-4 py-2 text-sm">Edit case</Link>
               )}
             </div>
             <h1 className="mt-2 text-2xl font-semibold text-neutral-900">{e.case_id ?? `Case #${data.id}`}</h1>
@@ -159,7 +159,7 @@ export function CaseDetail() {
                 ) : (
                   <TierBlock label="Danger-level constraints" items={e.required_safety_flags?.free_text} />
                 )}
-                <TierBlock label="Applicable verified rules" items={(e.required_safety_flags?.rules ?? []).map((r: any) => r.description)} />
+                <TierBlock label="Safety rules from the guideline" items={(e.required_safety_flags?.rules ?? []).map((r: any) => r.description)} />
               </SectionCard>
             </div>
           </>

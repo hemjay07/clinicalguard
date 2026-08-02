@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 export function PageContainer({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-6xl px-6 py-10">{children}</div>;
+  return <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">{children}</div>;
 }
 
 export function Spinner({ label = "Loading…" }: { label?: string }) {

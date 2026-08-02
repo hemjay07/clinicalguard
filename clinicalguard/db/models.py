@@ -1,8 +1,10 @@
+import uuid
 from datetime import datetime
 from pgvector.sqlalchemy import Vector
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Integer,
@@ -10,6 +12,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from clinicalguard.db.session import Base
 
@@ -311,18 +314,56 @@ class ConditionInvestigation(Base):
 
 
 class User(Base):
-    """A known, seeded author (ADR-030). No self-signup — accounts are
-    created via clinicalguard.auth.seed_user. Minimal identity, not a
-    permissions system: every authenticated user has the same capabilities."""
+    """An app user keyed to a verified Supabase Auth identity (ADR-031).
+    Rows are created/linked on first sign-in (see api.deps.get_current_user);
+    there are no local credentials. Not a permissions system — the only
+    access distinction is owner-vs-rater, decided by email against
+    settings.owner_email."""
 
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    username: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
+    # Nullable: a legacy pre-Supabase row keeps existing (preserving its
+    # eval_cases FKs) until its author signs in and gets linked by email.
+    supabase_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True, unique=True, index=True
+    )
+    email: Mapped[str | None] = mapped_column(
+        String(320), nullable=True, unique=True, index=True
+    )
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
+    )
+
+
+class DecompositionResponse(Base):
+    """One rater's judgment on one of the 15 fixed decomposition items
+    (ADR-032). The items themselves are frozen seed content in
+    clinicalguard.decomposition_items — identical for every rater, never
+    authored through the UI. One row per rater x item; editing updates the
+    row in place (edit-own pattern)."""
+
+    __tablename__ = "decomposition_response"
+    __table_args__ = (
+        UniqueConstraint("rater_user_id", "item_id", name="uq_decomposition_rater_item"),
+        CheckConstraint("decision IN ('keep_whole', 'split')", name="ck_decomposition_decision"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    rater_user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False, index=True
+    )
+    item_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    decision: Mapped[str] = mapped_column(String(20), nullable=False)
+    # Only meaningful when decision == 'split'.
+    split_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, onupdate=datetime.utcnow
     )
 
 

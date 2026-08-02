@@ -12,12 +12,14 @@ import { Authoring } from "./pages/Authoring";
 import { Login } from "./pages/Login";
 import { Cases } from "./pages/Cases";
 import { CaseDetail } from "./pages/CaseDetail";
+import { Decompose } from "./pages/Decompose";
 import { EvalDashboard } from "./pages/EvalDashboard";
 import { Methodology } from "./pages/Methodology";
 import { Spinner, PageContainer } from "./components/ui";
 
-// Authoring and case editing are the only auth-gated routes (ADR-030) —
-// browsing the corpus/conditions/safety rules stays open.
+// Auth-gated (ADR-031): authoring, case browsing (result privacy — an author
+// sees only their own cases), and the decomposition task. Reference material
+// (conditions, safety rules, methodology) stays open.
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -42,9 +44,10 @@ function AppRoutes() {
           <Route path="/conditions" element={<Conditions />} />
           <Route path="/conditions/:conditionId" element={<ConditionDetail />} />
           <Route path="/safety-rules" element={<SafetyRules />} />
-          <Route path="/cases" element={<Cases />} />
-          <Route path="/cases/:caseId" element={<CaseDetail />} />
+          <Route path="/cases" element={<RequireAuth><Cases /></RequireAuth>} />
+          <Route path="/cases/:caseId" element={<RequireAuth><CaseDetail /></RequireAuth>} />
           <Route path="/cases/:caseId/edit" element={<RequireAuth><Authoring /></RequireAuth>} />
+          <Route path="/decompose" element={<RequireAuth><Decompose /></RequireAuth>} />
           <Route path="/eval-dashboard" element={<EvalDashboard />} />
           <Route path="/methodology" element={<Methodology />} />
         </Routes>

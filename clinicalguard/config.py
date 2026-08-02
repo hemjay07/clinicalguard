@@ -5,11 +5,13 @@ class Settings(BaseSettings):
     database_url: PostgresDsn
     openai_api_key: str
     anthropic_api_key: str
-    # Signs the session cookie (ADR-030). Required — no insecure default.
-    session_secret_key: str
-    # False for local dev (HTTP); set True on Railway so the cookie is
-    # Secure + SameSite=None, which cross-origin (Vercel↔Railway) requires.
-    cookie_secure: bool = False
+    # Supabase project URL (https://<ref>.supabase.co) — used to fetch the
+    # JWKS that verifies Supabase Auth access tokens (ADR-031).
+    supabase_url: str
+    # The one owner identity (ADR-031): the verified account allowed to read
+    # results in aggregate (all cases, all decomposition responses). Not a
+    # roles system — owner-vs-rater is the only access distinction.
+    owner_email: str = "mujeebopabode07@gmail.com"
 
     model_config = {
         "env_file": ".env",

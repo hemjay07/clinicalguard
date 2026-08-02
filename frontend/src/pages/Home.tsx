@@ -28,11 +28,11 @@ function Section({ id, title, children }: { id?: string; title?: string; childre
 export function Home() {
   const conditions = useFetch(() => api.listConditions(), []);
   const safety = useFetch(() => api.safetyRules(), []);
-  const cases = useFetch(() => api.listEvalCases(), []);
+  const cases = useFetch(() => api.evalCaseCount(), []);
 
   const nConditions = conditions.data ? conditions.data.length : "251";
   const nSafety = safety.data ? safety.data.length : "9";
-  const nCases = cases.data ? String(cases.data.length) : "…";
+  const nCases = cases.data ? String(cases.data.count) : "…";
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 pb-16">

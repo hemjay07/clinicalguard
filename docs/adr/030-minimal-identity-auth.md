@@ -1,6 +1,6 @@
 # ADR-030: Minimal identity auth for rating attribution
 
-**Status:** Accepted (2026-07-15)
+**Status:** Superseded by ADR-031 (2026-08-02)
 
 ## Context
 

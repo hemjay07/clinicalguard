@@ -1,15 +1,16 @@
-// Minimal identity auth (ADR-030). Checks the session once on mount via
-// GET /auth/me (the session cookie itself is httpOnly — the frontend can't
-// read it directly) and exposes the result to the whole app.
+// Supabase Auth (ADR-031). supabase-js owns the session (sign-in, refresh,
+// OAuth callback handling); whenever a session exists we ask the backend
+// who that verified identity is via GET /auth/me — which also creates/links
+// the app's users row on first sign-in.
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { api, ApiError } from "./api/client";
+import { api } from "./api/client";
+import { supabase } from "./supabase";
 import type { AuthUser } from "./types";
 
 interface AuthState {
   user: AuthUser | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -20,23 +21,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.me()
-      .then(setUser)
-      .catch((e) => { if (!(e instanceof ApiError && e.status === 401)) console.error(e); })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    async function resolveUser(hasSession: boolean) {
+      if (!hasSession) {
+        if (!cancelled) setUser(null);
+        return;
+      }
+      try {
+        const u = await api.me();
+        if (!cancelled) setUser(u);
+      } catch (e) {
+        console.error(e);
+        if (!cancelled) setUser(null);
+      }
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      resolveUser(!!data.session).finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        resolveUser(!!session);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  async function login(username: string, password: string) {
-    const u = await api.login(username, password);
-    setUser(u);
-  }
-
   async function logout() {
-    await api.logout();
+    await supabase.auth.signOut();
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {

@@ -1,5 +1,6 @@
 // Typed fetch wrapper around the ClinicalGuard API.
 
+import { supabase } from "../supabase";
 import type {
   ConditionListItem,
   ConditionDetails,
@@ -10,6 +11,9 @@ import type {
   EvalCasePayload,
   CreatedCase,
   AuthUser,
+  DecompositionItemsPayload,
+  DecompositionResponse,
+  DecompositionDecision,
 } from "../types";
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8011";
@@ -24,13 +28,22 @@ export class ApiError extends Error {
   }
 }
 
+async function authHeader(): Promise<Record<string, string>> {
+  // supabase-js holds the session locally and refreshes it as needed; the
+  // verified access token is the only identity the backend accepts (ADR-031).
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    // Required for the session cookie (ADR-030) to ride cross-origin
-    // requests between the Vercel frontend and Railway backend.
-    credentials: "include",
     ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(await authHeader()),
+      ...init?.headers,
+    },
   });
   if (!res.ok) {
     let detail: unknown = null;
@@ -95,6 +108,7 @@ export const api = {
   },
   safetyRules: () => cachedRequest<SafetyRule[]>("/api/v1/safety-rules"),
   listEvalCases: () => request<EvalCaseListItem[]>("/api/v1/eval-cases"),
+  evalCaseCount: () => request<{ count: number }>("/api/v1/eval-cases/count"),
   evalCase: (id: number) =>
     request<EvalCaseDetail>(`/api/v1/eval-cases/${id}`),
   createEvalCase: (payload: EvalCasePayload) =>
@@ -107,11 +121,31 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
-  login: (username: string, password: string) =>
-    request<AuthUser>("/api/v1/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password }),
-    }),
-  logout: () => request<{ status: string }>("/api/v1/auth/logout", { method: "POST" }),
   me: () => request<AuthUser>("/api/v1/auth/me"),
+  decompositionItems: () =>
+    request<DecompositionItemsPayload>("/api/v1/decomposition/items"),
+  myDecompositionResponses: () =>
+    request<DecompositionResponse[]>("/api/v1/decomposition/responses"),
+  saveDecompositionResponse: (
+    itemId: number,
+    payload: { decision: DecompositionDecision; split_count: number | null; reason: string },
+  ) =>
+    request<DecompositionResponse>(`/api/v1/decomposition/responses/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  // Owner-only CSV export; fetched with the auth header and saved as a blob
+  // (a plain <a href> couldn't carry the Authorization header).
+  downloadDecompositionCsv: async () => {
+    const res = await fetch(`${BASE}/api/v1/decomposition/export?format=csv`, {
+      headers: await authHeader(),
+    });
+    if (!res.ok) throw new ApiError(res.status, null, `Export failed (${res.status})`);
+    const blobUrl = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = "decomposition_responses.csv";
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+  },
 };

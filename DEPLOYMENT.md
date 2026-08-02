@@ -5,8 +5,9 @@ Two pieces are deployed:
 - **Backend** — FastAPI app (`clinicalguard/api`) → **Render** (free web service)
 - **Frontend** — React/Vite SPA (`frontend/`) → **Vercel**
 
-Both auto-deploy from GitHub on push to the connected branch. No authentication is
-configured (Phase A relies on URL obscurity — see ADR-019).
+Both auto-deploy from GitHub on push to the connected branch. Authentication is
+Supabase Auth with Google OAuth as the primary sign-in (ADR-031); the backend
+verifies Supabase access tokens against the project JWKS.
 
 ---
 
@@ -26,8 +27,28 @@ Start command: `uvicorn clinicalguard.api.main:app --host 0.0.0.0 --port $PORT`
 3. Render reads `render.yaml`. Confirm: Runtime **Python**, Build `pip install .`,
    Start `uvicorn clinicalguard.api.main:app --host 0.0.0.0 --port $PORT`, Plan **Free**.
 4. Add the secret environment variables (values are in your local `.env`):
-   `DATABASE_URL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`. Leave `FRONTEND_ORIGIN`
+   `DATABASE_URL`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and
+   `SUPABASE_URL` (`https://sgkyiistoezuvsdfwzqg.supabase.co`). `OWNER_EMAIL`
+   is optional (defaults to the owner's Google email — the identity allowed
+   to read aggregate results, ADR-031). Leave `FRONTEND_ORIGIN`
    empty for now — set it after the frontend is deployed.
+   `SESSION_SECRET_KEY`/`COOKIE_SECURE` from ADR-030 are no longer read and
+   can be deleted.
+
+### Supabase Auth (one-time, dashboard)
+Google is the primary sign-in and needs a Google OAuth client once:
+1. Google Cloud Console → APIs & Services → Credentials → **Create OAuth
+   client ID** (type Web application). Authorized redirect URI:
+   `https://sgkyiistoezuvsdfwzqg.supabase.co/auth/v1/callback`.
+2. Supabase dashboard → Authentication → Providers → Google → enable, paste
+   the client ID + secret.
+3. Authentication → URL Configuration: Site URL
+   `https://clinicalguard.vercel.app`; additional redirect URLs
+   `http://localhost:5173/**` and `https://clinicalguard.vercel.app/**`
+   (already set via the management API).
+
+The email magic-link fallback works out of the box (built-in SMTP, low rate
+limits — fine at this scale).
 5. Create the service. First build takes a few minutes.
 
 > **Free tier note:** the service spins down after ~15 min idle; the next request

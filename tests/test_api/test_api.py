@@ -9,6 +9,8 @@ LLM annotation in `source_organizer.organize_source` is monkeypatched so the
 source-material endpoint test does not make a real model call.
 """
 
+import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event
@@ -16,13 +18,23 @@ from sqlalchemy.orm import Session
 
 from clinicalguard.api.deps import get_current_user, get_db
 from clinicalguard.api.main import app
-from clinicalguard.auth.hashing import hash_password
+from clinicalguard.config import settings
 from clinicalguard.db.models import User
 from clinicalguard.db.session import engine
 
 MALARIA_ID = 149
 MALARIA_SUBTYPE = "Severe (Complicated) malaria"
 TEST_AUTHOR_NAME = "Dr Test"
+
+
+def make_user(db_session, email: str, display_name: str) -> User:
+    """A Supabase-linked user row (ADR-031), created inside the same
+    rolled-back transaction as everything else in the test."""
+    user = User(email=email, supabase_user_id=uuid.uuid4(), display_name=display_name)
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
 
 
 @pytest.fixture
@@ -49,13 +61,7 @@ def db_session():
 
 @pytest.fixture
 def test_user(db_session):
-    """A seeded-style user (ADR-030), created inside the same rolled-back
-    transaction as everything else in the test."""
-    user = User(username="drtest", password_hash=hash_password("x"), display_name=TEST_AUTHOR_NAME)
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
+    return make_user(db_session, "drtest@example.com", TEST_AUTHOR_NAME)
 
 
 @pytest.fixture
@@ -354,40 +360,31 @@ def test_get_eval_case_404(client):
     assert r.status_code == 404
 
 
-# --- auth (ADR-030) ------------------------------------------------------------
+# --- auth (ADR-031) ------------------------------------------------------------
 
 def test_create_requires_auth(unauthenticated_client):
     r = unauthenticated_client.post("/api/v1/eval-cases", json=valid_payload())
     assert r.status_code == 401
 
 
-def test_login_success_and_me(unauthenticated_client, db_session):
-    user = User(username="loginuser", password_hash=hash_password("correct-horse"), display_name="Login User")
-    db_session.add(user)
-    db_session.commit()
-
-    r = unauthenticated_client.post("/api/v1/auth/login", json={"username": "loginuser", "password": "correct-horse"})
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["username"] == "loginuser"
-    assert body["display_name"] == "Login User"
-
-    me = unauthenticated_client.get("/api/v1/auth/me")
+def test_me(client, test_user):
+    me = client.get("/api/v1/auth/me")
     assert me.status_code == 200
-    assert me.json()["username"] == "loginuser"
+    body = me.json()
+    assert body["email"] == "drtest@example.com"
+    assert body["display_name"] == TEST_AUTHOR_NAME
+    assert body["is_owner"] is False
 
 
-def test_login_wrong_password_401(unauthenticated_client, db_session):
-    user = User(username="loginuser2", password_hash=hash_password("correct-horse"), display_name="Login User 2")
-    db_session.add(user)
-    db_session.commit()
-
-    r = unauthenticated_client.post("/api/v1/auth/login", json={"username": "loginuser2", "password": "wrong"})
+def test_me_without_token_401(unauthenticated_client):
+    r = unauthenticated_client.get("/api/v1/auth/me")
     assert r.status_code == 401
 
 
-def test_me_without_session_401(unauthenticated_client):
-    r = unauthenticated_client.get("/api/v1/auth/me")
+def test_me_garbage_token_401(unauthenticated_client):
+    r = unauthenticated_client.get(
+        "/api/v1/auth/me", headers={"Authorization": "Bearer not-a-real-token"}
+    )
     assert r.status_code == 401
 
 
@@ -415,9 +412,7 @@ def test_update_own_case_succeeds(client):
 def test_update_other_users_case_403(client, db_session, test_user):
     created = client.post("/api/v1/eval-cases", json=valid_payload()).json()
 
-    other = User(username="other_author", password_hash=hash_password("x"), display_name="Other Doctor")
-    db_session.add(other)
-    db_session.commit()
+    other = make_user(db_session, "other@example.com", "Other Doctor")
 
     app.dependency_overrides[get_current_user] = lambda: other
     r = client.put(f"/api/v1/eval-cases/{created['id']}", json=valid_payload())
@@ -438,3 +433,127 @@ def test_update_requires_auth(client):
 def test_update_unknown_case_404(client):
     r = client.put("/api/v1/eval-cases/999999999", json=valid_payload())
     assert r.status_code == 404
+
+
+# --- result privacy (A3 / ADR-031) -----------------------------------------
+
+def test_list_shows_only_own_cases(client, db_session, test_user, monkeypatch):
+    # The real owner_email already exists as a users row in the shared DB
+    # (unique index) — point the owner check at a test identity instead.
+    monkeypatch.setattr(settings, "owner_email", "owner-test@example.com")
+    created = client.post("/api/v1/eval-cases", json=valid_payload()).json()
+
+    other = make_user(db_session, "other-rater@example.com", "Other Doctor")
+    app.dependency_overrides[get_current_user] = lambda: other
+    listed_as_other = client.get("/api/v1/eval-cases").json()
+    viewed_as_other = client.get(f"/api/v1/eval-cases/{created['id']}")
+    app.dependency_overrides[get_current_user] = lambda: test_user
+
+    assert all(c["id"] != created["id"] for c in listed_as_other)
+    assert viewed_as_other.status_code == 403
+
+    # The author still sees their own case; the owner sees everything.
+    assert any(c["id"] == created["id"] for c in client.get("/api/v1/eval-cases").json())
+    owner = make_user(db_session, settings.owner_email, "Owner")
+    app.dependency_overrides[get_current_user] = lambda: owner
+    listed_as_owner = client.get("/api/v1/eval-cases").json()
+    viewed_as_owner = client.get(f"/api/v1/eval-cases/{created['id']}")
+    app.dependency_overrides[get_current_user] = lambda: test_user
+    assert any(c["id"] == created["id"] for c in listed_as_owner)
+    assert viewed_as_owner.status_code == 200
+
+
+def test_case_count_is_public(unauthenticated_client):
+    r = unauthenticated_client.get("/api/v1/eval-cases/count")
+    assert r.status_code == 200
+    assert isinstance(r.json()["count"], int)
+
+
+# --- decomposition task (ADR-032) -------------------------------------------
+
+RULEBOOK_MARKERS = ("sequencing", "named", "standardized unit", "selection", "parameter")
+
+
+def decomp_payload(**overrides):
+    payload = {"decision": "keep_whole", "split_count": None, "reason": "It is one decision."}
+    payload.update(overrides)
+    return payload
+
+
+def test_items_fixed_and_rule_free(client):
+    r = client.get("/api/v1/decomposition/items")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total_items"] == 15
+    flat = [i for g in body["groups"] for i in g["items"]]
+    assert [i["id"] for i in flat] == list(range(1, 16))
+    # The decomposition rules must appear nowhere rater-facing.
+    blob = str(body).lower()
+    assert not any(marker in blob for marker in RULEBOOK_MARKERS)
+
+
+def test_items_require_auth(unauthenticated_client):
+    assert unauthenticated_client.get("/api/v1/decomposition/items").status_code == 401
+
+
+def test_upsert_and_revise_response(client):
+    r = client.put("/api/v1/decomposition/responses/1", json=decomp_payload())
+    assert r.status_code == 200, r.text
+    assert r.json()["decision"] == "keep_whole"
+
+    # Revising updates the same row, not a second one.
+    r = client.put(
+        "/api/v1/decomposition/responses/1",
+        json=decomp_payload(decision="split", split_count=2, reason="Two separate checks."),
+    )
+    assert r.status_code == 200
+    mine = client.get("/api/v1/decomposition/responses").json()
+    assert len([m for m in mine if m["item_id"] == 1]) == 1
+    assert mine[0]["decision"] == "split" and mine[0]["split_count"] == 2
+
+
+def test_reason_required(client):
+    r = client.put("/api/v1/decomposition/responses/2", json=decomp_payload(reason="   "))
+    assert r.status_code == 422
+
+
+def test_split_requires_count(client):
+    r = client.put(
+        "/api/v1/decomposition/responses/2",
+        json=decomp_payload(decision="split", split_count=None, reason="Two things."),
+    )
+    assert r.status_code == 422
+
+
+def test_unknown_item_404(client):
+    assert client.put("/api/v1/decomposition/responses/99", json=decomp_payload()).status_code == 404
+
+
+def test_responses_are_own_only(client, db_session, test_user):
+    client.put("/api/v1/decomposition/responses/3", json=decomp_payload())
+
+    other = make_user(db_session, "rater2@example.com", "Rater Two")
+    app.dependency_overrides[get_current_user] = lambda: other
+    others_view = client.get("/api/v1/decomposition/responses").json()
+    app.dependency_overrides[get_current_user] = lambda: test_user
+    assert others_view == []
+
+
+def test_export_owner_only(client, db_session, test_user, monkeypatch):
+    monkeypatch.setattr(settings, "owner_email", "owner-test@example.com")
+    client.put("/api/v1/decomposition/responses/4", json=decomp_payload())
+
+    # A rater — even the one who answered — cannot read the aggregate.
+    assert client.get("/api/v1/decomposition/export").status_code == 403
+
+    owner = make_user(db_session, settings.owner_email, "Owner")
+    app.dependency_overrides[get_current_user] = lambda: owner
+    csv_r = client.get("/api/v1/decomposition/export")
+    json_r = client.get("/api/v1/decomposition/export?format=json")
+    app.dependency_overrides[get_current_user] = lambda: test_user
+
+    assert csv_r.status_code == 200
+    assert csv_r.headers["content-type"].startswith("text/csv")
+    assert "rater,rater_email,item_id" in csv_r.text.splitlines()[0]
+    rows = json_r.json()["responses"]
+    assert any(r["item_id"] == 4 and r["rater"] == TEST_AUTHOR_NAME for r in rows)

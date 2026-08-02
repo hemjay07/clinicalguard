@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from clinicalguard.api.deps import get_current_user, get_db
+from clinicalguard.api.deps import get_current_user, get_db, is_owner
 from clinicalguard.api.schemas import EvalCaseCreate, EvalCaseCreated
 from clinicalguard.db.models import (
     CandidateSafetyRule,
@@ -305,18 +305,22 @@ def _subtype_display(meta: dict) -> str | None:
 
 
 @router.get("")
-def list_eval_cases(db: Session = Depends(get_db)):
+def list_eval_cases(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """List the Phase A corpus: only cases authored through this UI
     (ground_truth_source = md_authored_via_ui). Legacy auto_generated_legacy
     cases and the hand-seeded nstg_derived reference cases remain in the database
     but are not surfaced here, so the count reflects the real MD-authored corpus.
-    Reads metadata (case_id, subtype, authored_by) from the expected_response JSON."""
-    rows = (
-        db.query(EvalCase)
-        .filter(EvalCase.ground_truth_source == GROUND_TRUTH_SOURCE)
-        .order_by(EvalCase.created_at.desc())
-        .all()
-    )
+    Reads metadata (case_id, subtype, authored_by) from the expected_response JSON.
+
+    Result privacy (A3/ADR-031): an author sees only their own cases; the
+    aggregate corpus is readable only by the owner."""
+    q = db.query(EvalCase).filter(EvalCase.ground_truth_source == GROUND_TRUTH_SOURCE)
+    if not is_owner(current_user):
+        q = q.filter(EvalCase.author_user_id == current_user.id)
+    rows = q.order_by(EvalCase.created_at.desc()).all()
 
     # Map condition ids -> names in one query.
     all_ids: set[int] = set()
@@ -352,12 +356,31 @@ def list_eval_cases(db: Session = Depends(get_db)):
     return out
 
 
+@router.get("/count")
+def count_eval_cases(db: Session = Depends(get_db)):
+    """Public corpus size for the landing page — the one aggregate fact that
+    stays open now that the case list itself is private (A3/ADR-031)."""
+    n = (
+        db.query(EvalCase)
+        .filter(EvalCase.ground_truth_source == GROUND_TRUTH_SOURCE)
+        .count()
+    )
+    return {"count": n}
+
+
 @router.get("/{case_id}")
-def get_eval_case(case_id: int, db: Session = Depends(get_db)):
-    """Full eval case for the read-only detail view."""
+def get_eval_case(
+    case_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Full eval case for the read-only detail view. Readable by its author
+    or the owner only (A3/ADR-031)."""
     row = db.query(EvalCase).filter_by(id=case_id).first()
     if not row:
         raise HTTPException(status_code=404, detail=f"Eval case {case_id} not found")
+    if row.author_user_id != current_user.id and not is_owner(current_user):
+        raise HTTPException(status_code=403, detail="You can only view your own cases")
 
     expected = _safe_load(row.expected_response)
     cids = _safe_load(row.condition_ids) if row.condition_ids else []

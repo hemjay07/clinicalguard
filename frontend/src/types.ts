@@ -65,8 +65,37 @@ export interface SourceMaterial {
 
 export interface AuthUser {
   id: number;
-  username: string;
+  email: string | null;
   display_name: string;
+  is_owner: boolean;
+}
+
+export type DecompositionDecision = "keep_whole" | "split";
+
+export interface DecompositionItem {
+  id: number;
+  text: string;
+  source_note?: string;
+}
+
+export interface DecompositionItemGroup {
+  case_label: string;
+  clinical_query: string;
+  items: DecompositionItem[];
+}
+
+export interface DecompositionItemsPayload {
+  task_version: number;
+  total_items: number;
+  groups: DecompositionItemGroup[];
+}
+
+export interface DecompositionResponse {
+  item_id: number;
+  decision: DecompositionDecision;
+  split_count: number | null;
+  reason: string;
+  updated_at: string | null;
 }
 
 export interface EvalCaseListItem {

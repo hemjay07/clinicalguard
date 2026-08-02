@@ -94,6 +94,7 @@ export interface DecompositionResponse {
   item_id: number;
   decision: DecompositionDecision;
   split_count: number | null;
+  split_labels: string[] | null;
   reason: string;
   updated_at: string | null;
 }

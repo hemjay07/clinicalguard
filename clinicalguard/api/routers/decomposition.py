@@ -5,6 +5,7 @@ done deliberately, offline, from the export."""
 
 import csv
 import io
+import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,6 +25,9 @@ DECISIONS = ("keep_whole", "split")
 class ResponseIn(BaseModel):
     decision: str
     split_count: int | None = None
+    # Ordered brief piece labels, one per piece — the carve itself. Never
+    # pre-populated anywhere: these must be the rater's own words.
+    split_labels: list[str] | None = None
     reason: str
 
     @field_validator("decision")
@@ -47,8 +51,13 @@ class ResponseOut(BaseModel):
     item_id: int
     decision: str
     split_count: int | None
+    split_labels: list[str] | None
     reason: str
     updated_at: str | None
+
+
+def _labels(row: DecompositionResponse) -> list[str] | None:
+    return json.loads(row.split_labels) if row.split_labels else None
 
 
 def _out(row: DecompositionResponse) -> ResponseOut:
@@ -56,6 +65,7 @@ def _out(row: DecompositionResponse) -> ResponseOut:
         item_id=row.item_id,
         decision=row.decision,
         split_count=row.split_count,
+        split_labels=_labels(row),
         reason=row.reason,
         updated_at=(row.updated_at or row.created_at).isoformat(),
     )
@@ -102,18 +112,30 @@ def upsert_response(
                 status_code=422,
                 detail="A split needs how many pieces (at least 2).",
             )
+        # The carve is the measurement: a split with unlabeled pieces gives
+        # the count without the cut lines, which is the useless case.
+        labels = [l.strip() for l in (payload.split_labels or [])]
+        if len(labels) != payload.split_count or any(not l for l in labels):
+            raise HTTPException(
+                status_code=422,
+                detail="Name each piece in a few words — one label per piece.",
+            )
+        payload.split_labels = labels
     else:
-        # keep_whole carries no count — normalize rather than reject.
+        # keep_whole carries no count or labels — normalize rather than reject.
         payload.split_count = None
+        payload.split_labels = None
 
     row = (
         db.query(DecompositionResponse)
         .filter_by(rater_user_id=current_user.id, item_id=item_id)
         .first()
     )
+    labels_json = json.dumps(payload.split_labels) if payload.split_labels else None
     if row:
         row.decision = payload.decision
         row.split_count = payload.split_count
+        row.split_labels = labels_json
         row.reason = payload.reason
         row.updated_at = datetime.utcnow()
     else:
@@ -122,6 +144,7 @@ def upsert_response(
             item_id=item_id,
             decision=payload.decision,
             split_count=payload.split_count,
+            split_labels=labels_json,
             reason=payload.reason,
         )
         db.add(row)
@@ -153,6 +176,7 @@ def export_responses(
             "item_text": ITEMS_BY_ID.get(resp.item_id, {}).get("text"),
             "decision": resp.decision,
             "split_count": resp.split_count,
+            "split_labels": _labels(resp),
             "reason": resp.reason,
             "updated_at": (resp.updated_at or resp.created_at).isoformat(),
         }
@@ -166,11 +190,15 @@ def export_responses(
         buf,
         fieldnames=[
             "rater", "rater_email", "item_id", "item_text",
-            "decision", "split_count", "reason", "updated_at",
+            "decision", "split_count", "split_labels", "reason", "updated_at",
         ],
     )
     writer.writeheader()
-    writer.writerows(records)
+    # CSV cell: ordered labels joined with " | " (JSON export carries the real array).
+    writer.writerows(
+        {**r, "split_labels": " | ".join(r["split_labels"]) if r["split_labels"] else ""}
+        for r in records
+    )
     buf.seek(0)
     return StreamingResponse(
         buf,

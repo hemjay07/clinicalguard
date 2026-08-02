@@ -3,7 +3,7 @@
 // rulebook is deliberately absent from every rater-facing surface; the
 // measurement depends on raters bringing independent judgment.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../AuthContext";
 import { PageContainer, Spinner, ErrorBox } from "../components/ui";
@@ -16,10 +16,13 @@ import type {
 interface Draft {
   decision: DecompositionDecision | null;
   split_count: string; // input value; validated on save
+  // One brief label per piece — always the rater's own words, never
+  // pre-populated or suggested (that would contaminate the measurement).
+  labels: string[];
   reason: string;
 }
 
-const EMPTY_DRAFT: Draft = { decision: null, split_count: "", reason: "" };
+const EMPTY_DRAFT: Draft = { decision: null, split_count: "", labels: [], reason: "" };
 
 export function Decompose() {
   const { user } = useAuth();
@@ -30,7 +33,15 @@ export function Decompose() {
   const [step, setStep] = useState(-1);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  // (no blocking "saving" state — continue never waits on the network)
+  // Background-save bookkeeping (optimistic UI): continue advances instantly,
+  // the PUT runs behind. A failed save is surfaced and the answer kept in the
+  // draft for retry — never fire-and-forget.
+  const [inflight, setInflight] = useState<Set<number>>(new Set());
+  const [failed, setFailed] = useState<Set<number>>(new Set());
+  // Per-item promise chain so a quick revise of the same item can't race an
+  // earlier save (last write wins, in order).
+  const chains = useRef(new Map<number, Promise<unknown>>());
 
   useEffect(() => {
     Promise.all([api.decompositionItems(), api.myDecompositionResponses()])
@@ -41,6 +52,7 @@ export function Decompose() {
           d[r.item_id] = {
             decision: r.decision,
             split_count: r.split_count?.toString() ?? "",
+            labels: r.split_labels ?? [],
             reason: r.reason,
           };
         });
@@ -74,32 +86,79 @@ export function Decompose() {
     setSaveError(null);
   }
 
-  async function saveAndNext() {
-    const item = flat[step];
-    const d = draftFor(item.id);
-    if (!d.decision) return setSaveError("Choose keep whole or split first.");
+  function validateDraft(d: Draft): { error: string } | { payload: Parameters<typeof api.saveDecompositionResponse>[1] } {
+    if (!d.decision) return { error: "Choose keep whole or split first." };
     const count = d.decision === "split" ? parseInt(d.split_count, 10) : null;
     if (d.decision === "split" && (!count || count < 2))
-      return setSaveError("How many pieces would you split it into? (at least 2)");
-    if (!d.reason.trim()) return setSaveError("A one-line reason is required — it's the most useful part.");
+      return { error: "How many pieces would you split it into? (at least 2)" };
+    const labels = count ? Array.from({ length: count }, (_, i) => (d.labels[i] ?? "").trim()) : null;
+    if (labels && labels.some((l) => !l))
+      return { error: "Name each piece in a few words — that's the part that captures how you cut it." };
+    if (!d.reason.trim()) return { error: "A one-line reason is required — it's the most useful part." };
+    return { payload: { decision: d.decision, split_count: count, split_labels: labels, reason: d.reason.trim() } };
+  }
 
-    setSaving(true);
-    setSaveError(null);
-    try {
-      await api.saveDecompositionResponse(item.id, {
-        decision: d.decision,
-        split_count: count,
-        reason: d.reason.trim(),
+  function mutate(set: React.Dispatch<React.SetStateAction<Set<number>>>, id: number, add: boolean) {
+    set((s) => {
+      const next = new Set(s);
+      if (add) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function saveInBackground(itemId: number, payload: Parameters<typeof api.saveDecompositionResponse>[1]) {
+    mutate(setInflight, itemId, true);
+    mutate(setFailed, itemId, false);
+    const prev = chains.current.get(itemId) ?? Promise.resolve();
+    const run = prev
+      .catch(() => {})
+      .then(() => api.saveDecompositionResponse(itemId, payload));
+    chains.current.set(itemId, run);
+    run
+      .then(() => {
+        setSaved((s) => new Set(s).add(itemId));
+        mutate(setFailed, itemId, false);
+      })
+      .catch(() => mutate(setFailed, itemId, true))
+      .finally(() => {
+        if (chains.current.get(itemId) === run) chains.current.delete(itemId);
+        mutate(setInflight, itemId, false);
       });
-      setSaved((s) => new Set(s).add(item.id));
-      setStep(step + 1);
-      window.scrollTo(0, 0);
-    } catch {
-      setSaveError("Couldn't save — please try again.");
-    } finally {
-      setSaving(false);
+  }
+
+  function retryFailed() {
+    for (const id of failed) {
+      const v = validateDraft(draftFor(id));
+      if ("payload" in v) saveInBackground(id, v.payload);
     }
   }
+
+  function saveAndNext() {
+    const item = flat[step];
+    const v = validateDraft(draftFor(item.id));
+    if ("error" in v) return setSaveError(v.error);
+    setSaveError(null);
+    // Optimistic: advance immediately, save behind. The answer lives in the
+    // draft either way, so a failure loses nothing — it surfaces for retry.
+    saveInBackground(item.id, v.payload);
+    setStep(step + 1);
+    window.scrollTo(0, 0);
+  }
+
+  // Shown on item + finish screens whenever a background save has failed.
+  const failedBanner = failed.size > 0 && (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <span>
+        {failed.size === 1
+          ? `Item ${[...failed][0]} didn't save — your answer is kept here.`
+          : `Items ${[...failed].sort((a, b) => a - b).join(", ")} didn't save — your answers are kept here.`}
+      </span>
+      <button onClick={retryFailed} className="cg-btn-secondary px-3 py-1.5 text-sm">
+        Retry
+      </button>
+    </div>
+  );
 
   // ---------- intro ----------
   if (step === -1) {
@@ -192,6 +251,10 @@ export function Decompose() {
           <p className="mt-2 text-sm text-neutral-500">
             You can still revise any answer below; your changes save the same way.
           </p>
+          {inflight.size > 0 && (
+            <p className="mt-2 text-xs text-neutral-400">Saving your last answers…</p>
+          )}
+          {failedBanner}
           <ul className="mt-6 space-y-2">
             {flat.map((item, i) => {
               const d = draftFor(item.id);
@@ -277,6 +340,31 @@ export function Decompose() {
               value={d.split_count}
               onChange={(e) => setDraft(item.id, { split_count: e.target.value })}
             />
+            {(() => {
+              const n = parseInt(d.split_count, 10);
+              if (!n || n < 2) return null;
+              return (
+                <div className="mt-3">
+                  <label className="cg-label">Name each piece — a few words is plenty</label>
+                  <div className="space-y-2">
+                    {Array.from({ length: Math.min(n, 10) }, (_, i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        className="cg-input"
+                        placeholder={`Piece ${i + 1}`}
+                        value={d.labels[i] ?? ""}
+                        onChange={(e) => {
+                          const labels = [...d.labels];
+                          labels[i] = e.target.value;
+                          setDraft(item.id, { labels });
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -297,6 +385,7 @@ export function Decompose() {
         )}
 
         {saveError && <div className="mt-4"><ErrorBox message={saveError} /></div>}
+        {failedBanner}
 
         <div className="mt-6 flex items-center justify-between">
           <button
@@ -305,8 +394,8 @@ export function Decompose() {
           >
             ← {step === 0 ? "Intro" : "Previous"}
           </button>
-          <button onClick={saveAndNext} disabled={saving} className="cg-btn-primary px-6 py-2.5">
-            {saving ? "Saving…" : step === total - 1 ? "Save & finish" : "Save & continue"}
+          <button onClick={saveAndNext} className="cg-btn-primary px-6 py-2.5">
+            {step === total - 1 ? "Save & finish" : "Save & continue"}
           </button>
         </div>
       </div>

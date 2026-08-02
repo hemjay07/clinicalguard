@@ -358,6 +358,9 @@ class DecompositionResponse(Base):
     decision: Mapped[str] = mapped_column(String(20), nullable=False)
     # Only meaningful when decision == 'split'.
     split_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # JSON array of brief rater-written piece labels, ordered, one per piece
+    # (the carve, not just the count). Required alongside split_count.
+    split_labels: Mapped[str | None] = mapped_column(Text, nullable=True)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow

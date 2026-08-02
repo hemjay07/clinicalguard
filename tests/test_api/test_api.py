@@ -504,12 +504,23 @@ def test_upsert_and_revise_response(client):
     # Revising updates the same row, not a second one.
     r = client.put(
         "/api/v1/decomposition/responses/1",
-        json=decomp_payload(decision="split", split_count=2, reason="Two separate checks."),
+        json=decomp_payload(
+            decision="split", split_count=2,
+            split_labels=["fluids first", "saline"],
+            reason="Two separate checks.",
+        ),
     )
     assert r.status_code == 200
     mine = client.get("/api/v1/decomposition/responses").json()
     assert len([m for m in mine if m["item_id"] == 1]) == 1
     assert mine[0]["decision"] == "split" and mine[0]["split_count"] == 2
+    # The carve round-trips, in order.
+    assert mine[0]["split_labels"] == ["fluids first", "saline"]
+
+    # Revising back to keep_whole clears count and labels.
+    r = client.put("/api/v1/decomposition/responses/1", json=decomp_payload())
+    assert r.status_code == 200
+    assert r.json()["split_count"] is None and r.json()["split_labels"] is None
 
 
 def test_reason_required(client):
@@ -523,6 +534,24 @@ def test_split_requires_count(client):
         json=decomp_payload(decision="split", split_count=None, reason="Two things."),
     )
     assert r.status_code == 422
+
+
+def test_split_requires_piece_labels(client):
+    """A split with unlabeled pieces is the count without the carve —
+    rejected. So is a label list that doesn't match the count, or one
+    with a blank entry."""
+    base = decomp_payload(decision="split", split_count=2, reason="Two things.")
+    assert client.put("/api/v1/decomposition/responses/2", json=base).status_code == 422
+    assert client.put(
+        "/api/v1/decomposition/responses/2", json={**base, "split_labels": ["only one"]}
+    ).status_code == 422
+    assert client.put(
+        "/api/v1/decomposition/responses/2", json={**base, "split_labels": ["one", "   "]}
+    ).status_code == 422
+    ok = client.put(
+        "/api/v1/decomposition/responses/2", json={**base, "split_labels": ["one", "two"]}
+    )
+    assert ok.status_code == 200, ok.text
 
 
 def test_unknown_item_404(client):
@@ -541,7 +570,13 @@ def test_responses_are_own_only(client, db_session, test_user):
 
 def test_export_owner_only(client, db_session, test_user, monkeypatch):
     monkeypatch.setattr(settings, "owner_email", "owner-test@example.com")
-    client.put("/api/v1/decomposition/responses/4", json=decomp_payload())
+    client.put(
+        "/api/v1/decomposition/responses/4",
+        json=decomp_payload(
+            decision="split", split_count=2,
+            split_labels=["fluids first", "saline"], reason="Two decisions.",
+        ),
+    )
 
     # A rater — even the one who answered — cannot read the aggregate.
     assert client.get("/api/v1/decomposition/export").status_code == 403
@@ -554,6 +589,8 @@ def test_export_owner_only(client, db_session, test_user, monkeypatch):
 
     assert csv_r.status_code == 200
     assert csv_r.headers["content-type"].startswith("text/csv")
-    assert "rater,rater_email,item_id" in csv_r.text.splitlines()[0]
+    assert "split_labels" in csv_r.text.splitlines()[0]
+    assert "fluids first | saline" in csv_r.text
     rows = json_r.json()["responses"]
-    assert any(r["item_id"] == 4 and r["rater"] == TEST_AUTHOR_NAME for r in rows)
+    mine = next(r for r in rows if r["item_id"] == 4 and r["rater"] == TEST_AUTHOR_NAME)
+    assert mine["split_labels"] == ["fluids first", "saline"]

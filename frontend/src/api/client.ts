@@ -128,7 +128,12 @@ export const api = {
     request<DecompositionResponse[]>("/api/v1/decomposition/responses"),
   saveDecompositionResponse: (
     itemId: number,
-    payload: { decision: DecompositionDecision; split_count: number | null; reason: string },
+    payload: {
+      decision: DecompositionDecision;
+      split_count: number | null;
+      split_labels: string[] | null;
+      reason: string;
+    },
   ) =>
     request<DecompositionResponse>(`/api/v1/decomposition/responses/${itemId}`, {
       method: "PUT",

@@ -97,7 +97,7 @@ if __name__ == "__main__":
         evaluation_dir = Path("evaluation")
         reports = sorted(evaluation_dir.glob("variance_report_*.json"))
         if not reports:
-            print("No variance report found. Run measure_variance.py first.")
+            print("No variance report found. Run measure_variance_authored.py first.")
             sys.exit(1)
         variance_path = reports[-1]
     else:

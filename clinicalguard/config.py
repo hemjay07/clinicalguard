@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # The one owner identity (ADR-031): the verified account allowed to read
     # results in aggregate (all cases, all decomposition responses). Not a
     # roles system — owner-vs-rater is the only access distinction.
-    owner_email: str = "irfanjimoh123@gmail.com"
+    owner_email: str = "mujeebopabode07@gmail.com"
 
     model_config = {
         "env_file": ".env",

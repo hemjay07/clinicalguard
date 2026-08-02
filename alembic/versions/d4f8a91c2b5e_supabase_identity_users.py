@@ -35,7 +35,7 @@ def upgrade() -> None:
     op.create_index("ix_users_supabase_user_id", "users", ["supabase_user_id"], unique=True)
     op.create_index("ix_users_email", "users", ["email"], unique=True)
 
-    op.execute("UPDATE users SET email = 'irfanjimoh123@gmail.com' WHERE username = 'mujeeb'")
+    op.execute("UPDATE users SET email = 'mujeebopabode07@gmail.com' WHERE username = 'mujeeb'")
 
     op.drop_index("ix_users_username", table_name="users")
     op.drop_column("users", "password_hash")

@@ -169,59 +169,31 @@ export function Decompose() {
             ClinicalGuard · rating task
           </p>
           <h1 className="mt-1 font-serif text-2xl font-semibold text-neutral-900">
-            Splitting rubric items into pieces
+            Splitting rubric items
           </h1>
           <p className="mt-2 text-sm text-neutral-500">
-            15 items, about 25–35 minutes. There's no answer key you're being checked against —
-            it's your independent clinical judgment we want.
+            15 items, ~25 min. No answer key, we want your independent clinical judgment. Some
+            are genuinely hard, so take a moment.
           </p>
 
           <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-neutral-700">
             <p>
-              In our scoring, each rubric item is checked against an AI's response as a yes/no:
-              did the response do this, or not. That's clean when an item is a single thing, and
-              messy when one item quietly contains several separate clinical decisions — a single
-              yes/no can't fairly capture a response that got one part right and another wrong.
+              Each item gets checked against an AI's response as a yes/no. That works when an
+              item is one thing, and breaks when it quietly holds several separate decisions.
             </p>
             <p>
-              So for each item: if it bundles more than one separately-checkable clinical
-              decision, split it. If it's a single decision, keep it whole. Each item is shown
-              under its source case with the clinical query, so you judge it in context.
+              <strong className="font-semibold text-neutral-900">
+                Your call on each: is this one thing, or does it bundle parts that should be
+                checked separately?
+              </strong>{" "}
+              Both splitting and keeping-whole are valid. Some things written together are
+              genuinely separable; others belong together and splitting would misrepresent them.
             </p>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-5">
-            <p className="text-sm font-semibold text-neutral-900">The mechanic, on a deliberately trivial example</p>
-            <div className="mt-3 space-y-2 rounded-lg bg-neutral-50 p-4 text-sm text-neutral-700">
-              <p>
-                <span className="font-mono text-[13px]">"order a chest X-ray and a full blood count"</span>{" "}
-                <span className="font-semibold text-brand-700">→</span> two separate things: split into{" "}
-                <span className="font-mono text-[13px]">"orders chest X-ray"</span> and{" "}
-                <span className="font-mono text-[13px]">"orders full blood count"</span>.
-              </p>
-              <p>
-                <span className="font-mono text-[13px]">"order an ECG"</span>{" "}
-                <span className="font-semibold text-brand-700">→</span> already one thing: keep whole.
-              </p>
-            </div>
-            <p className="mt-3 text-sm text-neutral-500">
-              That's only to show the format. The real items are less obvious, and how to handle
-              them is your call, in the context of the case.
+            <p>
+              Example: "chest X-ray and full blood count" → split. "order an ECG" → keep whole.
+              (Just the format, real items are subtler.)
             </p>
-          </div>
-
-          <div className="mt-4 rounded-xl border border-neutral-200 bg-white p-5 text-sm text-neutral-700">
-            <p className="font-semibold text-neutral-900">Two things to know</p>
-            <ul className="mt-2 list-disc space-y-1.5 pl-5">
-              <li>
-                The one-line reason you give for each item matters as much as the answer. If
-                something feels genuinely ambiguous, say so — that's useful signal, not a wrong answer.
-              </li>
-              <li>
-                You can go back and revise earlier answers at any point, including after you've
-                changed your mind mid-task. Nothing holds you to an earlier call.
-              </li>
-            </ul>
+            <p>The one-line reason matters as much as the answer. You can revise anytime.</p>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">

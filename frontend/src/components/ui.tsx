@@ -11,10 +11,18 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
   // The free-tier backend cold-starts in 30-60s after idle. If loading drags
   // past a few seconds, say so — a silent spinner reads as "broken".
   const [slow, setSlow] = useState(false);
+  // Drives the wake-up progress bar: flips one frame after `slow` so the CSS
+  // width transition animates from its 3% starting point.
+  const [fill, setFill] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setSlow(true), 4000);
     return () => clearTimeout(t);
   }, []);
+  useEffect(() => {
+    if (!slow) return;
+    const id = requestAnimationFrame(() => setFill(true));
+    return () => cancelAnimationFrame(id);
+  }, [slow]);
   return (
     <div className="text-sm text-neutral-500">
       <div className="flex items-center gap-2.5">
@@ -22,9 +30,19 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
         <span>{label}</span>
       </div>
       {slow && (
-        <p className="mt-2 text-xs text-neutral-400">
-          The server is waking up from sleep — this first load can take up to a minute. Subsequent pages will be fast.
-        </p>
+        <>
+          <p className="mt-2 text-xs text-neutral-400">
+            The server is waking up from sleep — this first load can take up to a minute. Subsequent pages will be fast.
+          </p>
+          {/* A bounded-feeling wait: eases toward 95% over ~50s (the typical
+              cold start) and holds there until the real data lands. */}
+          <span className="mt-2.5 block h-1 w-full max-w-xs overflow-hidden rounded-full bg-neutral-200">
+            <span
+              className="block h-full rounded-full bg-brand-600"
+              style={{ width: fill ? "95%" : "3%", transition: "width 50s cubic-bezier(0.2, 0.6, 0.3, 1)" }}
+            />
+          </span>
+        </>
       )}
     </div>
   );

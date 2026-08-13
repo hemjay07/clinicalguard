@@ -62,38 +62,55 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// Session cache for endpoints whose data is static per backend deployment
-// (guideline data: conditions, subtypes, source material, safety rules).
-// Repeat navigation renders instantly instead of re-crossing the network.
-const CACHE_PREFIX = "cg_api:";
-const CACHE_TTL_MS = 30 * 60 * 1000;
+// Cache for endpoints whose data is static per backend deployment (guideline
+// data: conditions, subtypes, source material, safety rules). localStorage +
+// stale-while-revalidate: anything cached in the last week renders instantly
+// — including across a Render cold start — while a background refresh keeps
+// the copy current for the next visit.
+const CACHE_PREFIX = "cg_api_v2:";
+const FRESH_TTL_MS = 30 * 60 * 1000;
+const STALE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-async function cachedRequest<T>(path: string): Promise<T> {
+function cacheStore(path: string, data: unknown): void {
   try {
-    const raw = sessionStorage.getItem(CACHE_PREFIX + path);
-    if (raw) {
-      const { at, data } = JSON.parse(raw);
-      if (Date.now() - at < CACHE_TTL_MS) return data as T;
-    }
-  } catch {
-    /* corrupt cache entry — fall through to network */
-  }
-  const data = await request<T>(path);
-  try {
-    sessionStorage.setItem(CACHE_PREFIX + path, JSON.stringify({ at: Date.now(), data }));
+    localStorage.setItem(CACHE_PREFIX + path, JSON.stringify({ at: Date.now(), data }));
   } catch {
     /* quota exceeded — serve uncached */
   }
+}
+
+async function cachedRequest<T>(path: string): Promise<T> {
+  let entry: { at: number; data: T } | null = null;
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + path);
+    if (raw) entry = JSON.parse(raw);
+  } catch {
+    /* corrupt cache entry — fall through to network */
+  }
+  const age = entry ? Date.now() - entry.at : Infinity;
+  if (entry && age < FRESH_TTL_MS) return entry.data;
+  if (entry && age < STALE_TTL_MS) {
+    // Serve stale instantly; refresh behind for next time. The refresh also
+    // wakes the free-tier backend, so nothing downstream pays the cold start.
+    request<T>(path).then((data) => cacheStore(path, data)).catch(() => {});
+    return entry.data;
+  }
+  const data = await request<T>(path);
+  cacheStore(path, data);
   return data;
 }
 
 // Fire-and-forget wake-up call. The Render free tier spins the backend down
 // when idle; pinging from the app shell on first load means it starts booting
-// while the user is still reading the landing page.
+// while the user is still reading the landing page. Once it's up, prefetch
+// the conditions list (open endpoint) so the authoring entry point renders
+// instantly even for a first-time visitor.
 export function warmUpApi(): void {
-  fetch(`${BASE}/health`).catch(() => {
-    /* backend waking up or offline — data fetches surface real errors */
-  });
+  fetch(`${BASE}/health`)
+    .then(() => api.listConditions())
+    .catch(() => {
+      /* backend waking up or offline — data fetches surface real errors */
+    });
 }
 
 export const api = {

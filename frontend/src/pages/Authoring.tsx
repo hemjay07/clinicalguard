@@ -39,6 +39,7 @@ function IntroOverlay({ onStart, onUseForm }: { onStart: () => void; onUseForm: 
           <li className="flex gap-2.5"><span className="text-brand-600">•</span>You can jump between questions and phases freely using the phase bar, the numbered dots, or the arrows.</li>
           <li className="flex gap-2.5"><span className="text-brand-600">•</span>You can switch to a full form view at any time — both views edit the same case.</li>
           <li className="flex gap-2.5"><span className="text-brand-600">•</span>Progress is auto-saved. Close the tab and pick up where you left off.</li>
+          <li className="flex gap-2.5"><span className="text-brand-600">•</span>If anything's unclear along the way, use the note link under any screen — it helps improve the tool, and you just keep going.</li>
         </ul>
         <div className="mt-6 flex items-center justify-between gap-3">
           <button onClick={onUseForm} className="text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600">Prefer the full form?</button>

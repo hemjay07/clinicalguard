@@ -12,7 +12,7 @@ import { SourcePanel } from "../components/SourcePanel";
 import { FullForm } from "../components/FullForm";
 import { GuidedFlow } from "../components/GuidedFlow";
 import { CasePreview } from "../components/CasePreview";
-import { NoteButton } from "../components/FeedbackNote";
+import { NoteLink } from "../components/FeedbackNote";
 import { saveDraft, loadDraft, clearDraft } from "../storage";
 import { useAuth } from "../AuthContext";
 import { decodeConditions, draftSlug } from "../selection";
@@ -346,6 +346,12 @@ export function Authoring() {
             onSubmit={submit} submitting={submitting}
           />
         )}
+
+        {/* In the document flow (not floating) so it can never cover content
+            on mobile; context tracks the current screen/view. */}
+        <div className="mt-4 px-1">
+          <NoteLink flow="authoring" context={noteContext} />
+        </div>
       </div>
 
       {showPanel && (
@@ -362,7 +368,6 @@ export function Authoring() {
         <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="cg-btn-secondary fixed bottom-20 right-5 z-30 shadow-sm lg:bottom-5">↑ Top</button>
       )}
-      <NoteButton flow="authoring" context={noteContext} />
       <button onClick={() => setMobileOpen(true)} className="cg-btn-primary fixed bottom-5 right-5 z-30 shadow-lg lg:hidden">Source</button>
       <div className={`fixed inset-0 z-40 transform bg-white transition-transform duration-200 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex h-full flex-col">

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { PageContainer, Spinner, ErrorBox } from "../components/ui";
-import { NoteButton } from "../components/FeedbackNote";
+import { NoteLink } from "../components/FeedbackNote";
 import { encodeConditions } from "../selection";
 import type { SelectedCondition } from "../types";
 
@@ -41,7 +41,6 @@ export function ConditionPicker() {
 
   return (
     <PageContainer>
-      <NoteButton flow="authoring" context="condition picker" />
       <h1 className="font-serif text-2xl font-semibold text-neutral-900">Author a case</h1>
       <p className="mt-1 text-neutral-600">
         Select one or more conditions the case spans.
@@ -107,6 +106,9 @@ export function ConditionPicker() {
           })}
         </div>
       )}
+      <div className="mt-5">
+        <NoteLink flow="authoring" context="condition picker" />
+      </div>
     </PageContainer>
   );
 }

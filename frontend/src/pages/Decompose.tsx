@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../AuthContext";
 import { PageContainer, Spinner, ErrorBox } from "../components/ui";
-import { NoteButton, ExitFeedback } from "../components/FeedbackNote";
+import { NoteLink, ExitFeedback } from "../components/FeedbackNote";
 import type {
   DecompositionDecision,
   DecompositionItemsPayload,
@@ -165,7 +165,6 @@ export function Decompose() {
   if (step === -1) {
     return (
       <PageContainer>
-        <NoteButton flow="decomposition" context="intro" />
         <div className="mx-auto w-full max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
             ClinicalGuard · rating task
@@ -208,6 +207,15 @@ export function Decompose() {
               </button>
             )}
           </div>
+
+          {/* Priming: legitimize notes up front so mid-task use feels normal. */}
+          <p className="mt-5 text-xs text-neutral-400">
+            If anything's unclear along the way, use the note link under any screen — it helps
+            me fix the tool, and you just keep going.
+          </p>
+          <div className="mt-2">
+            <NoteLink flow="decomposition" context="intro" />
+          </div>
         </div>
       </PageContainer>
     );
@@ -217,7 +225,6 @@ export function Decompose() {
   if (step >= total) {
     return (
       <PageContainer>
-        <NoteButton flow="decomposition" context="finish" />
         <div className="mx-auto w-full max-w-2xl">
           <h1 className="font-serif text-2xl font-semibold text-neutral-900">That's all 15 — thank you.</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">
@@ -258,6 +265,9 @@ export function Decompose() {
               );
             })}
           </ul>
+          <div className="mt-5">
+            <NoteLink flow="decomposition" context="finish" />
+          </div>
         </div>
       </PageContainer>
     );
@@ -269,7 +279,6 @@ export function Decompose() {
 
   return (
     <PageContainer>
-      <NoteButton flow="decomposition" context={`item ${item.id} (step ${step + 1} of ${total})`} />
       <div className="mx-auto w-full max-w-2xl">
         <div className="flex items-center justify-between text-xs text-neutral-400">
           <span className="font-semibold uppercase tracking-wider">Item {step + 1} of {total}</span>
@@ -382,6 +391,14 @@ export function Decompose() {
           <button onClick={saveAndNext} className="cg-btn-primary px-6 py-2.5">
             {step === total - 1 ? "Save & finish" : "Save & continue"}
           </button>
+        </div>
+
+        <div className="mt-5">
+          <NoteLink
+            flow="decomposition"
+            context={`item ${item.id} (step ${step + 1} of ${total})`}
+            label="Something unclear about this item?"
+          />
         </div>
       </div>
     </PageContainer>

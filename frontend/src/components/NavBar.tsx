@@ -1,15 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 
 const GITHUB_URL = "https://github.com/hemjay07/clinicalguard";
 
-// Ordered by the MD's journey: land → see the corpus → browse the reference
-// material behind it → read how it's scored. Authoring is the one primary
-// action, so it lives as a CTA on the right instead of a peer link.
-const links = [
-  { to: "/", label: "Home", end: true },
-  { to: "/cases", label: "Cases" },
+// Nav hierarchy (v1.6): things users DO (Cases, Rating task, Author CTA)
+// stay visible; reference material lives one click deep in a dropdown;
+// account chrome (Feedback, GitHub, Log out) lives behind the user's name.
+// The wordmark is the Home link — no separate Home item.
+const DO_LINKS = [{ to: "/cases", label: "Cases" }];
+
+const REFERENCE_LINKS = [
   { to: "/conditions", label: "Conditions" },
   { to: "/safety-rules", label: "Safety rules" },
   { to: "/methodology", label: "Methodology" },
@@ -30,6 +31,54 @@ function mobileLinkClass({ isActive }: { isActive: boolean }) {
   }`;
 }
 
+function menuItemClass({ isActive }: { isActive: boolean }) {
+  return `block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+    isActive ? "bg-brand-50 text-brand-800" : "text-neutral-600 hover:bg-neutral-100"
+  }`;
+}
+
+// Small dropdown shell: closes on outside click and on route change.
+function Dropdown({ trigger, active, children }: {
+  trigger: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+
+  useEffect(() => setOpen(false), [location.pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className={`border-b-2 pb-0.5 text-sm font-medium transition-colors ${
+          active
+            ? "border-brand-700 text-neutral-900"
+            : "border-transparent text-neutral-500 hover:text-neutral-900"
+        }`}
+      >
+        {trigger} <span className="text-xs">▾</span>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border border-neutral-200 bg-white p-1.5 shadow-lg">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NavBar() {
   // Don't advertise "Author a case" while the user is already authoring one.
   const location = useLocation();
@@ -41,54 +90,70 @@ export function NavBar() {
   // Any navigation closes the sheet.
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
-  const taskLink = { to: "/decompose", label: "Rating task" };
+  const referenceActive = REFERENCE_LINKS.some((l) => location.pathname.startsWith(l.to));
 
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-200 bg-neutral-50/90 backdrop-blur">
       <nav className="mx-auto flex w-full max-w-6xl items-center gap-5 px-4 py-3 sm:py-3.5">
         <Link to="/" className="mr-1 font-serif text-lg font-semibold text-brand-700">ClinicalGuard</Link>
 
-        {/* Desktop: one row of peer links; user + CTA on the right. */}
+        {/* Desktop: doing links + Reference dropdown; CTA and user menu right. */}
         <div className="hidden flex-1 items-center gap-5 lg:flex">
-          {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} className={desktopLinkClass}>
+          {DO_LINKS.map((l) => (
+            <NavLink key={l.to} to={l.to} className={desktopLinkClass}>
               {l.label}
             </NavLink>
           ))}
           {user && (
-            <NavLink to={taskLink.to} className={desktopLinkClass}>{taskLink.label}</NavLink>
+            <NavLink to="/decompose" className={desktopLinkClass}>Rating task</NavLink>
           )}
-          {user?.is_owner && (
-            <NavLink to="/feedback" className={desktopLinkClass}>Feedback</NavLink>
-          )}
-          <div className="ml-auto flex items-center gap-4">
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
-            >
-              GitHub ↗
-            </a>
-            {user ? (
-              <span className="flex items-center gap-2.5 text-sm text-neutral-500">
-                {user.display_name}
-                <button
-                  onClick={() => logout().then(() => navigate("/"))}
-                  className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
-                >
-                  Log out
-                </button>
-              </span>
-            ) : (
-              <NavLink to="/login" className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900">
-                Sign in
+          <Dropdown trigger="Reference" active={referenceActive}>
+            {REFERENCE_LINKS.map((l) => (
+              <NavLink key={l.to} to={l.to} className={menuItemClass}>
+                {l.label}
               </NavLink>
-            )}
+            ))}
+          </Dropdown>
+          <div className="ml-auto flex items-center gap-4">
             {!authoring && (
               <NavLink to="/author" className="cg-btn-primary px-4 py-1.5">
                 Author a case
               </NavLink>
+            )}
+            {user ? (
+              <Dropdown trigger={user.display_name} active={false}>
+                {user.is_owner && (
+                  <NavLink to="/feedback" className={menuItemClass}>Feedback</NavLink>
+                )}
+                <a
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100"
+                >
+                  GitHub ↗
+                </a>
+                <button
+                  onClick={() => logout().then(() => navigate("/"))}
+                  className="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100"
+                >
+                  Log out
+                </button>
+              </Dropdown>
+            ) : (
+              <>
+                <a
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
+                >
+                  GitHub ↗
+                </a>
+                <NavLink to="/login" className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900">
+                  Sign in
+                </NavLink>
+              </>
             )}
           </div>
         </div>
@@ -117,17 +182,26 @@ export function NavBar() {
         </button>
       </nav>
 
-      {/* Mobile sheet — plain disclosure under the bar, 44px+ touch rows. */}
+      {/* Mobile sheet — doing first, then reference group, then account. */}
       {open && (
         <div className="cg-screen-enter border-t border-neutral-200 bg-neutral-50 px-3 pb-4 pt-2 lg:hidden">
-          {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} className={mobileLinkClass}>
+          {DO_LINKS.map((l) => (
+            <NavLink key={l.to} to={l.to} className={mobileLinkClass}>
               {l.label}
             </NavLink>
           ))}
           {user && (
-            <NavLink to={taskLink.to} className={mobileLinkClass}>{taskLink.label}</NavLink>
+            <NavLink to="/decompose" className={mobileLinkClass}>Rating task</NavLink>
           )}
+
+          <p className="mt-2 px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+            Reference
+          </p>
+          {REFERENCE_LINKS.map((l) => (
+            <NavLink key={l.to} to={l.to} className={mobileLinkClass}>
+              {l.label}
+            </NavLink>
+          ))}
           {user?.is_owner && (
             <NavLink to="/feedback" className={mobileLinkClass}>Feedback</NavLink>
           )}

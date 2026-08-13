@@ -115,6 +115,15 @@ export function NavBar() {
             ))}
           </Dropdown>
           <div className="ml-auto flex items-center gap-4">
+            {/* The project repo, not the user's profile — shown to everyone. */}
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
+            >
+              GitHub ↗
+            </a>
             {!authoring && (
               <NavLink to="/author" className="cg-btn-primary px-4 py-1.5">
                 Author a case
@@ -125,14 +134,6 @@ export function NavBar() {
                 {user.is_owner && (
                   <NavLink to="/feedback" className={menuItemClass}>Feedback</NavLink>
                 )}
-                <a
-                  href={GITHUB_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100"
-                >
-                  GitHub ↗
-                </a>
                 <button
                   onClick={() => logout().then(() => navigate("/"))}
                   className="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100"
@@ -141,19 +142,9 @@ export function NavBar() {
                 </button>
               </Dropdown>
             ) : (
-              <>
-                <a
-                  href={GITHUB_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
-                >
-                  GitHub ↗
-                </a>
-                <NavLink to="/login" className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900">
-                  Sign in
-                </NavLink>
-              </>
+              <NavLink to="/login" className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900">
+                Sign in
+              </NavLink>
             )}
           </div>
         </div>

@@ -24,6 +24,7 @@ export interface ScreenDef {
   phase: 1 | 2 | 3;
   kind: ScreenKind;
   crumb: string;         // short label: breadcrumbs, case preview, review rows
+  lead?: string;         // short framing paragraph rendered above the question
   question: string;      // the one clinical question this screen asks
   help?: string;         // supporting explanation directly under the question
   optional?: boolean;
@@ -133,8 +134,9 @@ export const SCREENS: ScreenDef[] = [
   // picture to judge what would harm this patient.
   {
     id: "3.1", phase: 3, kind: "safety_harm", crumb: "Safety",
+    lead: "This is where your clinical judgment matters most. A rubric can score whether the right things are present. It can't catch what would harm this patient — that's what you're adding here.",
     question: "What must the AI never do, or never leave out, because it would harm this patient?",
-    help: "List only things that would cause real harm — a dangerous action the AI must not take, or a critical step it must not omit. Everyday best-practice or \"better choice\" issues do not belong here; those belong in the response above.",
+    help: "List only things that would cause real harm — a dangerous action the AI must not take, or a step it must not omit. Everyday best-practice or \"better choice\" issues do not belong here; those belong in the response above.",
   },
   {
     id: "3.2", phase: 3, kind: "review", crumb: "Review & submit",

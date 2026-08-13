@@ -282,7 +282,6 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, toggleArchetype
   const idx = screenIndex(screenId);
   const screen = SCREENS[idx];
   const inPhase = phaseScreens(screen.phase);
-  const posInPhase = inPhase.findIndex((s) => s.id === screen.id) + 1;
   const phaseTitle = PHASES.find((p) => p.n === screen.phase)!.title;
   const showSafetyPrompt = issues.some((i) => i.screenId === screen.id);
 
@@ -303,7 +302,20 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, toggleArchetype
       {/* key= remounts on navigation so the enter animation replays and
           per-screen local state (example toggles, learn-more) resets. */}
       <div key={screen.id} className="cg-screen-enter cg-card px-5 py-7 sm:px-10 sm:py-9">
-        <p className="cg-eyebrow">Phase {screen.phase} · {phaseTitle} — question {posInPhase} of {inPhase.length}</p>
+        {/* "question X of Y" counts real questions only — a phase whose only
+            other screen is the review step (phase 3) shows no count at all,
+            since review isn't a second question. */}
+        <p className="cg-eyebrow">
+          Phase {screen.phase} · {phaseTitle}
+          {(() => {
+            const questions = inPhase.filter((s) => s.kind !== "review");
+            const qPos = questions.findIndex((s) => s.id === screen.id) + 1;
+            return screen.kind !== "review" && questions.length > 1
+              ? ` — question ${qPos} of ${questions.length}`
+              : "";
+          })()}
+        </p>
+        {screen.lead && <p className="mt-3 max-w-prose text-sm leading-relaxed text-neutral-600">{screen.lead}</p>}
         <h2 className="mt-2 font-serif text-2xl font-semibold leading-snug text-neutral-900">{screen.question}</h2>
         {screen.help && <p className="mt-2.5 max-w-prose text-sm leading-relaxed text-neutral-500">{screen.help}</p>}
 

@@ -190,7 +190,7 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
 
       <Section num={3} title="Safety" subtitle="What must the AI never do, or never leave out" status={s3Status} summary={s3Summary} open={!!sectionsOpen[3]} onToggle={() => toggleSection(3)}>
         <h3 className="cg-eyebrow">What must the AI never do, or never leave out, because it would harm this patient?</h3>
-        <p className="cg-help mt-1">List only things that would cause real harm — a dangerous action the AI must not take, or a critical step it must not omit. Everyday best-practice or "better choice" issues do not belong here; those belong in the response above.</p>
+        <p className="cg-help mt-1">List only things that would cause real harm — a dangerous action the AI must not take, or a step it must not omit. Everyday best-practice or "better choice" issues do not belong here; those belong in the response above.</p>
         <div className="mt-3">
           <textarea rows={3} className="cg-textarea" value={form.safety_harm_text} onChange={(e) => set({ safety_harm_text: e.target.value })} placeholder="One per line — e.g. Insulin should not be initiated without first confirming serum potassium above 3.3 mmol/L" />
         </div>

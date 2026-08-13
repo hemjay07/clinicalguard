@@ -58,6 +58,9 @@ export function NavBar() {
           {user && (
             <NavLink to={taskLink.to} className={desktopLinkClass}>{taskLink.label}</NavLink>
           )}
+          {user?.is_owner && (
+            <NavLink to="/feedback" className={desktopLinkClass}>Feedback</NavLink>
+          )}
           <div className="ml-auto flex items-center gap-4">
             <a
               href={GITHUB_URL}
@@ -124,6 +127,9 @@ export function NavBar() {
           ))}
           {user && (
             <NavLink to={taskLink.to} className={mobileLinkClass}>{taskLink.label}</NavLink>
+          )}
+          {user?.is_owner && (
+            <NavLink to="/feedback" className={mobileLinkClass}>Feedback</NavLink>
           )}
           <a
             href={GITHUB_URL}

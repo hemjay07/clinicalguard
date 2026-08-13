@@ -173,3 +173,15 @@ export interface CreatedCase {
   case_id: string;
   warnings: string[];
 }
+
+export type FeedbackFlow = "authoring" | "decomposition";
+
+export interface FeedbackItem {
+  id: number;
+  user: string;
+  user_email: string | null;
+  flow: FeedbackFlow;
+  context: string | null;
+  note: string;
+  created_at: string;
+}

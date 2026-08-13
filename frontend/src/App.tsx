@@ -13,6 +13,7 @@ import { Login } from "./pages/Login";
 import { Cases } from "./pages/Cases";
 import { CaseDetail } from "./pages/CaseDetail";
 import { Decompose } from "./pages/Decompose";
+import { Feedback } from "./pages/Feedback";
 import { EvalDashboard } from "./pages/EvalDashboard";
 import { Methodology } from "./pages/Methodology";
 import { Spinner, PageContainer } from "./components/ui";
@@ -48,6 +49,7 @@ function AppRoutes() {
           <Route path="/cases/:caseId" element={<RequireAuth><CaseDetail /></RequireAuth>} />
           <Route path="/cases/:caseId/edit" element={<RequireAuth><Authoring /></RequireAuth>} />
           <Route path="/decompose" element={<RequireAuth><Decompose /></RequireAuth>} />
+          <Route path="/feedback" element={<RequireAuth><Feedback /></RequireAuth>} />
           <Route path="/eval-dashboard" element={<EvalDashboard />} />
           <Route path="/methodology" element={<Methodology />} />
         </Routes>

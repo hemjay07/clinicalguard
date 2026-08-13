@@ -12,6 +12,7 @@ import { SourcePanel } from "../components/SourcePanel";
 import { FullForm } from "../components/FullForm";
 import { GuidedFlow } from "../components/GuidedFlow";
 import { CasePreview } from "../components/CasePreview";
+import { NoteButton } from "../components/FeedbackNote";
 import { saveDraft, loadDraft, clearDraft } from "../storage";
 import { useAuth } from "../AuthContext";
 import { decodeConditions, draftSlug } from "../selection";
@@ -179,6 +180,13 @@ export function Authoring() {
   const names = useMemo(() => (sources.data ?? []).map((s) => s.data.condition.name), [sources.data]);
 
   const payload = useMemo(() => toPayload(form, refs), [form, refs]);
+
+  // Where a friction note would land: flow position (guided screen or full
+  // form) plus which case, so repeated confusions map back to a screen/field.
+  const currentScreen = SCREENS.find((s) => s.id === screenId);
+  const noteContext =
+    (isEdit ? `edit case ${editCaseId} · ` : "") +
+    (view === "guided" ? `screen ${screenId} (${currentScreen?.crumb ?? "?"})` : "full form");
 
   async function submit() {
     // No client-side gating (v1.3.1 §4) except safety (ADR-029) — the one
@@ -354,6 +362,7 @@ export function Authoring() {
         <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="cg-btn-secondary fixed bottom-20 right-5 z-30 shadow-sm lg:bottom-5">↑ Top</button>
       )}
+      <NoteButton flow="authoring" context={noteContext} />
       <button onClick={() => setMobileOpen(true)} className="cg-btn-primary fixed bottom-5 right-5 z-30 shadow-lg lg:hidden">Source</button>
       <div className={`fixed inset-0 z-40 transform bg-white transition-transform duration-200 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex h-full flex-col">

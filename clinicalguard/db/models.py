@@ -449,3 +449,28 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
     )
+
+
+class Feedback(Base):
+    """A friction note left by a user mid-flow (the floating "leave a note"
+    button) or at the end of a session (exit prompt). Capture-only: nothing
+    in the app responds to these, and only the owner can read them. The
+    context string records where in the flow the note was left."""
+
+    __tablename__ = "feedback"
+    __table_args__ = (
+        CheckConstraint("flow IN ('authoring', 'decomposition')", name="ck_feedback_flow"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False, index=True
+    )
+    flow: Mapped[str] = mapped_column(String(20), nullable=False)
+    # Free-form locator: screen/step id plus item_id or case field, e.g.
+    # "guided screen 2.3 (Required investigations)" or "item 7 (step 7 of 15)".
+    context: Mapped[str | None] = mapped_column(Text, nullable=True)
+    note: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )

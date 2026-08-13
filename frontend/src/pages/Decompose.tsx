@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../AuthContext";
 import { PageContainer, Spinner, ErrorBox } from "../components/ui";
+import { NoteButton, ExitFeedback } from "../components/FeedbackNote";
 import type {
   DecompositionDecision,
   DecompositionItemsPayload,
@@ -164,6 +165,7 @@ export function Decompose() {
   if (step === -1) {
     return (
       <PageContainer>
+        <NoteButton flow="decomposition" context="intro" />
         <div className="mx-auto w-full max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
             ClinicalGuard · rating task
@@ -215,6 +217,7 @@ export function Decompose() {
   if (step >= total) {
     return (
       <PageContainer>
+        <NoteButton flow="decomposition" context="finish" />
         <div className="mx-auto w-full max-w-2xl">
           <h1 className="font-serif text-2xl font-semibold text-neutral-900">That's all 15 — thank you.</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">
@@ -227,6 +230,15 @@ export function Decompose() {
             <p className="mt-2 text-xs text-neutral-400">Saving your last answers…</p>
           )}
           {failedBanner}
+          {/* One optional exit prompt, once per rater (localStorage-gated so
+              revisiting the finish screen doesn't nag). */}
+          {localStorage.getItem("cg_decomp_exit_fb") !== "1" && (
+            <ExitFeedback
+              flow="decomposition"
+              context="exit: finished task"
+              onDone={() => localStorage.setItem("cg_decomp_exit_fb", "1")}
+            />
+          )}
           <ul className="mt-6 space-y-2">
             {flat.map((item, i) => {
               const d = draftFor(item.id);
@@ -257,6 +269,7 @@ export function Decompose() {
 
   return (
     <PageContainer>
+      <NoteButton flow="decomposition" context={`item ${item.id} (step ${step + 1} of ${total})`} />
       <div className="mx-auto w-full max-w-2xl">
         <div className="flex items-center justify-between text-xs text-neutral-400">
           <span className="font-semibold uppercase tracking-wider">Item {step + 1} of {total}</span>

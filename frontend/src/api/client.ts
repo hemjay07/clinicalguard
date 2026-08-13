@@ -14,6 +14,8 @@ import type {
   DecompositionItemsPayload,
   DecompositionResponse,
   DecompositionDecision,
+  FeedbackFlow,
+  FeedbackItem,
 } from "../types";
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8011";
@@ -139,6 +141,26 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
+  // Friction capture (owner-readable only; submitting is open to any
+  // signed-in user). The 204 response is deliberate — nothing to react to.
+  submitFeedback: (flow: FeedbackFlow, context: string | null, note: string) =>
+    request<void>("/api/v1/feedback", {
+      method: "POST",
+      body: JSON.stringify({ flow, context, note }),
+    }),
+  listFeedback: () => request<FeedbackItem[]>("/api/v1/feedback"),
+  downloadFeedbackCsv: async () => {
+    const res = await fetch(`${BASE}/api/v1/feedback/export`, {
+      headers: await authHeader(),
+    });
+    if (!res.ok) throw new ApiError(res.status, null, `Export failed (${res.status})`);
+    const blobUrl = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = "feedback.csv";
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+  },
   // Owner-only CSV export; fetched with the auth header and saved as a blob
   // (a plain <a href> couldn't carry the Authorization header).
   downloadDecompositionCsv: async () => {

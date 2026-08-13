@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { useAuth } from "../AuthContext";
 import { PageContainer, Spinner, ErrorBox, SectionCard } from "../components/ui";
+import { ExitFeedback } from "../components/FeedbackNote";
 import { ARCHETYPES } from "../guidance";
 
 const ARCHETYPE_LABELS: Record<string, string> = Object.fromEntries(ARCHETYPES.map((a) => [a.value, a.label]));
@@ -57,6 +58,13 @@ export function CaseDetail() {
               {nav.warnings!.map((w, i) => <li key={i}>{w}</li>)}
             </ul>
           )}
+          {/* End-of-session friction capture — optional, skippable. */}
+          <div className="text-neutral-700">
+            <ExitFeedback
+              flow="authoring"
+              context={`exit: after ${nav.updated ? "updating" : "submitting"} case ${id}`}
+            />
+          </div>
         </div>
       )}
       {loading && <Spinner />}

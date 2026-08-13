@@ -15,7 +15,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from clinicalguard.api.routers import auth, conditions, decomposition, eval_cases, safety_rules
+from clinicalguard.api.routers import auth, conditions, decomposition, eval_cases, feedback, safety_rules
 
 logging.basicConfig(level=logging.INFO)
 
@@ -48,6 +48,7 @@ app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(conditions.router, prefix=API_PREFIX)
 app.include_router(decomposition.router, prefix=API_PREFIX)
 app.include_router(eval_cases.router, prefix=API_PREFIX)
+app.include_router(feedback.router, prefix=API_PREFIX)
 app.include_router(safety_rules.router, prefix=API_PREFIX)
 
 

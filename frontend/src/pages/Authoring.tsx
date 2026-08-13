@@ -335,7 +335,7 @@ export function Authoring() {
 
         {view === "guided" ? (
           <GuidedFlow
-            form={form} set={set} payload={payload}
+            form={form} set={set}
             screenId={screenId} goTo={goTo}
             toggleArchetype={toggleArchetype}
             onSubmit={submit} submitting={submitting} issues={issues}

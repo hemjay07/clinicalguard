@@ -3,11 +3,9 @@
 // names, breadcrumb dots, and arrows all jump anywhere; answers persist via
 // the shared FormState + autosave in the Authoring shell.
 
-import { useState } from "react";
 import type { FormState, ValidationIssue } from "../caseForm";
 import { SAFETY_PROMPT } from "../caseForm";
-import type { EvalCasePayload } from "../types";
-import { PHASES, SCREENS, screenIndex, phaseScreens, screenFilled, screenSummary, previewFragment } from "../flow";
+import { PHASES, SCREENS, screenIndex, phaseScreens, screenFilled, screenSummary } from "../flow";
 import type { ScreenDef } from "../flow";
 import { ArchetypePicker, ExampleToggle } from "./fields";
 import { GuidanceIcon } from "./GuidancePopover";
@@ -16,7 +14,6 @@ import { QUERY_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETY
 interface Props {
   form: FormState;
   set: (patch: Partial<FormState>) => void;
-  payload: EvalCasePayload;
   screenId: string;
   goTo: (id: string) => void;
   toggleArchetype: (value: string) => void;
@@ -278,21 +275,15 @@ function ReviewScreen({ form, goTo, issues }: {
 
 // --- the flow ------------------------------------------------------------------
 
-export function GuidedFlow({ form, set, payload, screenId, goTo, toggleArchetype, onSubmit, submitting, issues }: Props) {
+export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmit, submitting, issues }: Props) {
   const idx = screenIndex(screenId);
   const screen = SCREENS[idx];
   const inPhase = phaseScreens(screen.phase);
   const phaseTitle = PHASES.find((p) => p.n === screen.phase)!.title;
   const showSafetyPrompt = issues.some((i) => i.screenId === screen.id);
 
-  // "How this fits into the case" open-state persists for the session so the
-  // MD opts in once, not on every screen.
-  const [showFit, setShowFit] = useState(() => sessionStorage.getItem("cg_show_fit") === "1");
-  const toggleFit = () => setShowFit((v) => { sessionStorage.setItem("cg_show_fit", v ? "0" : "1"); return !v; });
-
   const goNext = () => { if (idx < SCREENS.length - 1) goTo(SCREENS[idx + 1].id); };
   const goBack = () => { if (idx > 0) goTo(SCREENS[idx - 1].id); };
-  const fragment = previewFragment(screen.kind, payload);
   const isReview = screen.kind === "review";
 
   return (
@@ -326,19 +317,6 @@ export function GuidedFlow({ form, set, payload, screenId, goTo, toggleArchetype
             <ScreenBody screen={screen} form={form} set={set} toggleArchetype={toggleArchetype} onEnter={goNext} showSafetyPrompt={showSafetyPrompt} />
           )}
         </div>
-
-        {!isReview && fragment && (
-          <div className="mt-6">
-            <button type="button" onClick={toggleFit} className="text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600">
-              {showFit ? "▾" : "▸"} How this fits into the case
-            </button>
-            {showFit && (
-              <pre className="mt-2 overflow-x-auto rounded-lg bg-neutral-100 px-3 py-2.5 font-mono text-xs leading-relaxed text-neutral-600">
-                {JSON.stringify(fragment, null, 2)}
-              </pre>
-            )}
-          </div>
-        )}
 
         {/* One navigation row: Back on the left, the single forward action on
             the right. Optional questions are skipped by pressing Next. */}

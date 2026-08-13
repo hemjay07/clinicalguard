@@ -1,5 +1,5 @@
-// The guided authoring flow: screen sequence, per-screen fill state, review
-// summaries, and the JSON fragment each screen contributes to the case.
+// The guided authoring flow: screen sequence, per-screen fill state, and
+// review summaries.
 //
 // Every question and help string here is a house rule the tool teaches through
 // the interface (PRD v1.3 §4) — e.g. "not investigations already provided in
@@ -8,7 +8,6 @@
 
 import type { FormState } from "./caseForm";
 import { lines, truncate, safetyAnswered } from "./caseForm";
-import type { EvalCasePayload } from "./types";
 import { ARCHETYPES } from "./guidance";
 
 export type ScreenKind =
@@ -221,29 +220,3 @@ export function screenSummary(kind: ScreenKind, form: FormState): string {
   }
 }
 
-// The slice of the case JSON this screen writes — shown in the optional
-// "How this fits into the case" preview so the MD sees the structure their
-// answer lands in.
-export function previewFragment(kind: ScreenKind, p: EvalCasePayload): object | null {
-  switch (kind) {
-    case "archetypes": return { reasoning_archetypes: p.reasoning_archetypes, other_archetypes: p.other_archetypes };
-    case "query": return { query: p.query };
-    case "evaluates": return { what_this_evaluates: p.what_this_evaluates };
-    case "scope": return { query_scope: p.query_scope };
-    case "provenance": return { provenance_notes: p.provenance_notes };
-    case "primary": return { diagnoses: { primary: p.diagnoses.primary } };
-    case "critical_differentials": return { diagnoses: { critical_differentials: p.diagnoses.critical_differentials } };
-    case "other_considerations": return { diagnoses: { other_considerations: p.diagnoses.other_considerations } };
-    case "inv_required": return { investigations: { required: p.investigations.required } };
-    case "inv_expected": return { investigations: { expected: p.investigations.expected } };
-    case "inv_situational": return { investigations: { situational: p.investigations.situational } };
-    case "tx_required": return { treatments: { required: p.treatments.required } };
-    case "tx_expected": return { treatments: { expected: p.treatments.expected } };
-    case "tx_situational": return { treatments: { situational: p.treatments.situational } };
-    case "complications": return { complications: p.complications };
-    case "monitoring": return { monitoring: p.monitoring };
-    case "escalation": return { escalation_triggers: p.escalation };
-    case "safety_harm": return { safety: p.safety };
-    case "review": return null;
-  }
-}

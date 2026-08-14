@@ -96,7 +96,6 @@ export function Authoring() {
   const [activeTab, setActiveTab] = useState(0);
   const [loadedDraft, setLoadedDraft] = useState(false);
   const [showTop, setShowTop] = useState(false);
-  const [draftDismissed, setDraftDismissed] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"source" | "preview">(() =>
     sessionStorage.getItem("cg_sidebar_tab") === "preview" ? "preview" : "source");
   const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) === "form" ? "form" : "guided"));
@@ -173,10 +172,17 @@ export function Authoring() {
   }
 
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  // Full detail lives in the tooltip; the visible indicator is just a dot and
+  // a word — "is it saved?" is binary, the timestamp is noise mid-flow.
   const saveIndicator =
     saveKind === "auto" && savedAt ? `Auto-saved at ${fmtTime(savedAt)}`
     : saveKind === "submitted" && savedAt ? `${isEdit ? "Saved" : "Submitted"} at ${fmtTime(savedAt)}`
     : isEdit ? "No unsaved changes" : "Not yet saved";
+  const saveShort =
+    saveKind === "auto" ? "Saved"
+    : saveKind === "submitted" ? (isEdit ? "Saved" : "Submitted")
+    : isEdit ? "Saved" : "Not saved";
+  const saveDot = saveKind === "none" && !isEdit ? "bg-neutral-300" : "bg-brand-500";
 
   const names = useMemo(() => (sources.data ?? []).map((s) => s.data.condition.name), [sources.data]);
 
@@ -297,7 +303,16 @@ export function Authoring() {
         <div className="sticky top-0 z-20 mb-4 flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-neutral-50/90 px-4 py-2.5 backdrop-blur">
           <div className="min-w-0">
             <h1 className="truncate font-serif text-base font-semibold text-neutral-900">{names.length ? names.join(", ") : "Loading…"}</h1>
-            <p className="truncate text-xs text-neutral-400">{isEdit ? "Editing as" : "Authoring as"} {user?.display_name ?? "…"}</p>
+            {/* The one line under the title is the draft state (with its only
+                escape hatch), not the user's own name — they know who they are. */}
+            {loadedDraftAt && (
+              <p className="truncate text-xs text-neutral-400">
+                Resumed draft from {fmtTime(loadedDraftAt)}{" · "}
+                <button onClick={discardDraft} className="underline underline-offset-2 hover:text-neutral-600">
+                  discard and start fresh
+                </button>
+              </p>
+            )}
           </div>
           <div className="flex shrink-0 items-center gap-3">
             {/* View switch: guided (default) vs full form */}
@@ -311,20 +326,12 @@ export function Authoring() {
                 </button>
               ))}
             </div>
-            <span className="hidden items-center gap-1.5 text-xs text-neutral-500 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-brand-500" />{saveIndicator}</span>
+            <span className="hidden items-center gap-1.5 text-xs text-neutral-500 sm:flex" title={saveIndicator}>
+              <span className={`h-1.5 w-1.5 rounded-full ${saveDot}`} />{saveShort}
+            </span>
             <button onClick={() => setShowPanel((s) => !s)} className="cg-btn-ghost hidden px-2 py-1 text-xs lg:inline-flex">{showPanel ? "Hide source" : "Show source"}</button>
           </div>
         </div>
-
-        {loadedDraftAt && !draftDismissed && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200/70 bg-amber-50/70 px-3.5 py-1.5 text-xs text-amber-800">
-            <span>Resumed draft from {fmtTime(loadedDraftAt)} on {new Date(loadedDraftAt).toLocaleDateString()}.</span>
-            <span className="flex items-center gap-3">
-              <button onClick={discardDraft} className="font-medium underline hover:no-underline">Discard and start fresh</button>
-              <button onClick={() => setDraftDismissed(true)} aria-label="Dismiss" className="font-medium hover:text-amber-950">✕</button>
-            </span>
-          </div>
-        )}
 
         {view === "form" && issues.length > 0 && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

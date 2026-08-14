@@ -43,7 +43,12 @@ function PhaseBar({ current, goTo, form }: { current: ScreenDef; goTo: (id: stri
                 }`}>
                   {isPast ? "✓" : p.n}
                 </span>
-                <span className={`truncate text-xs font-medium sm:text-sm ${isCurrent ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-600"}`}>
+                {/* On phones only the current phase carries its name — the
+                    truncated labels of the other two were noise, their
+                    numbered circles are enough to jump by. */}
+                <span className={`truncate text-xs font-medium sm:text-sm ${
+                  isCurrent ? "text-neutral-900" : "hidden text-neutral-400 group-hover:text-neutral-600 sm:block"
+                }`}>
                   {p.title}
                 </span>
               </span>
@@ -278,8 +283,6 @@ function ReviewScreen({ form, goTo, issues }: {
 export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmit, submitting, issues }: Props) {
   const idx = screenIndex(screenId);
   const screen = SCREENS[idx];
-  const inPhase = phaseScreens(screen.phase);
-  const phaseTitle = PHASES.find((p) => p.n === screen.phase)!.title;
   const showSafetyPrompt = issues.some((i) => i.screenId === screen.id);
 
   const goNext = () => { if (idx < SCREENS.length - 1) goTo(SCREENS[idx + 1].id); };
@@ -293,21 +296,10 @@ export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmi
       {/* key= remounts on navigation so the enter animation replays and
           per-screen local state (example toggles, learn-more) resets. */}
       <div key={screen.id} className="cg-screen-enter cg-card px-5 py-7 sm:px-10 sm:py-9">
-        {/* "question X of Y" counts real questions only — a phase whose only
-            other screen is the review step (phase 3) shows no count at all,
-            since review isn't a second question. */}
-        <p className="cg-eyebrow">
-          Phase {screen.phase} · {phaseTitle}
-          {(() => {
-            const questions = inPhase.filter((s) => s.kind !== "review");
-            const qPos = questions.findIndex((s) => s.id === screen.id) + 1;
-            return screen.kind !== "review" && questions.length > 1
-              ? ` — question ${qPos} of ${questions.length}`
-              : "";
-          })()}
-        </p>
-        {screen.lead && <p className="mt-3 max-w-prose text-sm leading-relaxed text-neutral-600">{screen.lead}</p>}
-        <h2 className="mt-2 font-serif text-2xl font-semibold leading-snug text-neutral-900">{screen.question}</h2>
+        {/* No eyebrow: the phase bar + dots directly above already say where
+            the author is — repeating it here was pure noise. */}
+        {screen.lead && <p className="mb-3 max-w-prose text-sm leading-relaxed text-neutral-600">{screen.lead}</p>}
+        <h2 className="font-serif text-2xl font-semibold leading-snug text-neutral-900">{screen.question}</h2>
         {screen.help && <p className="mt-2.5 max-w-prose text-sm leading-relaxed text-neutral-500">{screen.help}</p>}
 
         <div className="mt-6">

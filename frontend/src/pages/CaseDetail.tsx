@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
@@ -40,19 +41,85 @@ export function CaseDetail() {
   const { caseId } = useParams();
   const id = Number(caseId);
   const { data, error, loading } = useFetch(() => api.evalCase(id), [id]);
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   // Set when the author was just redirected here from a successful submit
   // or edit.
   const location = useLocation();
   const nav = (location.state as { submitted?: boolean; updated?: boolean; warnings?: string[] } | null) ?? null;
+  // Contribute-more opt-in state for the success screen. "done" also covers
+  // authors who opted in on an earlier case — no re-asking.
+  const [interest, setInterest] = useState<"idle" | "saving" | "done">("idle");
+  const optedIn = interest === "done" || !!user?.contribute_opt_in;
+
+  async function expressInterest() {
+    if (interest === "saving") return;
+    setInterest("saving");
+    try {
+      await api.contributeInterest();
+      setInterest("done");
+      refresh();
+    } catch {
+      setInterest("idle");
+    }
+  }
 
   return (
     <PageContainer>
-      {(nav?.submitted || nav?.updated) && (
-        <div className="mb-5 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800">
-          <p className="font-medium">
-            {nav.updated ? "Case updated. This is your case as it now exists in the corpus." : "Case submitted. This is your case as it now exists in the corpus."}
+      {/* Post-submission success screen (new cases). Deliberately restrained:
+          thank-you, attribution, edit pointer, the contribute-more prompt,
+          author-another — and nothing else. */}
+      {nav?.submitted && (
+        <div className="cg-screen-enter cg-card mb-6 px-6 py-7 sm:px-8">
+          <h2 className="font-serif text-2xl font-semibold text-neutral-900">
+            Thank you — your case is submitted.
+          </h2>
+          <p className="mt-2.5 text-sm leading-relaxed text-neutral-600">
+            You'll be attributed in the resulting research paper.
           </p>
+          <p className="mt-1 text-sm leading-relaxed text-neutral-500">
+            You can edit this case anytime from your <Link to="/cases" className="text-brand-700 underline underline-offset-2 hover:no-underline">Cases</Link> page — it's shown in full below.
+          </p>
+          {(nav.warnings?.length ?? 0) > 0 && (
+            <ul className="mt-3 list-disc space-y-0.5 rounded-lg bg-amber-50 py-2 pl-8 pr-4 text-sm text-amber-800">
+              {nav.warnings!.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          )}
+
+          {/* The one that matters: capture willingness at the moment of
+              completion. Visually distinct so it doesn't sink under the
+              thank-you. Capture-only — the owner follows up manually. */}
+          <div className="mt-5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3.5">
+            {optedIn ? (
+              <p className="text-sm font-medium text-brand-800">
+                Noted — thank you. That genuinely helps this research.
+              </p>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-brand-900">
+                  Interested in contributing more? There are other short ways to help shape this research.
+                </p>
+                <button
+                  onClick={expressInterest}
+                  disabled={interest === "saving"}
+                  className="cg-btn-primary shrink-0 px-4 py-1.5 text-sm disabled:opacity-50"
+                >
+                  {interest === "saving" ? "…" : "I'm interested"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5">
+            <Link to="/author" className="text-sm font-medium text-brand-700 hover:underline">
+              Author another case →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {nav?.updated && (
+        <div className="mb-5 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800">
+          <p className="font-medium">Case updated. This is your case as it now exists in the corpus.</p>
           {(nav.warnings?.length ?? 0) > 0 && (
             <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-brand-800/80">
               {nav.warnings!.map((w, i) => <li key={i}>{w}</li>)}
@@ -60,10 +127,7 @@ export function CaseDetail() {
           )}
           {/* End-of-session friction capture — optional, skippable. */}
           <div className="text-neutral-700">
-            <ExitFeedback
-              flow="authoring"
-              context={`exit: after ${nav.updated ? "updating" : "submitting"} case ${id}`}
-            />
+            <ExitFeedback flow="authoring" context={`exit: after updating case ${id}`} />
           </div>
         </div>
       )}

@@ -20,9 +20,14 @@ export function Feedback() {
     <PageContainer>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-serif text-2xl font-semibold text-neutral-900">Feedback notes</h1>
-        <button onClick={() => api.downloadFeedbackCsv()} className="cg-btn-secondary">
-          Download CSV
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => api.downloadAuthorsCsv()} className="cg-btn-secondary">
+            Authors (CSV)
+          </button>
+          <button onClick={() => api.downloadFeedbackCsv()} className="cg-btn-secondary">
+            Notes (CSV)
+          </button>
+        </div>
       </div>
       <p className="mt-1 text-sm text-neutral-500">
         In-flow notes and exit prompts from both flows, newest first.

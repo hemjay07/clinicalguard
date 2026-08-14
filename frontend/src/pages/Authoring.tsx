@@ -20,6 +20,7 @@ import { EMPTY, toPayload, fromExpectedResponse, safetyAnswered, SAFETY_PROMPT }
 import type { FormState, ValidationIssue } from "../caseForm";
 import { SCREENS } from "../flow";
 import type { SourceMaterial, ConditionRef, EvalCaseDetail } from "../types";
+import { CADRES } from "../types";
 
 interface SourceEntry { ref: ConditionRef; data: SourceMaterial }
 
@@ -27,6 +28,66 @@ type ViewMode = "guided" | "form";
 const VIEW_KEY = "cg_author_view";
 const INTRO_KEY = "cg_guided_intro_seen";
 const REVIEW_SCREEN = "3.2";
+
+// Asked once per author, before their first case (server-driven: shows only
+// while the users row has no cadre). Research metadata only — a clean
+// category, no contact details; identity already comes from auth.
+function CadreGate({ onDone }: { onDone: () => Promise<void> }) {
+  const [cadre, setCadre] = useState("");
+  const [other, setOther] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const valid = cadre && (cadre !== "Other" || other.trim());
+
+  async function save() {
+    if (!valid || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.setCadre(cadre, cadre === "Other" ? other.trim() : null);
+      await onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't save — try again.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4">
+      <div className="w-full max-w-md rounded-lg bg-white p-7 shadow-xl">
+        <h2 className="font-serif text-xl font-semibold text-neutral-900">One quick question first</h2>
+        <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+          What's your current cadre? Asked once — it's reported in the research as the
+          distribution of contributing authors.
+        </p>
+        <select
+          value={cadre}
+          onChange={(e) => setCadre(e.target.value)}
+          className="cg-input mt-4 w-full"
+        >
+          <option value="" disabled>Select your cadre…</option>
+          {CADRES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        {cadre === "Other" && (
+          <input
+            type="text"
+            autoFocus
+            className="cg-input mt-3 w-full"
+            placeholder="Please specify"
+            value={other}
+            onChange={(e) => setOther(e.target.value)}
+          />
+        )}
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        <div className="mt-5 flex justify-end">
+          <button onClick={save} disabled={!valid || saving} className="cg-btn-primary px-6 disabled:opacity-50">
+            {saving ? "Saving…" : "Continue"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // One-time introduction shown before the MD's very first guided session.
 function IntroOverlay({ onStart, onUseForm }: { onStart: () => void; onUseForm: () => void }) {
@@ -51,7 +112,7 @@ function IntroOverlay({ onStart, onUseForm }: { onStart: () => void; onUseForm: 
 }
 
 export function Authoring() {
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -368,8 +429,14 @@ export function Authoring() {
         </aside>
       )}
 
-      {showIntro && view === "guided" && (
-        <IntroOverlay onStart={() => dismissIntro("guided")} onUseForm={() => dismissIntro("form")} />
+      {/* Cadre gate first (server-driven, once per author); the one-time
+          intro waits until cadre is on record. */}
+      {user && !user.cadre ? (
+        <CadreGate onDone={refresh} />
+      ) : (
+        showIntro && view === "guided" && (
+          <IntroOverlay onStart={() => dismissIntro("guided")} onUseForm={() => dismissIntro("form")} />
+        )
       )}
 
       {showTop && view === "form" && (

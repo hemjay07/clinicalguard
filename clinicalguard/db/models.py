@@ -332,6 +332,17 @@ class User(Base):
         String(320), nullable=True, unique=True, index=True
     )
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    # Research metadata, author-level (asked once, before the first case):
+    # professional cadre as a clean category; "Other" carries a short
+    # free-text in cadre_other. Owner-readable; reported in the authors export.
+    cadre: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    cadre_other: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Raised from the post-submission screen: willing to help with deeper
+    # tasks (decomposition, tiering). Capture-only — the owner follows up
+    # manually from the export; nothing in the app acts on it.
+    contribute_opt_in: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
     )

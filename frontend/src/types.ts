@@ -68,7 +68,20 @@ export interface AuthUser {
   email: string | null;
   display_name: string;
   is_owner: boolean;
+  cadre: string | null;
+  cadre_other: string | null;
+  contribute_opt_in: boolean;
 }
+
+// Must match CADRES in the backend auth router.
+export const CADRES = [
+  "House Officer (HO)",
+  "Medical Officer",
+  "Registrar",
+  "Senior Registrar",
+  "Consultant",
+  "Other",
+] as const;
 
 export type DecompositionDecision = "keep_whole" | "split";
 

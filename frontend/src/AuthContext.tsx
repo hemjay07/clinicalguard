@@ -12,6 +12,9 @@ interface AuthState {
   user: AuthUser | null;
   loading: boolean;
   logout: () => Promise<void>;
+  // Re-fetch /auth/me after a profile write (cadre, contribute opt-in) so
+  // every consumer sees the updated user without a reload.
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -60,7 +63,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }
 
-  return <AuthContext.Provider value={{ user, loading, logout }}>{children}</AuthContext.Provider>;
+  async function refresh() {
+    try {
+      setUser(await api.me());
+    } catch {
+      /* keep the current user — a failed refresh shouldn't log anyone out */
+    }
+  }
+
+  return <AuthContext.Provider value={{ user, loading, logout, refresh }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {

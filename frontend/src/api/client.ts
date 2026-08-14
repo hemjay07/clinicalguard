@@ -141,6 +141,25 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   me: () => request<AuthUser>("/api/v1/auth/me"),
+  setCadre: (cadre: string, cadreOther: string | null) =>
+    request<AuthUser>("/api/v1/auth/me/cadre", {
+      method: "PUT",
+      body: JSON.stringify({ cadre, cadre_other: cadreOther }),
+    }),
+  contributeInterest: () =>
+    request<AuthUser>("/api/v1/auth/me/contribute-interest", { method: "POST" }),
+  downloadAuthorsCsv: async () => {
+    const res = await fetch(`${BASE}/api/v1/auth/authors/export`, {
+      headers: await authHeader(),
+    });
+    if (!res.ok) throw new ApiError(res.status, null, `Export failed (${res.status})`);
+    const blobUrl = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = "authors.csv";
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+  },
   decompositionItems: () =>
     request<DecompositionItemsPayload>("/api/v1/decomposition/items"),
   myDecompositionResponses: () =>

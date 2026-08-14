@@ -172,6 +172,7 @@ def export_responses(
         {
             "rater": user.display_name,
             "rater_email": user.email,
+            "rater_cadre": user.cadre,
             "item_id": resp.item_id,
             "item_text": ITEMS_BY_ID.get(resp.item_id, {}).get("text"),
             "decision": resp.decision,
@@ -189,7 +190,7 @@ def export_responses(
     writer = csv.DictWriter(
         buf,
         fieldnames=[
-            "rater", "rater_email", "item_id", "item_text",
+            "rater", "rater_email", "rater_cadre", "item_id", "item_text",
             "decision", "split_count", "split_labels", "reason", "updated_at",
         ],
     )

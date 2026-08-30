@@ -96,11 +96,9 @@ function IntroOverlay({ onStart, onUseForm }: { onStart: () => void; onUseForm: 
       <div className="w-full max-w-lg rounded-lg bg-white p-7 shadow-xl">
         <h2 className="font-serif text-xl font-semibold text-neutral-900">Authoring, one question at a time</h2>
         <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-neutral-600">
-          <li className="flex gap-2.5"><span className="text-brand-600">•</span>The tool walks you through authoring one clinical question at a time, across three phases: frame the case, author the expected response, safety layer.</li>
-          <li className="flex gap-2.5"><span className="text-brand-600">•</span>You can jump between questions and phases freely using the phase bar, the numbered dots, or the arrows.</li>
-          <li className="flex gap-2.5"><span className="text-brand-600">•</span>You can switch to a full form view at any time — both views edit the same case.</li>
-          <li className="flex gap-2.5"><span className="text-brand-600">•</span>Progress is auto-saved. Close the tab and pick up where you left off.</li>
-          <li className="flex gap-2.5"><span className="text-brand-600">•</span>If anything's unclear along the way, use the note link under any screen — it helps improve the tool, and you just keep going.</li>
+          <li className="flex gap-2.5"><span className="text-brand-600">•</span>You'll write a clinical question, then mark what a correct answer must include — one question per screen.</li>
+          <li className="flex gap-2.5"><span className="text-brand-600">•</span>Move around freely with the phase bar, dots or arrows. Everything saves as you go, so you can stop and come back.</li>
+          <li className="flex gap-2.5"><span className="text-brand-600">•</span>Stuck on anything? Use the note link under any screen and keep going.</li>
         </ul>
         <div className="mt-6 flex items-center justify-between gap-3">
           <button onClick={onUseForm} className="text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600">Prefer the full form?</button>
@@ -319,7 +317,7 @@ export function Authoring() {
     <div className="flex h-full flex-col">
       {/* Sidebar mode switch: NSTG source material vs live case preview. */}
       <div className="flex gap-1 border-b border-neutral-200 bg-neutral-50 p-1.5">
-        {([["source", "Source material"], ["preview", "Case preview"]] as const).map(([key, label]) => (
+        {([["source", "NSTG guideline"], ["preview", "Case preview"]] as const).map(([key, label]) => (
           <button key={key} onClick={() => setSidebarTab(key)}
             className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               sidebarTab === key ? "bg-white text-brand-700 shadow-sm ring-1 ring-neutral-200" : "text-neutral-500 hover:bg-neutral-100"

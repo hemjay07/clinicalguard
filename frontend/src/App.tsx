@@ -16,6 +16,7 @@ import { Decompose } from "./pages/Decompose";
 import { Feedback } from "./pages/Feedback";
 import { EvalDashboard } from "./pages/EvalDashboard";
 import { Methodology } from "./pages/Methodology";
+import { About } from "./pages/About";
 import { Spinner, PageContainer } from "./components/ui";
 
 // Auth-gated (ADR-031): authoring, case browsing (result privacy — an author
@@ -52,6 +53,7 @@ function AppRoutes() {
           <Route path="/feedback" element={<RequireAuth><Feedback /></RequireAuth>} />
           <Route path="/eval-dashboard" element={<EvalDashboard />} />
           <Route path="/methodology" element={<Methodology />} />
+          <Route path="/about" element={<About />} />
         </Routes>
       </main>
     </div>

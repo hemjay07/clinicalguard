@@ -1,7 +1,6 @@
 // Shared authoring field atoms. Both the guided flow and the full form render
 // these, so the two views stay visually and behaviorally identical.
 
-import { useState } from "react";
 import type { FormState } from "../caseForm";
 import { GuidanceIcon } from "./GuidancePopover";
 import { ARCHETYPES } from "../guidance";
@@ -43,19 +42,14 @@ export function ArchetypePicker({ form, set, toggleArchetype }: {
   );
 }
 
-// Collapsible worked example under a question ("Show an example").
-export function ExampleToggle({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
+// Worked example shown inline under a question. Previously hidden behind a
+// "Show an example" toggle — a physician tester never found it, so the example
+// now sits at the point of confusion rather than behind a discovery step.
+export function InlineExample({ text }: { text: string }) {
   return (
-    <div className="mt-2">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="cg-link text-xs">
-        {open ? "Hide example" : "Show an example"}
-      </button>
-      {open && (
-        <p className="mt-2 rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2.5 text-sm italic leading-relaxed text-neutral-600">
-          {text}
-        </p>
-      )}
+    <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5">
+      <div className="text-xs font-medium text-neutral-500">Example</div>
+      <p className="mt-1 text-sm italic leading-relaxed text-neutral-600">{text}</p>
     </div>
   );
 }

@@ -11,6 +11,7 @@ const GITHUB_URL = "https://github.com/hemjay07/clinicalguard";
 const DO_LINKS = [{ to: "/cases", label: "Cases" }];
 
 const REFERENCE_LINKS = [
+  { to: "/about", label: "The framework" },
   { to: "/conditions", label: "Conditions" },
   { to: "/safety-rules", label: "Safety rules" },
   { to: "/methodology", label: "Methodology" },

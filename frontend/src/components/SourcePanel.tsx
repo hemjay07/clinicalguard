@@ -52,9 +52,16 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-        <h2 className="text-sm font-semibold text-slate-700">Source material from NSTG</h2>
+        <h2 className="text-sm font-semibold text-slate-700">From the Nigerian guideline (NSTG)</h2>
+        {/* Testers did not realise this panel is specifically what NSTG
+            contains, nor that they may add beyond it. Said plainly here; the
+            wording matches the provenance screen (1.5). */}
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">
+          This is what NSTG says for the selected condition(s). Where it's missing something, add it
+          from your clinical judgment or another reference, and note the source.
+        </p>
         {data?.scoped_to_subtype && (
-          <p className="mt-0.5 text-xs text-slate-500">Scoped to: {data.scoped_to_subtype}</p>
+          <p className="mt-1 text-xs text-slate-500">Scoped to: {data.scoped_to_subtype}</p>
         )}
       </div>
 

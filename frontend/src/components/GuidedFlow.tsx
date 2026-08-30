@@ -7,7 +7,7 @@ import type { FormState, ValidationIssue } from "../caseForm";
 import { SAFETY_PROMPT } from "../caseForm";
 import { PHASES, SCREENS, screenIndex, phaseScreens, screenFilled, screenSummary } from "../flow";
 import type { ScreenDef } from "../flow";
-import { ArchetypePicker, ExampleToggle } from "./fields";
+import { ArchetypePicker, InlineExample } from "./fields";
 import { GuidanceIcon } from "./GuidancePopover";
 import { QUERY_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE, PROVENANCE_GUIDANCE, QUERY_EXAMPLE } from "../guidance";
 
@@ -130,7 +130,7 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
       return (
         <div>
           <textarea {...textareaProps("query", 5, "A realistic clinical scenario — 1-3 sentences ending in scope.")} autoFocus />
-          <ExampleToggle text={QUERY_EXAMPLE} />
+          <InlineExample text={QUERY_EXAMPLE} />
           <div className="mt-2"><GuidanceIcon title="Writing the clinical query" text={QUERY_GUIDANCE} /> <span className="text-xs text-neutral-400">Full guidance on writing queries</span></div>
         </div>
       );
@@ -151,7 +151,7 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
         </div>
       );
     case "primary":
-      return <input {...inputProps("primary", "The diagnosis the AI should reach (kept out of the query).")} autoFocus />;
+      return <input {...inputProps("primary", "The diagnosis the AI should reach")} autoFocus />;
     case "critical_differentials":
       return <textarea {...textareaProps("critical_differentials", 3, "One per line — e.g. Hyperosmolar hyperglycaemic state (HHS)")} />;
     case "other_considerations":

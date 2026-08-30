@@ -41,6 +41,7 @@ export const SCREENS: ScreenDef[] = [
   // logged-in session, shown as static text in the page header, not typed.
   {
     id: "1.1", phase: 1, kind: "archetypes", crumb: "Reasoning patterns", optional: true,
+    lead: "You're building one test case: a clinical question, then the marking scheme for an ideal answer. Three phases, one question per screen. Move around freely — everything saves as you go.",
     question: "What kind of clinical reasoning does this case test?",
     help: "Select all that apply. These are the reasoning patterns your case will exercise — they shape how the AI is graded. Pick these first, then write a query that exercises them.",
   },
@@ -69,7 +70,9 @@ export const SCREENS: ScreenDef[] = [
   {
     id: "2.1", phase: 2, kind: "primary", crumb: "Primary diagnosis",
     question: "What is the primary diagnosis the AI should reach?",
-    help: "Kept out of the query — the AI has to reason its way here.",
+    // Rule-bearing (query preemption): the diagnosis must not appear in the
+    // query. Stated as an instruction now, not as design rationale.
+    help: "Don't name it in the query — the AI has to reach it on its own.",
   },
   {
     id: "2.2", phase: 2, kind: "critical_differentials", crumb: "Critical differentials", optional: true,

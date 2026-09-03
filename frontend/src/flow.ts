@@ -146,6 +146,24 @@ export const SCREENS: ScreenDef[] = [
   },
 ];
 
+// --- D13 tiering ---------------------------------------------------------------
+// Decision D13 sorts the 19 screens into a skeleton (the spine a physician
+// walks) and enrichment (high value for the corpus, low value for the author
+// in the moment). The screens themselves are unchanged — same questions, same
+// help, same rules; only how the guided flow GROUPS them differs.
+//
+// 1.5 provenance is a deliberate exception: D13 tiers it as enrichment, but it
+// stays in the visible spine because TP2/D7 make it methodologically
+// load-bearing and physician testers asked for the NSTG-vs-judgment
+// distinction to be clearer, not more hidden.
+const ENRICHMENT_IDS = new Set([
+  "1.3", "1.4",
+  "2.3", "2.5", "2.6", "2.8", "2.9", "2.10", "2.11", "2.12",
+]);
+
+export type Tier = "core" | "enrichment";
+export const tierOf = (id: string): Tier => (ENRICHMENT_IDS.has(id) ? "enrichment" : "core");
+
 export function screenIndex(id: string): number {
   const i = SCREENS.findIndex((s) => s.id === id);
   return i === -1 ? 0 : i;
@@ -153,6 +171,74 @@ export function screenIndex(id: string): number {
 
 export function phaseScreens(phase: 1 | 2 | 3): ScreenDef[] {
   return SCREENS.filter((s) => s.phase === phase);
+}
+
+export function coreScreens(phase: 1 | 2 | 3): ScreenDef[] {
+  return phaseScreens(phase).filter((s) => tierOf(s.id) === "core");
+}
+
+export function enrichmentScreens(phase: 1 | 2 | 3): ScreenDef[] {
+  return phaseScreens(phase).filter((s) => tierOf(s.id) === "enrichment");
+}
+
+// --- the walked sequence -------------------------------------------------------
+// What the guided flow actually steps through: each core screen on its own, and
+// one grouped "add more detail" step per phase holding that phase's enrichment
+// screens. Every screen stays reachable — enrichment lives one tap inside its
+// group, and its ?screen= deep links still resolve (see stepIndexForScreen).
+
+export type FlowStep =
+  | { kind: "screen"; id: string; phase: 1 | 2 | 3; screen: ScreenDef }
+  | { kind: "enrichment"; id: string; phase: 1 | 2 | 3; screens: ScreenDef[] };
+
+export const ENRICHMENT_STEP_ID = (phase: number) => `${phase}.more`;
+
+export const FLOW_STEPS: FlowStep[] = (() => {
+  const steps: FlowStep[] = [];
+  for (const p of PHASES) {
+    for (const s of coreScreens(p.n)) {
+      steps.push({ kind: "screen", id: s.id, phase: p.n, screen: s });
+    }
+    const extra = enrichmentScreens(p.n);
+    if (extra.length) {
+      // Placed at the end of its phase so the core spine reads uninterrupted.
+      steps.push({ kind: "enrichment", id: ENRICHMENT_STEP_ID(p.n), phase: p.n, screens: extra });
+    }
+  }
+  // Review is authored last: pull it to the very end regardless of tiering.
+  const review = steps.findIndex((st) => st.kind === "screen" && st.screen.kind === "review");
+  if (review !== -1) steps.push(...steps.splice(review, 1));
+  return steps;
+})();
+
+export function phaseSteps(phase: 1 | 2 | 3): FlowStep[] {
+  return FLOW_STEPS.filter((st) => st.phase === phase);
+}
+
+// Resolve any ?screen= value to a step index. A core screen id maps to its own
+// step; an enrichment screen id maps to its phase's group (the caller opens
+// that item). Unknown ids fall back to the first step.
+export function stepIndexForScreen(id: string): number {
+  const direct = FLOW_STEPS.findIndex((st) => st.id === id);
+  if (direct !== -1) return direct;
+  const screen = SCREENS.find((s) => s.id === id);
+  if (screen) {
+    const grouped = FLOW_STEPS.findIndex(
+      (st) => st.kind === "enrichment" && st.phase === screen.phase
+    );
+    if (grouped !== -1) return grouped;
+  }
+  return 0;
+}
+
+// True when ?screen= names an enrichment question, so its group opens with that
+// item already expanded (keeps per-question review links working).
+export function enrichmentTarget(id: string): string | null {
+  return SCREENS.some((s) => s.id === id) && tierOf(id) === "enrichment" ? id : null;
+}
+
+export function isValidFlowParam(id: string): boolean {
+  return SCREENS.some((s) => s.id === id) || FLOW_STEPS.some((st) => st.id === id);
 }
 
 // Whether the author has answered a screen's question (drives breadcrumb dots

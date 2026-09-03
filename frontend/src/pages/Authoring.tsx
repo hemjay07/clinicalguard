@@ -18,7 +18,7 @@ import { useAuth } from "../AuthContext";
 import { decodeConditions, draftSlug } from "../selection";
 import { EMPTY, toPayload, fromExpectedResponse, safetyAnswered, SAFETY_PROMPT } from "../caseForm";
 import type { FormState, ValidationIssue } from "../caseForm";
-import { SCREENS } from "../flow";
+import { SCREENS, FLOW_STEPS, isValidFlowParam } from "../flow";
 import type { SourceMaterial, ConditionRef, EvalCaseDetail } from "../types";
 import { CADRES } from "../types";
 
@@ -163,7 +163,9 @@ export function Authoring() {
   // Guided-flow position lives in the URL (?screen=2.3) so a specific question
   // can be shared for review. Invalid/absent falls back to the first screen.
   const screenParam = searchParams.get("screen");
-  const screenId = SCREENS.some((s) => s.id === screenParam) ? (screenParam as string) : SCREENS[0].id;
+  // Accepts both a step id ("2.more") and any individual question id ("2.5") —
+  // enrichment deep links still resolve, into their group. See flow.ts.
+  const screenId = screenParam && isValidFlowParam(screenParam) ? screenParam : FLOW_STEPS[0].id;
   const goTo = (id: string) => {
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
@@ -250,9 +252,11 @@ export function Authoring() {
   // Where a friction note would land: flow position (guided screen or full
   // form) plus which case, so repeated confusions map back to a screen/field.
   const currentScreen = SCREENS.find((s) => s.id === screenId);
+  const currentStep = FLOW_STEPS.find((st) => st.id === screenId);
+  const crumb = currentScreen?.crumb ?? (currentStep?.kind === "enrichment" ? "More detail" : "?");
   const noteContext =
     (isEdit ? `edit case ${editCaseId} · ` : "") +
-    (view === "guided" ? `screen ${screenId} (${currentScreen?.crumb ?? "?"})` : "full form");
+    (view === "guided" ? `screen ${screenId} (${crumb})` : "full form");
 
   async function submit() {
     // No client-side gating (v1.3.1 §4) except safety (ADR-029) — the one

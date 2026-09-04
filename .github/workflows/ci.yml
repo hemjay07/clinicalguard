@@ -18,11 +18,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      # Installs from pyproject rather than a hand-listed set. The hand-listed
+      # one drifted out of date (it was still installing bcrypt and itsdangerous
+      # for the auth scheme ADR-031 replaced, while missing pyjwt, pyyaml and
+      # alembic), which is a class of breakage that only shows up in CI.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install sqlalchemy psycopg2-binary pgvector pydantic pydantic-settings python-dotenv rank-bm25 openai anthropic httpx fastapi "uvicorn[standard]" bcrypt itsdangerous
-          pip install pytest pytest-asyncio mypy ruff
+          pip install -e ".[dev]"
 
       - name: Run tests
         env:
@@ -30,5 +33,9 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SESSION_SECRET_KEY: ${{ secrets.SESSION_SECRET_KEY }}
+          # Not a secret: this is the project's public URL, the same one the
+          # frontend bundle ships. It's here because Settings requires it, so
+          # without it every test errors during collection.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://sgkyiistoezuvsdfwzqg.supabase.co' }}
         run: |
           pytest tests/ -v

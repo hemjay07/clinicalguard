@@ -1,13 +1,25 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { useAuth } from "../AuthContext";
 import { PageContainer, Spinner, ErrorBox, SectionCard } from "../components/ui";
 import { ExitFeedback } from "../components/FeedbackNote";
-import { ARCHETYPES } from "../guidance";
+import { ARCHETYPES, PROVENANCE_TIERS } from "../guidance";
+import { LABELS } from "../labels";
+import { fromExpectedResponse } from "../caseForm";
+import { emptyOptional } from "../flow";
 
+// The case page is the one author-facing surface where the framework's own
+// short names for the reasoning patterns still earn their place: as chips on
+// a finished artifact they read as tags, not as a taxonomy the author has to
+// learn mid-question.
 const ARCHETYPE_LABELS: Record<string, string> = Object.fromEntries(ARCHETYPES.map((a) => [a.value, a.label]));
+const PROVENANCE_LABELS: Record<string, string> = Object.fromEntries(PROVENANCE_TIERS.map((t) => [t.value, t.label]));
+
+// NSTG condition names arrive lower-cased for some entries ("abortion"). The
+// author wrote a case about Abortion, so that is what the page says.
+const displayName = (name: string) => name.charAt(0).toUpperCase() + name.slice(1);
 
 function TierBlock({ label, items }: { label: string; items?: string[] }) {
   if (!items || items.length === 0) return null;
@@ -50,6 +62,13 @@ export function CaseDetail() {
   // authors who opted in on an earlier case — no re-asking.
   const [interest, setInterest] = useState<"idle" | "saving" | "done">("idle");
   const optedIn = interest === "done" || !!user?.contribute_opt_in;
+  // Counted the same way the review screen counts them, from the same form
+  // model, so the number on the thank-you card matches what the author just
+  // saw before submitting.
+  const emptyCount = useMemo(
+    () => (data ? emptyOptional(fromExpectedResponse(data)).length : 0),
+    [data],
+  );
 
   async function expressInterest() {
     if (interest === "saving") return;
@@ -71,18 +90,22 @@ export function CaseDetail() {
       {nav?.submitted && (
         <div className="cg-screen-enter cg-card mb-6 px-6 py-7 sm:px-8">
           <h2 className="font-serif text-2xl font-semibold text-neutral-900">
-            Thank you — your case is submitted.
+            Thank you. Your case is submitted.
           </h2>
           <p className="mt-2.5 text-sm leading-relaxed text-neutral-600">
-            You'll be attributed in the resulting research paper.
+            You'll be credited in the research paper.
           </p>
           <p className="mt-1 text-sm leading-relaxed text-neutral-500">
-            You can edit this case anytime from your <Link to="/cases" className="text-brand-700 underline underline-offset-2 hover:no-underline">Cases</Link> page — it's shown in full below.
+            You can edit it any time from your <Link to="/cases" className="text-brand-700 underline underline-offset-2 hover:no-underline">Cases</Link> page.
           </p>
-          {(nav.warnings?.length ?? 0) > 0 && (
-            <ul className="mt-3 list-disc space-y-0.5 rounded-lg bg-amber-50 py-2 pl-8 pr-4 text-sm text-amber-800">
-              {nav.warnings!.map((w, i) => <li key={i}>{w}</li>)}
-            </ul>
+          {/* What was an amber warning box is one grey line. Nothing here is
+              wrong with the case — the optional sections are optional, and
+              the moment the author finishes is the worst possible time to
+              tell them their work looks incomplete. */}
+          {emptyCount > 0 && (
+            <p className="mt-2 text-sm text-neutral-400">
+              {emptyCount} optional section{emptyCount === 1 ? " is" : "s are"} still empty. Add {emptyCount === 1 ? "it" : "them"} any time from Cases.
+            </p>
           )}
 
           {/* The one that matters: capture willingness at the moment of
@@ -143,7 +166,11 @@ export function CaseDetail() {
                 <Link to={`/cases/${data.id}/edit`} className="cg-btn-secondary px-4 py-2 text-sm">Edit case</Link>
               )}
             </div>
-            <h1 className="mt-2 text-2xl font-semibold text-neutral-900">{e.case_id ?? `Case #${data.id}`}</h1>
+            <h1 className="mt-2 text-2xl font-semibold text-neutral-900">
+              {data.conditions.length
+                ? data.conditions.map((c) => displayName(c.name)).join(", ")
+                : `Case #${data.id}`}
+            </h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
               <span>Conditions:</span>
               {data.conditions.map((c, i) => (
@@ -153,26 +180,31 @@ export function CaseDetail() {
                 </span>
               ))}
               {e.authored_by && <span>· authored by {e.authored_by}</span>}
-              <span>· {data.ground_truth_source}</span>
+              <span>· authored in the app</span>
               {data.updated_at && <span>· edited {new Date(data.updated_at).toLocaleDateString()}</span>}
             </div>
 
             <div className="mt-5 grid gap-4">
-              <SectionCard title="Clinical query">
+              <SectionCard title={LABELS.query}>
                 <p className="text-sm text-slate-700">{data.query}</p>
                 {e.what_this_evaluates && (
-                  <p className="mt-3 text-sm text-slate-500"><span className="font-medium">What this evaluates: </span>{e.what_this_evaluates}</p>
+                  <p className="mt-3 text-sm text-slate-500"><span className="font-medium">{LABELS.evaluates}: </span>{e.what_this_evaluates}</p>
                 )}
                 {data.query_scope && (
-                  <p className="mt-2 text-sm text-slate-500"><span className="font-medium">Scope: </span>{data.query_scope}</p>
+                  <p className="mt-2 text-sm text-slate-500"><span className="font-medium">{LABELS.scope}: </span>{data.query_scope}</p>
                 )}
-                {e.provenance_notes && (
-                  <p className="mt-2 text-sm text-slate-500"><span className="font-medium">Ground truth provenance: </span>{e.provenance_notes}</p>
+                {(data.guideline_provenance || e.provenance_notes) && (
+                  <p className="mt-2 text-sm text-slate-500">
+                    <span className="font-medium">{LABELS.provenance}: </span>
+                    {data.guideline_provenance && (PROVENANCE_LABELS[data.guideline_provenance] ?? data.guideline_provenance)}
+                    {data.guideline_provenance && e.provenance_notes ? " — " : ""}
+                    {e.provenance_notes}
+                  </p>
                 )}
               </SectionCard>
 
               {((e.reasoning_archetypes?.length ?? 0) > 0 || (e.other_archetypes?.length ?? 0) > 0) && (
-                <SectionCard title="Reasoning patterns">
+                <SectionCard title={LABELS.archetypes}>
                   <div className="flex flex-wrap gap-2">
                     {(e.reasoning_archetypes ?? []).map((v: string) => (
                       <span key={v} className="rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-xs text-neutral-700">
@@ -190,8 +222,8 @@ export function CaseDetail() {
 
               <SectionCard title="Expected diagnoses">
                 <TierBlock label="Primary" items={e.expected_diagnoses?.required?.primary ? [e.expected_diagnoses.required.primary] : []} />
-                <TierBlock label="Critical differentials" items={e.expected_diagnoses?.required?.critical_differentials} />
-                <TierBlock label="Other considerations" items={e.expected_diagnoses?.expected?.other_considerations} />
+                <TierBlock label={LABELS.critical_differentials} items={e.expected_diagnoses?.required?.critical_differentials} />
+                <TierBlock label={LABELS.other_considerations} items={e.expected_diagnoses?.expected?.other_considerations} />
               </SectionCard>
 
               <SectionCard title="Investigations">
@@ -217,7 +249,7 @@ export function CaseDetail() {
                 <TierBlock label="Monitoring — required" items={e.required_monitoring?.required_elements} />
                 <TierBlock label="Monitoring — expected" items={e.required_monitoring?.expected_elements} />
                 {/* Escalation is flat (ADR-028); legacy blobs may still carry the old tiered shape. */}
-                <TierBlock label="Escalation triggers" items={
+                <TierBlock label={LABELS.escalation} items={
                   e.escalation_triggers
                   ?? (e.required_escalation_triggers
                     ? [...(e.required_escalation_triggers.required ?? []), ...(e.required_escalation_triggers.expected ?? [])]
@@ -225,11 +257,11 @@ export function CaseDetail() {
                 } />
               </SectionCard>
 
-              <SectionCard title="Safety">
+              <SectionCard title={LABELS.safety_harm}>
                 {e.required_safety_flags?.none_declared ? (
-                  <p className="text-sm italic text-slate-500">No danger-level constraints declared.</p>
+                  <p className="text-sm italic text-slate-500">Nothing rises to that level for this patient.</p>
                 ) : (
-                  <TierBlock label="Danger-level constraints" items={e.required_safety_flags?.free_text} />
+                  <TierBlock label={LABELS.safety_harm} items={e.required_safety_flags?.free_text} />
                 )}
                 <TierBlock label="Safety rules from the guideline" items={(e.required_safety_flags?.rules ?? []).map((r: any) => r.description)} />
               </SectionCard>

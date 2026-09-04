@@ -2,8 +2,9 @@
 // these, so the two views stay visually and behaviorally identical.
 
 import type { FormState } from "../caseForm";
+import { provenanceRequiresNotes } from "../guidance";
 import { GuidanceIcon } from "./GuidancePopover";
-import { ARCHETYPES } from "../guidance";
+import { ARCHETYPES, PROVENANCE_TIERS, PROVENANCE_GUIDANCE } from "../guidance";
 
 export function Field({ label, guidance, hint, children }: { label: string; guidance?: { title: string; text: string }; hint?: string; children: React.ReactNode }) {
   return (
@@ -18,6 +19,11 @@ export function Field({ label, guidance, hint, children }: { label: string; guid
   );
 }
 
+// One column, on every width. The two-column grid halved the scroll but made
+// each option a two-line fragment the eye had to reassemble; these are whole
+// sentences and want to be read as a list. The framework's short names for
+// the patterns are deliberately absent (v1.6 §3) — they belong to the corpus,
+// not to the person answering.
 export function ArchetypePicker({ form, set, toggleArchetype }: {
   form: FormState;
   set: (patch: Partial<FormState>) => void;
@@ -25,20 +31,77 @@ export function ArchetypePicker({ form, set, toggleArchetype }: {
 }) {
   return (
     <>
-      <div className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
+      <div className="space-y-2.5">
         {ARCHETYPES.map((a) => (
-          <label key={a.value} className="flex cursor-pointer items-start gap-2.5 text-sm text-neutral-700">
+          <label key={a.value} className="flex cursor-pointer items-start gap-2.5 text-sm leading-relaxed text-neutral-700">
             <input type="checkbox" checked={form.archetypes.includes(a.value)} onChange={() => toggleArchetype(a.value)} className="mt-0.5 accent-brand-700" />
-            <span><span className="font-medium text-neutral-800">{a.label}</span><span className="mt-0.5 block text-xs leading-snug text-neutral-400">{a.subtitle}</span></span>
+            <span>{a.plain}</span>
           </label>
         ))}
-        <label className="flex cursor-pointer items-start gap-2.5 text-sm text-neutral-700">
+        <label className="flex cursor-pointer items-start gap-2.5 text-sm leading-relaxed text-neutral-700">
           <input type="checkbox" checked={form.other_checked} onChange={(e) => set({ other_checked: e.target.checked })} className="mt-0.5 accent-brand-700" />
-          <span className="font-medium text-neutral-800">Other (specify)</span>
+          <span>Something else (describe it)</span>
         </label>
       </div>
-      {form.other_checked && <input className="cg-input mt-3" value={form.other_text} onChange={(e) => set({ other_text: e.target.value })} placeholder="Describe the reasoning pattern" />}
+      {form.other_checked && <input className="cg-input mt-3" value={form.other_text} onChange={(e) => set({ other_text: e.target.value })} placeholder="Describe it" />}
     </>
+  );
+}
+
+// The provenance tier (ADR-033) plus the notes it makes necessary. No default
+// selection: a pre-ticked answer to "where did this come from?" reads as
+// answered when it isn't. The notes textarea appears only for the two tiers
+// that claim something came from outside NSTG, which are the only two a
+// reviewer cannot check without being told which parts.
+export function ProvenancePicker({ form, set, showPrompt }: {
+  form: FormState;
+  set: (patch: Partial<FormState>) => void;
+  showPrompt?: boolean;
+}) {
+  const needsNotes = provenanceRequiresNotes(form.guideline_provenance);
+  return (
+    <div>
+      <div className="space-y-2.5">
+        {PROVENANCE_TIERS.map((t) => (
+          <label key={t.value} className="flex cursor-pointer items-start gap-2.5 text-sm leading-relaxed text-neutral-700">
+            <input
+              type="radio"
+              name="guideline_provenance"
+              checked={form.guideline_provenance === t.value}
+              onChange={() => set({ guideline_provenance: t.value })}
+              className="mt-0.5 accent-brand-700"
+            />
+            <span>{t.label}</span>
+          </label>
+        ))}
+      </div>
+
+      {needsNotes && (
+        <div className="mt-4">
+          <div className="cg-label">Which parts, and from where? One or two sentences.</div>
+          <textarea
+            rows={3}
+            className="cg-textarea"
+            value={form.provenance_notes}
+            onChange={(e) => set({ provenance_notes: e.target.value })}
+            placeholder="e.g. TB regimen from NSTG; HIV co-management from WHO TB-HIV guidance, which NSTG doesn't cover."
+          />
+        </div>
+      )}
+
+      {showPrompt && (
+        <p className="mt-3 text-sm text-amber-700">
+          {form.guideline_provenance
+            ? "Say which parts came from where, in a sentence or two."
+            : "Say where this answer came from before submitting."}
+        </p>
+      )}
+
+      <div className="mt-3">
+        <GuidanceIcon title="Why provenance matters" text={PROVENANCE_GUIDANCE} />{" "}
+        <span className="text-xs text-neutral-400">Why this matters</span>
+      </div>
+    </div>
   );
 }
 

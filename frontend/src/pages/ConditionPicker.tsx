@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
@@ -16,6 +16,7 @@ export function ConditionPicker() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<SelectedCondition[]>([]);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -42,15 +43,20 @@ export function ConditionPicker() {
   return (
     <PageContainer>
       <h1 className="font-serif text-2xl font-semibold text-neutral-900">Author a case</h1>
-      <p className="mt-1 text-neutral-600">
-        Select one or more conditions the case spans.
+      {/* Testers read "select one or more conditions" as "author one case per
+          condition", and produced thin single-condition cases for what was
+          clinically one presentation. The copy now says the quiet part. */}
+      <p className="mt-1 max-w-2xl text-neutral-600">
+        Which condition is your case about? If it involves more than one (say, TB with HIV
+        co-infection), add each of them, so the guideline for every one sits beside you as you
+        write. You're writing one case, not one per condition. Pick something you manage often.
       </p>
 
       {/* Selected chips */}
       {selected.length > 0 && (
         <div className="mt-4 rounded-lg border border-neutral-200 bg-white p-4">
           <div className="mb-2 text-xs font-medium tracking-wide text-neutral-500">
-            Selected: {selected.length} condition{selected.length > 1 ? "s" : ""}
+            Your case covers:
           </div>
           <div className="space-y-2">
             {selected.map((s) => (
@@ -67,15 +73,22 @@ export function ConditionPicker() {
             ))}
           </div>
           <button
+            onClick={() => { setQ(""); searchRef.current?.focus(); }}
+            className="mt-2 text-xs font-medium text-brand-700 hover:underline"
+          >
+            + add another condition it involves
+          </button>
+          <button
             onClick={proceed}
             className="cg-btn-primary mt-4"
           >
-            Author case →
+            Start this case →
           </button>
         </div>
       )}
 
       <input
+        ref={searchRef}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search conditions… (e.g. Malaria)"

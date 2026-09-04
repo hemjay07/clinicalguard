@@ -39,7 +39,7 @@ export function Home() {
         <p className="mt-5 text-[17px] leading-relaxed text-neutral-700">
           You write a clinical question for an AI to answer, then a marking scheme for the ideal
           response — what a good answer must include, and what it must never get wrong. We use these
-          to score AI systems, and to help train them to follow the right standard of care.
+          to test whether AI systems follow the standard of care where they'd actually be used.
         </p>
         <p className="mt-4 text-[17px] leading-relaxed text-neutral-700">
           It takes about {AUTHORING_TIME} minutes, and it's the clinical reasoning you already do

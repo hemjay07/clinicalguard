@@ -8,7 +8,7 @@ import { useSearchParams, useNavigate, useParams, Link } from "react-router-dom"
 import { api, ApiError } from "../api/client";
 import { useFetch } from "../useFetch";
 import { PageContainer, ErrorBox, Spinner } from "../components/ui";
-import { SourcePanel } from "../components/SourcePanel";
+import { SourcePanel, sourceSectionsFor } from "../components/SourcePanel";
 import { FullForm } from "../components/FullForm";
 import { GuidedFlow } from "../components/GuidedFlow";
 import { CasePreview } from "../components/CasePreview";
@@ -16,93 +16,95 @@ import { NoteLink } from "../components/FeedbackNote";
 import { saveDraft, loadDraft, clearDraft } from "../storage";
 import { useAuth } from "../AuthContext";
 import { decodeConditions, draftSlug } from "../selection";
-import { EMPTY, toPayload, fromExpectedResponse, safetyAnswered, SAFETY_PROMPT } from "../caseForm";
+import {
+  EMPTY, toPayload, fromExpectedResponse, safetyAnswered, provenanceAnswered,
+  SAFETY_PROMPT, PROVENANCE_PROMPT, PROVENANCE_NOTES_PROMPT,
+} from "../caseForm";
 import type { FormState, ValidationIssue } from "../caseForm";
-import { SCREENS, FLOW_STEPS, isValidFlowParam } from "../flow";
+import { screenById, FLOW_STEPS, isValidFlowParam, stepIndexForScreen, groupScreens } from "../flow";
 import type { SourceMaterial, ConditionRef, EvalCaseDetail } from "../types";
 import { CADRES } from "../types";
+import { getAuthorView, setAuthorView, subscribeAuthorView } from "../authorView";
+import type { ViewMode } from "../authorView";
 
 interface SourceEntry { ref: ConditionRef; data: SourceMaterial }
 
-type ViewMode = "guided" | "form";
-const VIEW_KEY = "cg_author_view";
 const INTRO_KEY = "cg_guided_intro_seen";
 const REVIEW_SCREEN = "3.2";
+const PROVENANCE_SCREEN = "1.5";
+const SAFETY_SCREEN = "3.1";
 
-// Asked once per author, before their first case (server-driven: shows only
-// while the users row has no cadre). Research metadata only — a clean
-// category, no contact details; identity already comes from auth.
-function CadreGate({ onDone }: { onDone: () => Promise<void> }) {
+// One overlay, shown once. It used to be two — a cadre question, then an
+// introduction — which meant a first-time author hit two modals before
+// reaching a single clinical question. Cadre is a one-line field at the
+// bottom of the introduction now, and the whole thing is gone for good once
+// the author has seen it and has a cadre on record.
+function StartOverlay({ needsCadre, onStart }: {
+  needsCadre: boolean;
+  onStart: (view: ViewMode, cadre: { cadre: string; other: string | null } | null) => Promise<void>;
+}) {
   const [cadre, setCadre] = useState("");
   const [other, setOther] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const valid = cadre && (cadre !== "Other" || other.trim());
+  const ready = !needsCadre || (!!cadre && (cadre !== "Other" || !!other.trim()));
 
-  async function save() {
-    if (!valid || saving) return;
-    setSaving(true);
+  async function start(view: ViewMode) {
+    if (!ready || busy) return;
+    setBusy(true);
     setError(null);
     try {
-      await api.setCadre(cadre, cadre === "Other" ? other.trim() : null);
-      await onDone();
+      await onStart(view, needsCadre ? { cadre, other: cadre === "Other" ? other.trim() : null } : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save — try again.");
-      setSaving(false);
+      setBusy(false);
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-7 shadow-xl">
-        <h2 className="font-serif text-xl font-semibold text-neutral-900">One quick question first</h2>
-        <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-          What's your current cadre? Asked once — it's reported in the research as the
-          distribution of contributing authors.
-        </p>
-        <select
-          value={cadre}
-          onChange={(e) => setCadre(e.target.value)}
-          className="cg-input mt-4 w-full"
-        >
-          <option value="" disabled>Select your cadre…</option>
-          {CADRES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        {cadre === "Other" && (
-          <input
-            type="text"
-            autoFocus
-            className="cg-input mt-3 w-full"
-            placeholder="Please specify"
-            value={other}
-            onChange={(e) => setOther(e.target.value)}
-          />
-        )}
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-        <div className="mt-5 flex justify-end">
-          <button onClick={save} disabled={!valid || saving} className="cg-btn-primary px-6 disabled:opacity-50">
-            {saving ? "Saving…" : "Continue"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// One-time introduction shown before the MD's very first guided session.
-function IntroOverlay({ onStart, onUseForm }: { onStart: () => void; onUseForm: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white p-7 shadow-xl">
+      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-lg bg-white p-7 shadow-xl">
         <h2 className="font-serif text-xl font-semibold text-neutral-900">Authoring, one question at a time</h2>
         <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-neutral-600">
-          <li className="flex gap-2.5"><span className="text-brand-600">•</span>You'll write a clinical question, then mark what a correct answer must include — one question per screen.</li>
-          <li className="flex gap-2.5"><span className="text-brand-600">•</span>Move around freely with the phase bar, dots or arrows. Everything saves as you go, so you can stop and come back.</li>
-          <li className="flex gap-2.5"><span className="text-brand-600">•</span>Stuck on anything? Use the note link under any screen and keep going.</li>
+          <li className="flex gap-2.5"><span className="text-brand-600">•</span>You'll write a clinical question, then mark what a correct answer must include. One question per screen.</li>
+          <li className="flex gap-2.5"><span className="text-brand-600">•</span>Move around freely. Everything saves as you go, so you can stop and come back.</li>
+          <li className="flex gap-2.5"><span className="text-brand-600">•</span>Stuck? Use the note link under any screen and keep going.</li>
         </ul>
+
+        {needsCadre && (
+          <div className="mt-6">
+            <label className="cg-label">Your current cadre</label>
+            <p className="cg-help -mt-0.5 mb-1.5">Asked once. Reported in the paper as the mix of contributing authors.</p>
+            <select value={cadre} onChange={(e) => setCadre(e.target.value)} className="cg-input w-full">
+              <option value="" disabled>Select your cadre…</option>
+              {CADRES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {cadre === "Other" && (
+              <input
+                type="text"
+                autoFocus
+                className="cg-input mt-3 w-full"
+                placeholder="Please specify"
+                value={other}
+                onChange={(e) => setOther(e.target.value)}
+              />
+            )}
+          </div>
+        )}
+
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
         <div className="mt-6 flex items-center justify-between gap-3">
-          <button onClick={onUseForm} className="text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600">Prefer the full form?</button>
-          <button onClick={onStart} className="cg-btn-primary px-6">Start authoring</button>
+          <button
+            onClick={() => start("form")}
+            disabled={!ready || busy}
+            className="text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-600 disabled:opacity-40"
+          >
+            Prefer the full form?
+          </button>
+          <button onClick={() => start("guided")} disabled={!ready || busy} className="cg-btn-primary px-6 disabled:opacity-50">
+            {busy ? "Saving…" : "Start authoring"}
+          </button>
         </div>
       </div>
     </div>
@@ -154,17 +156,19 @@ export function Authoring() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [loadedDraft, setLoadedDraft] = useState(false);
-  const [showTop, setShowTop] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"source" | "preview">(() =>
     sessionStorage.getItem("cg_sidebar_tab") === "preview" ? "preview" : "source");
-  const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) === "form" ? "form" : "guided"));
-  const [showIntro, setShowIntro] = useState(() => !localStorage.getItem(INTRO_KEY));
+  const [view, setView] = useState<ViewMode>(getAuthorView);
+  const [introSeen, setIntroSeen] = useState(() => !!localStorage.getItem(INTRO_KEY));
+
+  // The switch also lives in the nav hamburger on a phone (see authorView.ts).
+  useEffect(() => subscribeAuthorView(setView), []);
 
   // Guided-flow position lives in the URL (?screen=2.3) so a specific question
   // can be shared for review. Invalid/absent falls back to the first screen.
   const screenParam = searchParams.get("screen");
   // Accepts both a step id ("2.more") and any individual question id ("2.5") —
-  // enrichment deep links still resolve, into their group. See flow.ts.
+  // optional-question deep links still resolve, into their group. See flow.ts.
   const screenId = screenParam && isValidFlowParam(screenParam) ? screenParam : FLOW_STEPS[0].id;
   const goTo = (id: string) => {
     setSearchParams((prev) => {
@@ -175,16 +179,17 @@ export function Authoring() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const setViewMode = (v: ViewMode) => { setView(v); localStorage.setItem(VIEW_KEY, v); };
-  const dismissIntro = (v: ViewMode) => { localStorage.setItem(INTRO_KEY, "1"); setShowIntro(false); if (v !== view) setViewMode(v); };
+  const setViewMode = (v: ViewMode) => { setView(v); setAuthorView(v); };
 
   useEffect(() => { sessionStorage.setItem("cg_show_source", showPanel ? "1" : "0"); }, [showPanel]);
   useEffect(() => { sessionStorage.setItem("cg_sidebar_tab", sidebarTab); }, [sidebarTab]);
+
+  // One analytics tag per internal screen id, so drop-off is measurable per
+  // question rather than per page. A no-op wherever Clarity isn't loaded.
   useEffect(() => {
-    const onScroll = () => setShowTop(window.scrollY > 400);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    if (view !== "guided") return;
+    window.clarity?.("set", "cg_screen", screenId);
+  }, [screenId, view]);
 
   // Edit mode: seed the form from the fetched case once it arrives. No draft
   // persistence — the server copy is the source of truth, not localStorage.
@@ -251,20 +256,47 @@ export function Authoring() {
 
   // Where a friction note would land: flow position (guided screen or full
   // form) plus which case, so repeated confusions map back to a screen/field.
-  const currentScreen = SCREENS.find((s) => s.id === screenId);
-  const currentStep = FLOW_STEPS.find((st) => st.id === screenId);
+  const currentScreen = screenById(screenId);
+  const currentStep = FLOW_STEPS[stepIndexForScreen(screenId)];
   const crumb = currentScreen?.crumb ?? (currentStep?.kind === "enrichment" ? "More detail" : "?");
   const noteContext =
     (isEdit ? `edit case ${editCaseId} · ` : "") +
     (view === "guided" ? `screen ${screenId} (${crumb})` : "full form");
 
+  // Which guideline section the panel should be showing. A grouped step takes
+  // the mapping of the first question inside it.
+  const panelKind = view !== "guided"
+    ? null
+    : currentScreen?.kind
+      ?? (currentStep?.kind === "enrichment" ? groupScreens(currentStep.groups[0])[0]?.kind ?? null : null);
+  const openSections = useMemo(() => sourceSectionsFor(panelKind), [panelKind]);
+
+  async function startAuthoring(v: ViewMode, cadre: { cadre: string; other: string | null } | null) {
+    if (cadre) {
+      await api.setCadre(cadre.cadre, cadre.other);
+      await refresh();
+    }
+    localStorage.setItem(INTRO_KEY, "1");
+    setIntroSeen(true);
+    if (v !== view) setViewMode(v);
+  }
+
   async function submit() {
-    // No client-side gating (v1.3.1 §4) except safety (ADR-029) — the one
-    // deliberate exception. Checked before the request so an unresolved
-    // safety question never round-trips to the server.
+    // No client-side gating (v1.3.1 §4) except the two questions that must be
+    // actively answered: harm (ADR-029) and provenance (ADR-033). Checked
+    // before the request so neither round-trips to the server unresolved.
     if (!safetyAnswered(form)) {
-      setIssues([{ message: SAFETY_PROMPT, screenId: "3.1" }]);
-      if (view === "guided") goTo("3.1");
+      setIssues([{ message: SAFETY_PROMPT, screenId: SAFETY_SCREEN }]);
+      if (view === "guided") goTo(SAFETY_SCREEN);
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (!provenanceAnswered(form)) {
+      setIssues([{
+        message: form.guideline_provenance ? PROVENANCE_NOTES_PROMPT : PROVENANCE_PROMPT,
+        screenId: PROVENANCE_SCREEN,
+      }]);
+      if (view === "guided") goTo(PROVENANCE_SCREEN);
       else window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -286,7 +318,7 @@ export function Authoring() {
     } catch (e) {
       if (e instanceof ApiError && e.detail && typeof e.detail === "object" && "errors" in (e.detail as any))
         setIssues(((e.detail as any).errors as string[]).map((m) => ({ message: m, screenId: null })));
-      else setIssues([{ message: e instanceof Error ? e.message : "Submission failed.", screenId: null }]);
+      else setIssues([{ message: e instanceof Error ? e.message : "Submission failed." , screenId: null }]);
       if (view === "guided") goTo(REVIEW_SCREEN);
       else window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
@@ -352,15 +384,23 @@ export function Authoring() {
             </div>
           )}
           <div className="min-h-0 flex-1">
-            <SourcePanel data={sources.data?.[activeTab]?.data ?? null} loading={sources.loading} error={sources.error} />
+            <SourcePanel
+              data={sources.data?.[activeTab]?.data ?? null}
+              loading={sources.loading}
+              error={sources.error}
+              openSections={openSections}
+              resetKey={`${activeTab}:${panelKind ?? "none"}`}
+            />
           </div>
         </>
       )}
     </div>
   );
 
+  // Room for the fixed phone navigation bar, so the note link below the card
+  // stays reachable and nothing sits under the primary action.
   return (
-    <div className="relative mx-auto flex w-full max-w-7xl gap-5 px-6 py-6">
+    <div className="relative mx-auto flex w-full max-w-7xl gap-5 px-6 py-6 pb-28 lg:pb-6">
       <div className={showPanel ? "w-full lg:w-[60%]" : "mx-auto w-full max-w-3xl"}>
         {/* Sticky header bar */}
         <div className="sticky top-0 z-20 mb-4 flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-neutral-50/90 px-4 py-2.5 backdrop-blur">
@@ -378,8 +418,10 @@ export function Authoring() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            {/* View switch: guided (default) vs full form */}
-            <div className="flex rounded-lg border border-neutral-200 bg-white p-0.5">
+            {/* View switch: guided (default) vs full form. On a phone this
+                lives in the nav hamburger instead — there is no room for it
+                beside the condition name. */}
+            <div className="hidden rounded-lg border border-neutral-200 bg-white p-0.5 lg:flex">
               {([["guided", "Guided"], ["form", "Full form"]] as const).map(([key, label]) => (
                 <button key={key} onClick={() => setViewMode(key)}
                   className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
@@ -409,12 +451,14 @@ export function Authoring() {
             screenId={screenId} goTo={goTo}
             toggleArchetype={toggleArchetype}
             onSubmit={submit} submitting={submitting} issues={issues}
+            onOpenSource={() => setMobileOpen(true)}
           />
         ) : (
           <FullForm
             form={form} set={set}
             toggleArchetype={toggleArchetype}
             onSubmit={submit} submitting={submitting}
+            onOpenSource={() => setMobileOpen(true)}
           />
         )}
 
@@ -431,21 +475,12 @@ export function Authoring() {
         </aside>
       )}
 
-      {/* Cadre gate first (server-driven, once per author); the one-time
-          intro waits until cadre is on record. */}
-      {user && !user.cadre ? (
-        <CadreGate onDone={refresh} />
-      ) : (
-        showIntro && view === "guided" && (
-          <IntroOverlay onStart={() => dismissIntro("guided")} onUseForm={() => dismissIntro("form")} />
-        )
+      {/* One overlay, once: the introduction, carrying the cadre question for
+          an author who hasn't answered it. */}
+      {user && (!introSeen || !user.cadre) && (
+        <StartOverlay needsCadre={!user.cadre} onStart={startAuthoring} />
       )}
 
-      {showTop && view === "form" && (
-        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="cg-btn-secondary fixed bottom-20 right-5 z-30 shadow-sm lg:bottom-5">↑ Top</button>
-      )}
-      <button onClick={() => setMobileOpen(true)} className="cg-btn-primary fixed bottom-5 right-5 z-30 shadow-lg lg:hidden">Source</button>
       <div className={`fixed inset-0 z-40 transform bg-white transition-transform duration-200 ease-out lg:hidden ${mobileOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex h-full flex-col">
           <button onClick={() => setMobileOpen(false)} className="cg-btn-ghost m-2 self-end">✕ Close</button>

@@ -3,7 +3,7 @@
 // clicking a row jumps straight to that question's screen.
 
 import type { FormState } from "../caseForm";
-import { PHASES, phaseScreens, screenFilled, screenSummary } from "../flow";
+import { PHASES, phaseScreens, screenFilled, screenSummary, screenLabel } from "../flow";
 
 export function CasePreview({ form, screenId, onJump }: {
   form: FormState;
@@ -26,7 +26,7 @@ export function CasePreview({ form, screenId, onJump }: {
                 <>
                   <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${filled ? "bg-brand-500" : "bg-neutral-200"}`} />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-medium text-neutral-500">{s.crumb}</span>
+                    <span className="block text-xs font-medium text-neutral-500">{screenLabel(s.kind)}</span>
                     <span className={`block truncate text-sm ${filled ? "text-neutral-800" : "italic text-neutral-300"}`}>
                       {summary || "—"}
                     </span>

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { getAuthorView, setAuthorView, subscribeAuthorView } from "../authorView";
+import type { ViewMode } from "../authorView";
 
 const GITHUB_URL = "https://github.com/hemjay07/clinicalguard";
 
@@ -84,14 +86,23 @@ export function NavBar() {
   // Don't advertise "Author a case" while the user is already authoring one.
   const location = useLocation();
   const authoring = location.pathname.startsWith("/author");
+  // While a case is actually being composed, the desktop header carries only
+  // the logo and the user menu. Cases, Rating task, Reference and GitHub are
+  // all invitations to leave a half-written case; the phone is unchanged
+  // because the hamburger already keeps them out of sight.
+  const composing =
+    location.pathname.startsWith("/author/compose") || /^\/cases\/[^/]+\/edit$/.test(location.pathname);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<ViewMode>(getAuthorView);
 
   // Any navigation closes the sheet.
   useEffect(() => { setOpen(false); }, [location.pathname]);
+  useEffect(() => subscribeAuthorView(setView), []);
 
   const referenceActive = REFERENCE_LINKS.some((l) => location.pathname.startsWith(l.to));
+  const switchView = (v: ViewMode) => { setView(v); setAuthorView(v); };
 
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-200 bg-neutral-50/90 backdrop-blur">
@@ -100,31 +111,37 @@ export function NavBar() {
 
         {/* Desktop: doing links + Reference dropdown; CTA and user menu right. */}
         <div className="hidden flex-1 items-center gap-5 lg:flex">
-          {DO_LINKS.map((l) => (
-            <NavLink key={l.to} to={l.to} className={desktopLinkClass}>
-              {l.label}
-            </NavLink>
-          ))}
-          {user && (
-            <NavLink to="/decompose" className={desktopLinkClass}>Rating task</NavLink>
+          {!composing && (
+            <>
+              {DO_LINKS.map((l) => (
+                <NavLink key={l.to} to={l.to} className={desktopLinkClass}>
+                  {l.label}
+                </NavLink>
+              ))}
+              {user && (
+                <NavLink to="/decompose" className={desktopLinkClass}>Rating task</NavLink>
+              )}
+              <Dropdown trigger="Reference" active={referenceActive}>
+                {REFERENCE_LINKS.map((l) => (
+                  <NavLink key={l.to} to={l.to} className={menuItemClass}>
+                    {l.label}
+                  </NavLink>
+                ))}
+              </Dropdown>
+            </>
           )}
-          <Dropdown trigger="Reference" active={referenceActive}>
-            {REFERENCE_LINKS.map((l) => (
-              <NavLink key={l.to} to={l.to} className={menuItemClass}>
-                {l.label}
-              </NavLink>
-            ))}
-          </Dropdown>
           <div className="ml-auto flex items-center gap-4">
             {/* The project repo, not the user's profile — shown to everyone. */}
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
-            >
-              GitHub ↗
-            </a>
+            {!composing && (
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="border-b-2 border-transparent pb-0.5 text-sm font-medium text-neutral-500 hover:text-neutral-900"
+              >
+                GitHub ↗
+              </a>
+            )}
             {!authoring && (
               <NavLink to="/author" className="cg-btn-primary px-4 py-1.5">
                 Author a case
@@ -177,6 +194,27 @@ export function NavBar() {
       {/* Mobile sheet — doing first, then reference group, then account. */}
       {open && (
         <div className="cg-screen-enter border-t border-neutral-200 bg-neutral-50 px-3 pb-4 pt-2 lg:hidden">
+          {/* The authoring view switch has no room in the compose header on a
+              phone, so it lives here — the one place a phone user already
+              looks for the controls this page doesn't show. */}
+          {composing && (
+            <div className="mb-2 px-1">
+              <p className="px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-400">View</p>
+              <div className="flex rounded-lg border border-neutral-200 bg-white p-1">
+                {([["guided", "Guided"], ["form", "Full form"]] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => { switchView(key); setOpen(false); }}
+                    className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      view === key ? "bg-brand-700 text-white" : "text-neutral-600 hover:bg-neutral-100"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {DO_LINKS.map((l) => (
             <NavLink key={l.to} to={l.to} className={mobileLinkClass}>
               {l.label}

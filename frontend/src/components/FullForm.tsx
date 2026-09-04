@@ -7,9 +7,10 @@
 import { useState } from "react";
 import type { FormState } from "../caseForm";
 import { lines, truncate, safetyAnswered } from "../caseForm";
-import { Field, ArchetypePicker } from "./fields";
+import { Field, ArchetypePicker, ProvenancePicker } from "./fields";
 import { GuidanceIcon } from "./GuidancePopover";
-import { QUERY_GUIDANCE, TIER_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE, PROVENANCE_GUIDANCE } from "../guidance";
+import { LABELS } from "../labels";
+import { QUERY_GUIDANCE, TIER_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE } from "../guidance";
 
 type SectionStatus = "Not started" | "In progress" | "Filled";
 const BADGE: Record<SectionStatus, string> = {
@@ -97,12 +98,13 @@ function TierGroup({ prefix, form, set, revealed, reveal }: {
   );
 }
 
-export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
+export function FullForm({ form, set, toggleArchetype, onSubmit, submitting, onOpenSource }: {
   form: FormState;
   set: (patch: Partial<FormState>) => void;
   toggleArchetype: (value: string) => void;
   onSubmit: () => void;
   submitting: boolean;
+  onOpenSource: () => void;
 }) {
   // Collapsed by default except the first section.
   const [sectionsOpen, setSectionsOpen] = useState<Record<number, boolean>>(() => {
@@ -117,7 +119,7 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const reveal = (k: string) => setRevealed((p) => ({ ...p, [k]: true }));
 
-  const s1Status = statusOf([form.archetypes.length || form.other_checked ? "x" : "", form.query, form.what_this_evaluates, form.query_scope, form.provenance_notes]);
+  const s1Status = statusOf([form.archetypes.length || form.other_checked ? "x" : "", form.query, form.what_this_evaluates, form.query_scope, form.guideline_provenance]);
   const s2Status = statusOf([form.primary, form.critical_differentials, form.other_considerations, form.inv_required, form.inv_expected, form.inv_situational, form.tx_required, form.tx_expected, form.tx_situational, form.complications, form.mon_required, form.mon_expected, form.escalation]);
   const s3Status: SectionStatus = safetyAnswered(form) ? "Filled" : "Not started";
 
@@ -126,7 +128,7 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
   const s1Summary = form.query ? `"${truncate(form.query, 56)}"` : "What the case is about and what reasoning it tests";
   const s2Summary = form.primary ? `${truncate(form.primary, 36)} · ${s2Count} item${s2Count === 1 ? "" : "s"}` : "What a competent AI should address";
   const s3Summary = form.safety_none_declared
-    ? "No danger-level constraints declared"
+    ? "Nothing rises to that level for this patient"
     : lines(form.safety_harm_text).length
       ? `${lines(form.safety_harm_text).length} constraint${lines(form.safety_harm_text).length === 1 ? "" : "s"}`
       : "What must the AI never do, or never leave out";
@@ -136,19 +138,22 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
       <Section num={1} title="Frame the case" subtitle="What the case is about and what reasoning it tests" status={s1Status} summary={s1Summary} open={!!sectionsOpen[1]} onToggle={() => toggleSection(1)}>
         {/* No "authored by" field (ADR-030) — identity comes from the
             logged-in session, shown in the page header. */}
-        <Field label="Reasoning patterns this case exercises" guidance={{ title: "Reasoning patterns", text: ARCHETYPE_GUIDANCE }} hint="Optional. Pick these first, then write a query that exercises them.">
+        <Field label={LABELS.archetypes} guidance={{ title: "Reasoning patterns", text: ARCHETYPE_GUIDANCE }} hint="Optional. Pick these first, then write a scenario that exercises them.">
           <ArchetypePicker form={form} set={set} toggleArchetype={toggleArchetype} />
         </Field>
 
-        <Field label="Clinical query" guidance={{ title: "Writing the clinical query", text: QUERY_GUIDANCE }}>
-          <textarea rows={3} className="cg-textarea" value={form.query} onChange={(e) => set({ query: e.target.value })} placeholder="A realistic clinical scenario — 1-3 sentences ending in scope." />
+        <Field label={LABELS.query} guidance={{ title: "Writing the clinical query", text: QUERY_GUIDANCE }}>
+          <textarea rows={3} className="cg-textarea" value={form.query} onChange={(e) => set({ query: e.target.value })} placeholder="A realistic scenario, 1 to 3 sentences, ending with what you're asking for." />
         </Field>
-        <Field label="What this case evaluates" guidance={{ title: "What this case evaluates", text: WHAT_THIS_EVALUATES_GUIDANCE }}>
+        <Field label={LABELS.evaluates} guidance={{ title: "What this case evaluates", text: WHAT_THIS_EVALUATES_GUIDANCE }}>
           <textarea rows={2} className="cg-textarea" value={form.what_this_evaluates} onChange={(e) => set({ what_this_evaluates: e.target.value })} placeholder="Optional but recommended." />
         </Field>
-        <Field label="Query scope" hint="Optional."><input className="cg-input" value={form.query_scope} onChange={(e) => set({ query_scope: e.target.value })} placeholder="e.g. diagnosis + initial management; excludes long-term follow-up" /></Field>
-        <Field label="Provenance notes" guidance={{ title: "Provenance notes", text: PROVENANCE_GUIDANCE }} hint="Two sentences: what traces to the guideline, and what is authored from clinical judgment or another standard. This tells a reviewer what to verify against what. Not a decision journal.">
-          <textarea rows={2} className="cg-textarea" value={form.provenance_notes} onChange={(e) => set({ provenance_notes: e.target.value })} placeholder="TB diagnosis and regimen from NSTG. HIV co-management (cotrimoxazole, CD4, coordinated ART) from WHO TB-HIV guidance, which NSTG doesn't cover." />
+        <Field label={LABELS.scope} hint="Optional."><input className="cg-input" value={form.query_scope} onChange={(e) => set({ query_scope: e.target.value })} placeholder="e.g. diagnosis + initial management; excludes long-term follow-up" /></Field>
+        {/* Same control as the guided flow's provenance screen (ADR-033), so
+            the tier can be set from either view and an existing case with a
+            null tier becomes complete on its next save. */}
+        <Field label={LABELS.provenance} hint="So a reviewer knows what to check against what.">
+          <ProvenancePicker form={form} set={set} />
         </Field>
       </Section>
 
@@ -156,9 +161,9 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
         <div className="space-y-6">
           <div>
             <h3 className="cg-eyebrow mb-2">Expected diagnoses</h3>
-            <Field label="Primary diagnosis"><input className="cg-input" value={form.primary} onChange={(e) => set({ primary: e.target.value })} placeholder="The diagnosis the AI should reach (kept out of the query)." /></Field>
-            <Field label="Critical differentials" hint="Differentials the AI must consider."><textarea rows={2} className="cg-textarea" value={form.critical_differentials} onChange={(e) => set({ critical_differentials: e.target.value })} placeholder="One per line" /></Field>
-            <Field label="Other considerations the AI should address"><textarea rows={2} className="cg-textarea" value={form.other_considerations} onChange={(e) => set({ other_considerations: e.target.value })} placeholder="One per line" /></Field>
+            <Field label={LABELS.primary}><input className="cg-input" value={form.primary} onChange={(e) => set({ primary: e.target.value })} placeholder="The diagnosis the AI should reach (kept out of the scenario)." /></Field>
+            <Field label={LABELS.critical_differentials}><textarea rows={2} className="cg-textarea" value={form.critical_differentials} onChange={(e) => set({ critical_differentials: e.target.value })} placeholder="One per line" /></Field>
+            <Field label={LABELS.other_considerations}><textarea rows={2} className="cg-textarea" value={form.other_considerations} onChange={(e) => set({ other_considerations: e.target.value })} placeholder="One per line" /></Field>
           </div>
 
           <div>
@@ -172,7 +177,7 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
           </div>
 
           <div>
-            <Field label="Complications the AI should address"><textarea rows={2} className="cg-textarea" value={form.complications} onChange={(e) => set({ complications: e.target.value })} placeholder="One complication per line" /></Field>
+            <Field label={LABELS.complications}><textarea rows={2} className="cg-textarea" value={form.complications} onChange={(e) => set({ complications: e.target.value })} placeholder="One complication per line" /></Field>
           </div>
 
           <div>
@@ -181,7 +186,7 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
               <Field label="Monitoring — required"><textarea rows={2} className="cg-textarea" value={form.mon_required} onChange={(e) => set({ mon_required: e.target.value })} placeholder="One per line" /></Field>
               <Field label="Monitoring — expected"><textarea rows={2} className="cg-textarea" value={form.mon_expected} onChange={(e) => set({ mon_expected: e.target.value })} placeholder="One per line" /></Field>
             </div>
-            <Field label="Escalation triggers" hint="One per line: [finding] — [escalation action]. Flat — a finding either warrants escalation or it does not.">
+            <Field label={LABELS.escalation} hint="One per line: [finding] — [escalation action]. Flat — a finding either warrants escalation or it does not.">
               <textarea rows={2} className="cg-textarea" value={form.escalation} onChange={(e) => set({ escalation: e.target.value })} placeholder="Rifampicin resistance on GeneXpert — escalate to MDR-TB pathway" />
             </Field>
           </div>
@@ -196,13 +201,27 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting }: {
         </div>
         <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-neutral-700">
           <input type="checkbox" checked={form.safety_none_declared} onChange={(e) => set({ safety_none_declared: e.target.checked })} className="mt-0.5 accent-brand-700" />
-          <span>No danger-level constraints apply to this patient.</span>
+          <span>Nothing here rises to that level for this patient.</span>
         </label>
       </Section>
 
-      {/* Submit bar — saving is automatic (indicator lives in the page header). */}
-      <div className="cg-card flex items-center justify-end p-4">
+      {/* Submit bar — saving is automatic (indicator lives in the page header).
+          On a phone it moves to the fixed bar below, so nothing floats over it. */}
+      <div className="cg-card hidden items-center justify-end p-4 lg:flex">
         <button onClick={onSubmit} disabled={submitting} className="cg-btn-primary px-6">{submitting ? "Submitting…" : "Submit case"}</button>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-neutral-200 bg-white/95 px-3 py-2.5 backdrop-blur lg:hidden">
+        <button onClick={onSubmit} disabled={submitting} className="cg-btn-primary flex-1">
+          {submitting ? "Submitting…" : "Submit"}
+        </button>
+        <button type="button" onClick={onOpenSource} aria-label="Open the NSTG source panel"
+          className="cg-btn-secondary flex h-9 w-10 items-center justify-center px-0">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3H9v14H4.5A1.5 1.5 0 0 1 3 15.5v-11Z" />
+            <path d="M17 4.5A1.5 1.5 0 0 0 15.5 3H11v14h4.5a1.5 1.5 0 0 0 1.5-1.5v-11Z" />
+          </svg>
+        </button>
       </div>
     </div>
   );

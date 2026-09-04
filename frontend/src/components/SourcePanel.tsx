@@ -3,7 +3,38 @@
 
 import { useState } from "react";
 import type { SourceMaterial } from "../types";
+import type { ScreenKind } from "../flow";
 import { Spinner, ErrorBox } from "./ui";
+
+export type SourceSection =
+  | "intro" | "findings" | "investigations" | "treatments"
+  | "differentials" | "complications" | "safety";
+
+// Which parts of the guideline are worth having open for the question on
+// screen. Everything stays expandable — this only decides what starts open,
+// so the author lands on the relevant section instead of scrolling past five
+// collapsed headers to find it. An unmapped screen opens nothing: on the
+// opening question, and on anything that describes the case rather than
+// answering it, no part of the guideline is more relevant than another.
+const SECTIONS_BY_SCREEN: Partial<Record<ScreenKind, SourceSection[]>> = {
+  query: ["intro", "findings"],
+  primary: ["intro", "findings"],
+  critical_differentials: ["intro", "findings"],
+  inv_required: ["investigations"],
+  inv_expected: ["investigations"],
+  inv_situational: ["investigations"],
+  tx_required: ["treatments"],
+  tx_expected: ["treatments"],
+  tx_situational: ["treatments"],
+  complications: ["complications", "treatments"],
+  monitoring: ["complications", "treatments"],
+  escalation: ["findings", "treatments"],
+  safety_harm: ["treatments", "safety"],
+};
+
+export function sourceSectionsFor(kind: ScreenKind | null): SourceSection[] {
+  return (kind && SECTIONS_BY_SCREEN[kind]) || [];
+}
 
 function Collapsible({ title, count, children, defaultOpen = true }: { title: string; count: number; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -21,10 +52,9 @@ function Collapsible({ title, count, children, defaultOpen = true }: { title: st
   );
 }
 
-// The guideline's introduction for the condition — collapsed by default so it
-// doesn't push the structured data below the fold.
-function IntroBlock({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
+// The guideline's introduction for the condition.
+function IntroBlock({ text, defaultOpen }: { text: string; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div>
       <button
@@ -48,14 +78,21 @@ function PlainList({ items }: { items: string[] }) {
   );
 }
 
-export function SourcePanel({ data, loading, error }: { data: SourceMaterial | null; loading: boolean; error: string | null }) {
+export function SourcePanel({ data, loading, error, openSections = [], resetKey = "" }: {
+  data: SourceMaterial | null;
+  loading: boolean;
+  error: string | null;
+  openSections?: SourceSection[];
+  resetKey?: string;
+}) {
+  const isOpen = (s: SourceSection) => openSections.includes(s);
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
         <h2 className="text-sm font-semibold text-slate-700">From the Nigerian guideline (NSTG)</h2>
         {/* Testers did not realise this panel is specifically what NSTG
             contains, nor that they may add beyond it. Said plainly here; the
-            wording matches the provenance screen (1.5). */}
+            wording matches the provenance screen. */}
         <p className="mt-1 text-xs leading-relaxed text-slate-500">
           This is what NSTG says for the selected condition(s). Where it's missing something, add it
           from your clinical judgment or another reference, and note the source.
@@ -65,7 +102,10 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* resetKey remounts the sections when the author moves screen, so the
+          mapping above re-applies. Anything they expanded by hand is theirs
+          until they navigate — which is the right lifetime for it. */}
+      <div key={resetKey} className="flex-1 overflow-y-auto">
         {loading && <div className="p-4"><Spinner label="Loading source material…" /></div>}
         {error && <div className="p-4"><ErrorBox message={error} /></div>}
 
@@ -73,11 +113,11 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
           <>
             {data.condition.introduction && (
               <div className="border-b border-slate-200">
-                <IntroBlock text={data.condition.introduction} />
+                <IntroBlock text={data.condition.introduction} defaultOpen={isOpen("intro")} />
               </div>
             )}
 
-            <Collapsible title="Findings" count={Object.values(data.findings.by_subtype).flat().length}>
+            <Collapsible title="Findings" count={Object.values(data.findings.by_subtype).flat().length} defaultOpen={isOpen("findings")}>
               {Object.keys(data.findings.by_subtype).length === 0 ? (
                 <p className="text-slate-400">None recorded.</p>
               ) : (
@@ -90,11 +130,11 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
               )}
             </Collapsible>
 
-            <Collapsible title="Investigations" count={data.investigations_pool.items.length}>
+            <Collapsible title="Investigations" count={data.investigations_pool.items.length} defaultOpen={isOpen("investigations")}>
               <PlainList items={data.investigations_pool.items} />
             </Collapsible>
 
-            <Collapsible title="Treatments" count={Object.values(data.treatments_pool.by_type).flat().length}>
+            <Collapsible title="Treatments" count={Object.values(data.treatments_pool.by_type).flat().length} defaultOpen={isOpen("treatments")}>
               {Object.keys(data.treatments_pool.by_type).length === 0 ? (
                 <p className="text-slate-400">None recorded.</p>
               ) : (
@@ -107,17 +147,18 @@ export function SourcePanel({ data, loading, error }: { data: SourceMaterial | n
               )}
             </Collapsible>
 
-            <Collapsible title="Differentials" count={data.differentials_pool.items.length}>
+            <Collapsible title="Differentials" count={data.differentials_pool.items.length} defaultOpen={isOpen("differentials")}>
               <PlainList items={data.differentials_pool.items} />
             </Collapsible>
 
-            <Collapsible title="Complications" count={data.complications_pool.items.length}>
+            <Collapsible title="Complications" count={data.complications_pool.items.length} defaultOpen={isOpen("complications")}>
               <PlainList items={data.complications_pool.items} />
             </Collapsible>
 
             <Collapsible
               title="Safety signals"
               count={data.safety_signals.adverse_reactions_from_nstg.length}
+              defaultOpen={isOpen("safety")}
             >
               {/* Verified rules are deliberately not surfaced here (ADR-029)
                   — the author answers the harm question in their own words;

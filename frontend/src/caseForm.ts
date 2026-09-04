@@ -4,6 +4,7 @@
 // validateCase mirrors the server's structural checks and tags each issue with
 // the guided-flow screen that fixes it.
 
+import { provenanceRequiresNotes } from "./guidance";
 import type { EvalCasePayload, SituationalItem, ConditionRef, EvalCaseDetail } from "./types";
 
 export interface FormState {
@@ -12,6 +13,10 @@ export interface FormState {
   what_this_evaluates: string;
   query_scope: string;
   provenance_notes: string;
+  // "" until the author picks a tier — the radio has no default on purpose
+  // (ADR-033): a pre-selected answer to "where did this come from?" is worse
+  // than no answer, because it looks answered.
+  guideline_provenance: string;
   primary: string;
   critical_differentials: string;
   other_considerations: string;
@@ -29,6 +34,7 @@ export interface FormState {
 
 export const EMPTY: FormState = {
   query: "", what_this_evaluates: "", query_scope: "", provenance_notes: "",
+  guideline_provenance: "",
   primary: "", critical_differentials: "", other_considerations: "",
   inv_required: "", inv_expected: "", inv_situational: "",
   tx_required: "", tx_expected: "", tx_situational: "",
@@ -54,6 +60,16 @@ export function safetyAnswered(f: FormState): boolean {
 // if the check is somehow bypassed client-side.
 export const SAFETY_PROMPT = "Answer the safety question to finish — either list the dangers, or confirm there are none.";
 
+// Same shape, for the second required answer (ADR-033). Mirrors the server's
+// two checks so an unresolved provenance question never round-trips.
+export const PROVENANCE_PROMPT = "Say where this answer came from before submitting.";
+export const PROVENANCE_NOTES_PROMPT = "Say which parts came from where, in a sentence or two.";
+
+export function provenanceAnswered(f: FormState): boolean {
+  if (!f.guideline_provenance) return false;
+  return !provenanceRequiresNotes(f.guideline_provenance) || !!f.provenance_notes.trim();
+}
+
 export function parseSituational(s: string): SituationalItem[] {
   return lines(s).map((line) => {
     const m = line.split(/\s*[—-]\s*trigger:\s*/i);
@@ -69,6 +85,7 @@ export function toPayload(f: FormState, conditions: ConditionRef[]): EvalCasePay
     what_this_evaluates: f.what_this_evaluates.trim(),
     query_scope: f.query_scope.trim(),
     provenance_notes: f.provenance_notes.trim(),
+    guideline_provenance: f.guideline_provenance || null,
     diagnoses: { primary: f.primary.trim(), critical_differentials: lines(f.critical_differentials), other_considerations: lines(f.other_considerations) },
     investigations: { required: lines(f.inv_required), expected: lines(f.inv_expected), situational: parseSituational(f.inv_situational) },
     treatments: { required: lines(f.tx_required), expected: lines(f.tx_expected), situational: parseSituational(f.tx_situational) },
@@ -104,6 +121,9 @@ export function fromExpectedResponse(detail: EvalCaseDetail): FormState {
     what_this_evaluates: e.what_this_evaluates ?? "",
     query_scope: e.query_scope ?? detail.query_scope ?? "",
     provenance_notes: e.provenance_notes ?? "",
+    // Cases authored before v1.6 have no tier; the edit path shows the radio
+    // unanswered so the author picks one the next time they save.
+    guideline_provenance: detail.guideline_provenance ?? e.guideline_provenance ?? "",
     primary: diag.required?.primary ?? "",
     critical_differentials: (diag.required?.critical_differentials ?? []).join("\n"),
     other_considerations: (diag.expected?.other_considerations ?? []).join("\n"),

@@ -97,14 +97,35 @@ export const PROVENANCE_GUIDANCE = `Provenance is source attribution in the fewe
 // 2026-07-02 is the reference example for good authoring (PRD v1.3 §9).
 export const QUERY_EXAMPLE = `27-year-old accountant with known type 1 diabetes, presenting to the emergency department with two days of fever, abdominal pain and vomiting. Appears drowsy and dehydrated on arrival. Point-of-care random glucose 28 mmol/L, urine dipstick shows ketones 3+. Diagnosis and initial management?`;
 
-// Canonical archetypes: enum value, display label, and a one-line inline subtitle
-// (so MDs don't have to open the modal to understand each one). Order per the PRD.
-export const ARCHETYPES: { value: string; label: string; subtitle: string }[] = [
-  { value: "missing_context_recognition", label: "Missing-context recognition", subtitle: "AI should recognize key context is absent and seek it before answering" },
-  { value: "severity_stratification", label: "Severity stratification", subtitle: "Management diverges based on severity; AI must classify correctly" },
-  { value: "contraindication_navigation", label: "Contraindication navigation", subtitle: "Standard treatment is unsafe due to pregnancy, age, comorbidity, or interaction" },
-  { value: "overlapping_presentation_differentiation", label: "Overlapping presentation differentiation", subtitle: "Multiple conditions present similarly; AI must reason through differences" },
-  { value: "critical_red_flag_recognition", label: "Critical red flag recognition", subtitle: "Presentation appears routine but contains features requiring escalation" },
-  { value: "first_line_protocol_adherence", label: "First-line protocol adherence", subtitle: "Tests whether AI follows the specific guideline vs giving a reasonable alternative" },
-  { value: "referral_and_escalation_per_protocol", label: "Referral and escalation per protocol", subtitle: "AI doesn't follow guideline-specified escalation triggers" },
+// Canonical archetypes: enum value, the short framework name, and the plain
+// sentence an author actually picks from.
+//
+// The stored enum values are unchanged. `label` is the framework's own name
+// for the pattern and survives only on the case page and in the "?" modal —
+// v1.6 took it out of the authoring flow entirely, because a physician
+// choosing between "Missing-context recognition" and "Severity
+// stratification" is being asked to learn our taxonomy before they can answer
+// a clinical question. `plain` is what the flow shows: one sentence, in the
+// clinic's terms, describing what a good answer does. Order per the PRD.
+export const ARCHETYPES: { value: string; label: string; subtitle: string; plain: string }[] = [
+  { value: "missing_context_recognition", label: "Missing-context recognition", subtitle: "AI should recognize key context is absent and seek it before answering", plain: "Notices that key information is missing and asks for it before answering" },
+  { value: "severity_stratification", label: "Severity stratification", subtitle: "Management diverges based on severity; AI must classify correctly", plain: "Grades severity correctly, because management changes with it" },
+  { value: "contraindication_navigation", label: "Contraindication navigation", subtitle: "Standard treatment is unsafe due to pregnancy, age, comorbidity, or interaction", plain: "Recognises the standard treatment is unsafe here (pregnancy, age, comorbidity, interaction) and adjusts" },
+  { value: "overlapping_presentation_differentiation", label: "Overlapping presentation differentiation", subtitle: "Multiple conditions present similarly; AI must reason through differences", plain: "Tells apart conditions that present alike" },
+  { value: "critical_red_flag_recognition", label: "Critical red flag recognition", subtitle: "Presentation appears routine but contains features requiring escalation", plain: "Spots the red flag in a presentation that looks routine" },
+  { value: "first_line_protocol_adherence", label: "First-line protocol adherence", subtitle: "Tests whether AI follows the specific guideline vs giving a reasonable alternative", plain: "Follows the Nigerian guideline's first-line choice, not just a reasonable alternative" },
+  { value: "referral_and_escalation_per_protocol", label: "Referral and escalation per protocol", subtitle: "AI doesn't follow guideline-specified escalation triggers", plain: "Refers or escalates when the guideline says to" },
 ];
+
+// The three provenance tiers (ADR-033). `value` is what the API stores;
+// `label` is the whole question the author answers, so the radio needs no
+// second line of explanation. The two mixed tiers carry `requiresNotes`,
+// which is the client half of the server-side rule in eval_cases.py.
+export const PROVENANCE_TIERS: { value: string; label: string; requiresNotes: boolean }[] = [
+  { value: "nstg_only", label: "The Nigerian guideline (NSTG) covers all of it", requiresNotes: false },
+  { value: "nstg_plus_other", label: "Mostly NSTG, plus another source or my own judgment for some parts", requiresNotes: true },
+  { value: "judgment_primary", label: "Mostly my own judgment or another standard; NSTG doesn't cover this well", requiresNotes: true },
+];
+
+export const provenanceRequiresNotes = (tier: string): boolean =>
+  PROVENANCE_TIERS.some((t) => t.value === tier && t.requiresNotes);

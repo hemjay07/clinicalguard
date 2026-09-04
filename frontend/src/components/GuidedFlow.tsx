@@ -7,13 +7,14 @@ import type { FormState, ValidationIssue } from "../caseForm";
 import { SAFETY_PROMPT } from "../caseForm";
 import { useState } from "react";
 import {
-  PHASES, phaseScreens, screenFilled, screenSummary,
+  PHASES, phaseScreens, screenFilled, screenSummary, screenLabel,
   FLOW_STEPS, phaseSteps, stepIndexForScreen, enrichmentTarget,
+  displayNumber, groupScreens, emptyOptional,
 } from "../flow";
-import type { ScreenDef, FlowStep } from "../flow";
-import { ArchetypePicker, InlineExample } from "./fields";
+import type { ScreenDef, FlowStep, OptionalGroup } from "../flow";
+import { ArchetypePicker, ProvenancePicker, InlineExample } from "./fields";
 import { GuidanceIcon } from "./GuidancePopover";
-import { QUERY_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE, PROVENANCE_GUIDANCE, QUERY_EXAMPLE } from "../guidance";
+import { QUERY_GUIDANCE, TRIGGER_GUIDANCE, WHAT_THIS_EVALUATES_GUIDANCE, ARCHETYPE_GUIDANCE, QUERY_EXAMPLE } from "../guidance";
 
 interface Props {
   form: FormState;
@@ -24,6 +25,7 @@ interface Props {
   onSubmit: () => void;
   submitting: boolean;
   issues: ValidationIssue[];
+  onOpenSource: () => void;
 }
 
 // --- phase bar ---------------------------------------------------------------
@@ -47,13 +49,13 @@ function PhaseBar({ current, goTo, form }: { current: FlowStep; goTo: (id: strin
                 }`}>
                   {isPast ? "✓" : p.n}
                 </span>
-                {/* On phones only the current phase carries its name — the
-                    truncated labels of the other two were noise, their
-                    numbered circles are enough to jump by. */}
+                {/* Phones carry all three labels, but the one-word versions —
+                    the full titles truncated into noise at that width. */}
                 <span className={`truncate text-xs font-medium sm:text-sm ${
-                  isCurrent ? "text-neutral-900" : "hidden text-neutral-400 group-hover:text-neutral-600 sm:block"
+                  isCurrent ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-600"
                 }`}>
-                  {p.title}
+                  <span className="sm:hidden">{p.short}</span>
+                  <span className="hidden sm:inline">{p.title}</span>
                 </span>
               </span>
               <span className="mt-2 block h-0.5 w-full overflow-hidden rounded-full bg-neutral-200">
@@ -65,18 +67,19 @@ function PhaseBar({ current, goTo, form }: { current: FlowStep; goTo: (id: strin
       </div>
 
       {/* Breadcrumb dots for the current phase — clickable, show fill state.
-          The enrichment group gets a "+" dot so optional depth is visible from
-          the bar itself, not only once you reach the end of the phase. */}
+          Numbers come from position in the phase, not from the screen id, so
+          they always read 1 2 3 … with no gaps (the ids are stable and out of
+          order by design; see flow.ts). The optional menu gets a "+" dot so
+          the extra depth is visible from the bar rather than only on arrival. */}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {phaseSteps(current.phase).map((st) => {
           const active = st.id === current.id;
           const filled = st.kind === "screen"
             ? screenFilled(st.screen.kind, form)
-            : st.screens.some((s) => screenFilled(s.kind, form));
-          const label = st.kind === "screen" ? st.screen.id.split(".")[1] : "+";
+            : st.groups.some((g) => groupScreens(g).some((s) => screenFilled(s.kind, form)));
           const title = st.kind === "screen"
-            ? `${st.screen.id} — ${st.screen.crumb}`
-            : `More detail — ${st.screens.length} optional questions`;
+            ? screenLabel(st.screen.kind)
+            : "Add more detail — optional";
           return (
             <button
               key={st.id}
@@ -91,7 +94,7 @@ function PhaseBar({ current, goTo, form }: { current: FlowStep; goTo: (id: strin
                     : "bg-neutral-100 text-neutral-400 hover:bg-neutral-200"
               }`}
             >
-              {label}
+              {displayNumber(st)}
             </button>
           );
         })}
@@ -107,13 +110,20 @@ const SITUATIONAL_PLACEHOLDER: Record<string, string> = {
   tx_situational: "IV sodium bicarbonate — trigger: AI raises severe acidosis with pH < 7.0",
 };
 
-function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPrompt }: {
+// Two worked lines, one of each shape the question asks for: a thing the AI
+// must never do, and a thing it must never leave out.
+const SAFETY_PLACEHOLDER = `One per line, e.g.
+Do not give a beta-blocker in acute decompensated heart failure
+Anti-TB drugs are hepatotoxic; do not start them without baseline liver function tests`;
+
+function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPrompt, showProvenancePrompt }: {
   screen: ScreenDef;
   form: FormState;
   set: (patch: Partial<FormState>) => void;
   toggleArchetype: (value: string) => void;
   onEnter: () => void;
   showSafetyPrompt: boolean;
+  showProvenancePrompt?: boolean;
 }) {
   const inputProps = (key: keyof FormState, placeholder: string) => ({
     className: "cg-input",
@@ -135,15 +145,15 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
       return (
         <div>
           <ArchetypePicker form={form} set={set} toggleArchetype={toggleArchetype} />
-          <div className="mt-3"><GuidanceIcon title="Reasoning patterns" text={ARCHETYPE_GUIDANCE} /> <span className="text-xs text-neutral-400">More on reasoning patterns</span></div>
+          <div className="mt-4"><GuidanceIcon title="Reasoning patterns" text={ARCHETYPE_GUIDANCE} /> <span className="text-xs text-neutral-400">More on these</span></div>
         </div>
       );
     case "query":
       return (
         <div>
-          <textarea {...textareaProps("query", 5, "A realistic clinical scenario — 1-3 sentences ending in scope.")} autoFocus />
+          <textarea {...textareaProps("query", 5, "A realistic scenario, 1 to 3 sentences, ending with what you're asking for.")} autoFocus />
           <InlineExample text={QUERY_EXAMPLE} />
-          <div className="mt-2"><GuidanceIcon title="Writing the clinical query" text={QUERY_GUIDANCE} /> <span className="text-xs text-neutral-400">Full guidance on writing queries</span></div>
+          <div className="mt-2"><GuidanceIcon title="Writing the clinical query" text={QUERY_GUIDANCE} /> <span className="text-xs text-neutral-400">Full guidance</span></div>
         </div>
       );
     case "evaluates":
@@ -156,12 +166,7 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
     case "scope":
       return <input {...inputProps("query_scope", "e.g. diagnosis and initial management; excludes long-term glycaemic control planning")} />;
     case "provenance":
-      return (
-        <div>
-          <textarea {...textareaProps("provenance_notes", 3, "TB diagnosis and regimen from NSTG. HIV co-management (cotrimoxazole, CD4, coordinated ART) from WHO TB-HIV guidance, which NSTG doesn't cover.")} />
-          <div className="mt-2"><GuidanceIcon title="Provenance notes" text={PROVENANCE_GUIDANCE} /> <span className="text-xs text-neutral-400">Why provenance matters</span></div>
-        </div>
-      );
+      return <ProvenancePicker form={form} set={set} showPrompt={showProvenancePrompt} />;
     case "primary":
       return <input {...inputProps("primary", "The diagnosis the AI should reach")} autoFocus />;
     case "critical_differentials":
@@ -183,13 +188,15 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
         <div>
           <p className="cg-help mb-1.5">Format: [item] — trigger: [what the AI raises that activates the requirement]</p>
           <textarea {...textareaProps(key, 3, SITUATIONAL_PLACEHOLDER[key])} />
-          <div className="mt-2"><GuidanceIcon title="Situational triggers" text={TRIGGER_GUIDANCE} /> <span className="text-xs text-neutral-400">How triggers are scored</span></div>
+          <div className="mt-2"><GuidanceIcon title="Situational triggers" text={TRIGGER_GUIDANCE} /> <span className="text-xs text-neutral-400">How triggers are checked</span></div>
         </div>
       );
     }
     case "complications":
       return <textarea {...textareaProps("complications", 3, "One per line — e.g. Cerebral edema (rare but catastrophic; particularly in young patients)")} />;
     case "monitoring":
+      // Stacks on a phone: side-by-side, each textarea was too narrow to read
+      // a monitoring line in.
       return (
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -213,10 +220,7 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
       const checked = form.safety_none_declared;
       return (
         <div>
-          <textarea
-            {...textareaProps("safety_harm_text", 4, "One per line — e.g. Insulin should not be initiated without first confirming serum potassium above 3.3 mmol/L")}
-            autoFocus
-          />
+          <textarea {...textareaProps("safety_harm_text", 5, SAFETY_PLACEHOLDER)} autoFocus />
           <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-neutral-700">
             <input
               type="checkbox"
@@ -224,7 +228,7 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
               onChange={(e) => set({ safety_none_declared: e.target.checked })}
               className="mt-0.5 accent-brand-700"
             />
-            <span>No danger-level constraints apply to this patient.</span>
+            <span>Nothing here rises to that level for this patient.</span>
           </label>
           {showSafetyPrompt && (
             <p className="mt-3 text-sm text-amber-700">{SAFETY_PROMPT}</p>
@@ -237,27 +241,22 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
   }
 }
 
-// --- enrichment group ----------------------------------------------------------
-// One step per phase holding that phase's optional questions. Deliberately a
-// full, inviting panel rather than a grey link: if physicians never open it we
-// get thin skeleton-only cases and a weak corpus. Each question is one tap to
-// open, and answered ones start open so returning shows your work.
+// --- the optional menu ---------------------------------------------------------
+// One step, five named things rather than nine questions. Physicians skipped
+// the old list because reading it cost more than answering it; a menu of five
+// recognisable groups can be scanned in a second and left alone honestly.
+// Each group opens in place, and every field keeps its own guidance verbatim.
 
-const ENRICHMENT_NUDGE: Record<number, string> = {
-  1: "Optional. A line on what the case is testing, and its scope, help the next reader use it well.",
-  2: "Optional, but expected and situational items, monitoring, and complications make a case much stronger.",
-};
-
-function EnrichmentRow({ screen, form, set, toggleArchetype, defaultOpen }: {
-  screen: ScreenDef;
+function OptionalGroupRow({ group, form, set, toggleArchetype, defaultOpen }: {
+  group: OptionalGroup;
   form: FormState;
   set: (patch: Partial<FormState>) => void;
   toggleArchetype: (value: string) => void;
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const filled = screenFilled(screen.kind, form);
-  const summary = screenSummary(screen.kind, form);
+  const screens = groupScreens(group);
+  const answered = screens.filter((s) => screenFilled(s.kind, form)).length;
 
   return (
     <div className="border-b border-neutral-100 last:border-b-0">
@@ -265,76 +264,93 @@ function EnrichmentRow({ screen, form, set, toggleArchetype, defaultOpen }: {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-1 py-3.5 text-left transition-colors hover:bg-neutral-50"
+        className="flex w-full items-start gap-3 px-1 py-3.5 text-left transition-colors hover:bg-neutral-50"
       >
-        <span className={`mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full ${filled ? "bg-brand-500" : "bg-neutral-300"}`} />
+        <span className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${answered ? "bg-brand-500" : "bg-neutral-300"}`} />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-neutral-800">{screen.crumb}</span>
-          <span className={`block truncate text-xs ${filled ? "text-neutral-500" : "text-neutral-400"}`}>
-            {summary || "Not added"}
-          </span>
+          <span className="block text-sm font-medium text-neutral-800">{group.title}</span>
+          {group.blurb && (
+            <span className="mt-0.5 block text-xs leading-snug text-neutral-400">{group.blurb}</span>
+          )}
+          {answered > 0 && (
+            <span className="mt-0.5 block text-xs text-neutral-500">{answered} of {screens.length} added</span>
+          )}
         </span>
         <span className="shrink-0 text-lg leading-none text-neutral-400">{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div className="px-1 pb-5">
-          <h3 className="font-serif text-base font-semibold leading-snug text-neutral-900">{screen.question}</h3>
-          {screen.help && <p className="mt-1.5 max-w-prose text-sm leading-relaxed text-neutral-500">{screen.help}</p>}
-          <div className="mt-3.5">
-            <ScreenBody
-              screen={screen}
-              form={form}
-              set={set}
-              toggleArchetype={toggleArchetype}
-              onEnter={() => {}}
-              showSafetyPrompt={false}
-            />
-          </div>
+        <div className="space-y-5 px-1 pb-5">
+          {screens.map((s) => (
+            <div key={s.id}>
+              <div className="cg-label">{screenLabel(s.kind)}</div>
+              {s.help && <p className="cg-help -mt-0.5 mb-1.5">{s.help}</p>}
+              <ScreenBody
+                screen={s}
+                form={form}
+                set={set}
+                toggleArchetype={toggleArchetype}
+                onEnter={() => {}}
+                showSafetyPrompt={false}
+              />
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function EnrichmentGroup({ screens, phase, form, set, toggleArchetype, openId }: {
-  screens: ScreenDef[];
-  phase: 1 | 2 | 3;
+function OptionalMenu({ groups, form, set, toggleArchetype, openKey }: {
+  groups: OptionalGroup[];
   form: FormState;
   set: (patch: Partial<FormState>) => void;
   toggleArchetype: (value: string) => void;
-  openId: string | null;
+  openKey: string | null;
 }) {
-  const answered = screens.filter((s) => screenFilled(s.kind, form)).length;
   return (
-    <div>
-      <p className="text-sm leading-relaxed text-neutral-600">{ENRICHMENT_NUDGE[phase]}</p>
-      <p className="mt-3 text-xs font-medium text-neutral-400">
-        {answered > 0 ? `${answered} of ${screens.length} added` : `${screens.length} optional questions`}
-        {" · tap any to add"}
-      </p>
-      <div className="mt-3 border-t border-neutral-100">
-        {screens.map((s) => (
-          <EnrichmentRow
-            key={s.id}
-            screen={s}
-            form={form}
-            set={set}
-            toggleArchetype={toggleArchetype}
-            defaultOpen={s.id === openId || screenFilled(s.kind, form)}
-          />
-        ))}
-      </div>
+    <div className="border-t border-neutral-100">
+      {groups.map((g) => (
+        <OptionalGroupRow
+          key={g.key}
+          group={g}
+          form={form}
+          set={set}
+          toggleArchetype={toggleArchetype}
+          defaultOpen={g.key === openKey || groupScreens(g).some((s) => screenFilled(s.kind, form))}
+        />
+      ))}
     </div>
   );
 }
 
 // --- review screen -------------------------------------------------------------
 
+function ReviewRow({ label, value, missing, onEdit }: {
+  label: string; value: string; missing?: boolean; onEdit: () => void;
+}) {
+  return (
+    <button type="button" onClick={onEdit}
+      className="flex w-full items-baseline gap-3 px-4 py-2.5 text-left transition-colors hover:bg-neutral-50">
+      <span className="w-40 shrink-0 text-xs font-medium text-neutral-500 sm:w-52">{label}</span>
+      <span className={`min-w-0 flex-1 whitespace-pre-line text-sm ${missing ? "text-red-600" : "text-neutral-800"}`}>
+        {missing ? "Not provided" : value}
+      </span>
+      <span className="shrink-0 text-xs font-medium text-brand-700">Edit</span>
+    </button>
+  );
+}
+
 function ReviewScreen({ form, goTo, issues }: {
   form: FormState;
   goTo: (id: string) => void;
   issues: ValidationIssue[];
 }) {
+  // Empty optional questions collapse to one line per phase. The old review
+  // screen listed all nineteen rows, most of them "Not provided (optional)",
+  // which made a perfectly good case look half-finished at the exact moment
+  // the author was deciding whether to submit it.
+  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+
   return (
     <div>
       {issues.length > 0 && (
@@ -354,28 +370,60 @@ function ReviewScreen({ form, goTo, issues }: {
       )}
 
       <div className="space-y-4">
-        {PHASES.map((p) => (
-          <div key={p.n} className="cg-card">
-            <div className="border-b border-neutral-100 px-4 py-2.5">
-              <span className="cg-eyebrow">Phase {p.n} · {p.title}</span>
+        {PHASES.map((p) => {
+          const screens = phaseScreens(p.n).filter((s) => s.kind !== "review");
+          const shown = screens.filter((s) => screenFilled(s.kind, form) || !s.optional);
+          const hidden = emptyOptional(form, p.n);
+          if (shown.length === 0 && hidden.length === 0) return null;
+          const isOpen = !!expanded[p.n];
+          return (
+            <div key={p.n} className="cg-card">
+              <div className="border-b border-neutral-100 px-4 py-2.5">
+                <span className="cg-eyebrow">Phase {p.n} · {p.title}</span>
+              </div>
+              <div className="divide-y divide-neutral-100">
+                {shown.map((s) => (
+                  <ReviewRow
+                    key={s.id}
+                    label={screenLabel(s.kind)}
+                    value={screenSummary(s.kind, form)}
+                    missing={!screenFilled(s.kind, form)}
+                    onEdit={() => goTo(s.id)}
+                  />
+                ))}
+                {hidden.length > 0 && (
+                  <div>
+                    <div className="flex items-baseline gap-3 px-4 py-2.5">
+                      <span className="min-w-0 flex-1 text-sm text-neutral-500">
+                        {hidden.length} optional section{hidden.length === 1 ? "" : "s"} not added. You can add these later.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setExpanded((e) => ({ ...e, [p.n]: !e[p.n] }))}
+                        aria-expanded={isOpen}
+                        className="shrink-0 text-xs font-medium text-brand-700 hover:underline"
+                      >
+                        {isOpen ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                    {isOpen && (
+                      <div className="divide-y divide-neutral-100 border-t border-neutral-100">
+                        {hidden.map((s) => (
+                          <button key={s.id} type="button" onClick={() => goTo(s.id)}
+                            className="flex w-full items-baseline gap-3 px-4 py-2.5 text-left transition-colors hover:bg-neutral-50">
+                            <span className="w-40 shrink-0 text-xs font-medium text-neutral-500 sm:w-52">{screenLabel(s.kind)}</span>
+                            <span className="min-w-0 flex-1 truncate text-sm italic text-neutral-300">Not added</span>
+                            <span className="shrink-0 text-xs font-medium text-brand-700">Edit</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="divide-y divide-neutral-100">
-              {phaseScreens(p.n).filter((s) => s.kind !== "review").map((s) => {
-                const summary = screenSummary(s.kind, form);
-                return (
-                  <button key={s.id} type="button" onClick={() => goTo(s.id)}
-                    className="flex w-full items-baseline gap-3 px-4 py-2.5 text-left transition-colors hover:bg-neutral-50">
-                    <span className="w-44 shrink-0 text-xs font-medium text-neutral-500">{s.crumb}</span>
-                    <span className={`min-w-0 flex-1 truncate text-sm ${summary ? "text-neutral-800" : "italic text-neutral-300"}`}>
-                      {summary || (s.optional ? "Not provided (optional)" : "Not provided")}
-                    </span>
-                    <span className="shrink-0 text-xs font-medium text-brand-700">Edit</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -383,19 +431,20 @@ function ReviewScreen({ form, goTo, issues }: {
 
 // --- the flow ------------------------------------------------------------------
 
-export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmit, submitting, issues }: Props) {
-  // The flow walks FLOW_STEPS (core screens + one grouped enrichment step per
-  // phase), not the raw 19. A ?screen= pointing at an enrichment question
-  // resolves to its group with that question already open.
+export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmit, submitting, issues, onOpenSource }: Props) {
+  // The flow walks FLOW_STEPS (core screens + the grouped optional step), not
+  // the raw screen list. A ?screen= pointing at an optional question resolves
+  // to the menu with that question's group already open.
   const idx = stepIndexForScreen(screenId);
   const step = FLOW_STEPS[idx];
-  const openId = enrichmentTarget(screenId);
+  const openGroup = enrichmentTarget(screenId);
   const screen = step.kind === "screen" ? step.screen : null;
-  const showSafetyPrompt = !!screen && issues.some((i) => i.screenId === screen.id);
+  const screenIssue = !!screen && issues.some((i) => i.screenId === screen.id);
 
   const goNext = () => { if (idx < FLOW_STEPS.length - 1) goTo(FLOW_STEPS[idx + 1].id); };
   const goBack = () => { if (idx > 0) goTo(FLOW_STEPS[idx - 1].id); };
   const isReview = screen?.kind === "review";
+  const forwardLabel = idx === FLOW_STEPS.length - 2 ? "Review case →" : "Next →";
 
   return (
     <div className="space-y-5">
@@ -408,44 +457,57 @@ export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmi
             the author is — repeating it here was pure noise. */}
         {step.kind === "enrichment" ? (
           <>
-            <h2 className="font-serif text-2xl font-semibold leading-snug text-neutral-900">Add more detail</h2>
-            <p className="mt-1.5 text-sm font-medium text-brand-700">Optional — your case is already valid without this</p>
+            <h2 className="font-serif text-xl font-semibold leading-snug text-neutral-900 sm:text-2xl">Add more detail</h2>
+            <p className="mt-2 max-w-prose text-sm leading-relaxed text-neutral-500">
+              Optional. Skip this if you're short on time; you or another physician can add it later.
+            </p>
             <div className="mt-6">
-              <EnrichmentGroup
-                screens={step.screens}
-                phase={step.phase}
+              <OptionalMenu
+                groups={step.groups}
                 form={form}
                 set={set}
                 toggleArchetype={toggleArchetype}
-                openId={openId}
+                openKey={openGroup?.key ?? null}
               />
             </div>
           </>
         ) : (
           <>
             {screen!.lead && <p className="mb-3 max-w-prose text-sm leading-relaxed text-neutral-600">{screen!.lead}</p>}
-            <h2 className="font-serif text-2xl font-semibold leading-snug text-neutral-900">{screen!.question}</h2>
+            {/* One type-size step smaller on a phone: at 2xl a two-line
+                question pushed the input itself below the fold. */}
+            <h2 className="font-serif text-xl font-semibold leading-snug text-neutral-900 sm:text-2xl">{screen!.question}</h2>
             {screen!.help && <p className="mt-2.5 max-w-prose text-sm leading-relaxed text-neutral-500">{screen!.help}</p>}
 
             <div className="mt-6">
               {isReview ? (
                 <ReviewScreen form={form} goTo={goTo} issues={issues} />
               ) : (
-                <ScreenBody screen={screen!} form={form} set={set} toggleArchetype={toggleArchetype} onEnter={goNext} showSafetyPrompt={showSafetyPrompt} />
+                <ScreenBody
+                  screen={screen!}
+                  form={form}
+                  set={set}
+                  toggleArchetype={toggleArchetype}
+                  onEnter={goNext}
+                  showSafetyPrompt={screen!.kind === "safety_harm" && screenIssue}
+                  showProvenancePrompt={screen!.kind === "provenance" && screenIssue}
+                />
               )}
             </div>
           </>
         )}
 
         {/* One navigation row: Back on the left, the single forward action on
-            the right. Optional questions are skipped by pressing Next. */}
-        <div className="mt-8 flex items-center justify-between gap-3 border-t border-neutral-100 pt-5">
+            the right. Optional questions are skipped by pressing Next. On a
+            phone this row gives way to the fixed bottom bar below, so the
+            primary action is always in reach without scrolling. */}
+        <div className="mt-8 hidden items-center justify-between gap-3 border-t border-neutral-100 pt-5 lg:flex">
           <button type="button" onClick={goBack} disabled={idx === 0} className="cg-btn-ghost -ml-2" aria-label="Previous question">
             ← Back
           </button>
           {!isReview ? (
             <button type="button" onClick={goNext} className="cg-btn-primary px-6" aria-label="Next question">
-              {idx === FLOW_STEPS.length - 2 ? "Review case →" : "Next →"}
+              {forwardLabel}
             </button>
           ) : (
             <button type="button" onClick={onSubmit} disabled={submitting} className="cg-btn-primary px-6">
@@ -453,6 +515,31 @@ export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmi
             </button>
           )}
         </div>
+      </div>
+
+      {/* Phone navigation. Replaces the floating "Source" and "↑ Top" buttons,
+          which sat on top of whatever the author was trying to press. The
+          primary action lives here, so nothing can overlay it. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-neutral-200 bg-white/95 px-3 py-2.5 backdrop-blur lg:hidden">
+        <button type="button" onClick={goBack} disabled={idx === 0} className="cg-btn-ghost px-3 disabled:opacity-40" aria-label="Previous question">
+          ← Back
+        </button>
+        {!isReview ? (
+          <button type="button" onClick={goNext} className="cg-btn-primary flex-1" aria-label="Next question">
+            {forwardLabel}
+          </button>
+        ) : (
+          <button type="button" onClick={onSubmit} disabled={submitting} className="cg-btn-primary flex-1">
+            {submitting ? "Submitting…" : "Submit"}
+          </button>
+        )}
+        <button type="button" onClick={onOpenSource} aria-label="Open the NSTG source panel"
+          className="cg-btn-secondary flex h-9 w-10 items-center justify-center px-0">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3H9v14H4.5A1.5 1.5 0 0 1 3 15.5v-11Z" />
+            <path d="M17 4.5A1.5 1.5 0 0 0 15.5 3H11v14h4.5a1.5 1.5 0 0 0 1.5-1.5v-11Z" />
+          </svg>
+        </button>
       </div>
     </div>
   );

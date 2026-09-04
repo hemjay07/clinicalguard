@@ -109,6 +109,7 @@ export interface DecompositionResponse {
   split_count: number | null;
   split_labels: string[] | null;
   reason: string;
+  briefing_version: string;
   updated_at: string | null;
 }
 
@@ -133,6 +134,7 @@ export interface EvalCaseDetail {
   source: string;
   dataset_version: string;
   query_scope: string | null;
+  guideline_provenance: string | null;
   is_validated: boolean;
   submitted_at: string | null;
   updated_at: string | null;
@@ -169,6 +171,10 @@ export interface EvalCasePayload {
   what_this_evaluates: string;
   query_scope: string;
   provenance_notes: string;
+  // Case-level provenance tier (ADR-033). Null only for the edit path before
+  // the author of a pre-v1.6 case has picked one; the server rejects a null
+  // on submit.
+  guideline_provenance: string | null;
   diagnoses: { primary: string; critical_differentials: string[]; other_considerations: string[] };
   investigations: TierGroup;
   treatments: TierGroup;

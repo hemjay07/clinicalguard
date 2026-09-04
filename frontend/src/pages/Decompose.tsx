@@ -182,13 +182,18 @@ export function Decompose() {
               Each item gets checked against an AI's response as a yes/no. That works when an
               item is one thing, and breaks when it quietly holds several separate decisions.
             </p>
+            {/* The briefing withholds the decomposition rulebook on purpose
+                (ADR-032): the measurement is what raters bring unaided, so
+                nothing here may explain why items might belong together.
+                Changing this paragraph changes what is being measured — bump
+                BRIEFING_VERSION on the server when it changes again. */}
             <p>
-              <strong className="font-semibold text-neutral-900">
-                Your call on each: is this one thing, or does it bundle parts that should be
-                checked separately?
-              </strong>{" "}
-              Both splitting and keeping-whole are valid. Some things written together are
-              genuinely separable; others belong together and splitting would misrepresent them.
+              So for each item: if it bundles more than one separately-checkable clinical
+              decision, split it into those pieces. If it's a single decision, keep it whole. Use
+              your judgment for the in-between: sometimes things are written together because
+              they genuinely belong together, and splitting them would misrepresent the clinical
+              intent. Whether an item is truly separable is your call, in the context of the
+              case.
             </p>
             <p>
               Example: "chest X-ray and full blood count" → split. "order an ECG" → keep whole.

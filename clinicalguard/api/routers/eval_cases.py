@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/eval-cases", tags=["eval-cases"])
 
 GROUND_TRUTH_SOURCE = "md_authored_via_ui"
+# Case-level provenance tiers (ADR-033). Ordered from "the guideline covers
+# all of it" to "the guideline barely covers this".
+GUIDELINE_PROVENANCE_TIERS = ("nstg_only", "nstg_plus_other", "judgment_primary")
+# The two tiers that assert something came from outside NSTG — those are the
+# ones a reviewer cannot check without being told which parts, and from where.
+TIERS_REQUIRING_NOTES = ("nstg_plus_other", "judgment_primary")
 DATASET_VERSION = "NSTG 2022"
 SCORING_DIMENSIONS = [
     "treatment_correctness",
@@ -109,6 +115,9 @@ def build_expected_response(
         "derived_from": [f"NSTG 2022 {c['condition_name']} section" for c in conds],
         "query_scope": payload.query_scope.strip(),
         "provenance_notes": payload.provenance_notes.strip(),
+        # Descriptive metadata, like provenance_notes: carried in the exported
+        # case JSON for stratified reporting, never read by the scorer.
+        "guideline_provenance": payload.guideline_provenance,
         "scoring_dimensions": SCORING_DIMENSIONS,
         "expected_diagnoses": {
             "required": {
@@ -168,6 +177,20 @@ def _validate_and_build(
         raise HTTPException(
             status_code=422,
             detail={"errors": ["Answer the safety question to finish — either list the dangers, or confirm there are none."]},
+        )
+
+    # Provenance tier (ADR-033), the second required answer. A reviewer can
+    # only check the answer if they know what to check it against; the two
+    # mixed tiers additionally have to say which parts came from where.
+    if payload.guideline_provenance not in GUIDELINE_PROVENANCE_TIERS:
+        raise HTTPException(
+            status_code=422,
+            detail={"errors": ["Say where this answer came from before submitting."]},
+        )
+    if payload.guideline_provenance in TIERS_REQUIRING_NOTES and not payload.provenance_notes.strip():
+        raise HTTPException(
+            status_code=422,
+            detail={"errors": ["Say which parts came from where, in a sentence or two."]},
         )
 
     ids = [c.condition_id for c in payload.conditions]
@@ -240,6 +263,7 @@ def create_eval_case(
         query_scope=payload.query_scope.strip() or None,
         ground_truth_source=GROUND_TRUTH_SOURCE,
         safety_none_declared=payload.safety.none_declared,
+        guideline_provenance=payload.guideline_provenance,
         author_user_id=current_user.id,
     )
     db.add(row)
@@ -276,6 +300,7 @@ def update_eval_case(
     row.expected_response = json.dumps(expected)
     row.query_scope = payload.query_scope.strip() or None
     row.safety_none_declared = payload.safety.none_declared
+    row.guideline_provenance = payload.guideline_provenance
     row.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(row)
@@ -401,6 +426,7 @@ def get_eval_case(
         "dataset_version": row.dataset_version,
         "query_scope": row.query_scope,
         "is_validated": row.is_validated,
+        "guideline_provenance": row.guideline_provenance,
         "submitted_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
         "author_user_id": row.author_user_id,

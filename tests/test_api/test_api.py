@@ -101,6 +101,7 @@ def valid_payload(**overrides):
         "what_this_evaluates": "Recognition of severe malaria features.",
         "query_scope": "diagnosis + acute management",
         "provenance_notes": "Fully NSTG-grounded; severity thresholds from clinical judgment.",
+        "guideline_provenance": "nstg_plus_other",
         "diagnoses": {
             "primary": "Severe (complicated) malaria",
             "critical_differentials": ["Meningitis"],
@@ -250,8 +251,11 @@ def test_create_then_list_and_get(client):
     assert exp["reasoning_archetypes"] == ["severity_stratification", "critical_red_flag_recognition"]
     assert exp["other_archetypes"] == ["a custom reasoning pattern"]
     assert "required_principle" not in exp["required_monitoring"]
-    # provenance notes stored in the blob (ADR-026)
+    # provenance notes stored in the blob (ADR-026), provenance tier alongside
+    # it (ADR-033) — both descriptive metadata the scorer never reads.
     assert exp["provenance_notes"] == "Fully NSTG-grounded; severity thresholds from clinical judgment."
+    assert exp["guideline_provenance"] == "nstg_plus_other"
+    assert body["guideline_provenance"] == "nstg_plus_other"
     # escalation is flat (ADR-028)
     assert exp["escalation_triggers"] == ["Deep coma — escalate to ICU", "Anuria — renal review"]
     assert "required_escalation_triggers" not in exp
@@ -312,6 +316,8 @@ def test_create_empty_fields_still_submits(client):
         treatments={"required": [], "expected": [], "situational": []},
         safety={"free_text": [], "none_declared": True},
         escalation=[],
+        guideline_provenance="nstg_only",
+        provenance_notes="",
     )
     r = client.post("/api/v1/eval-cases", json=payload)
     assert r.status_code == 201, r.text
@@ -335,6 +341,55 @@ def test_create_safety_both_filled_422(client):
     r = client.post("/api/v1/eval-cases", json=payload)
     assert r.status_code == 422
     assert "safety question" in r.json()["detail"]["errors"][0].lower()
+
+
+def test_create_without_provenance_tier_422(client):
+    """ADR-033: the provenance tier is the second required answer. Without it
+    a reviewer has no idea what to check the answer against."""
+    payload = valid_payload(guideline_provenance=None)
+    r = client.post("/api/v1/eval-cases", json=payload)
+    assert r.status_code == 422
+    assert "where this answer came from" in r.json()["detail"]["errors"][0].lower()
+
+
+@pytest.mark.parametrize("tier", ["nstg_plus_other", "judgment_primary"])
+def test_create_mixed_provenance_requires_notes_422(client, tier):
+    """The two mixed tiers assert something came from outside NSTG — which
+    is unverifiable unless the author says which parts, and from where."""
+    payload = valid_payload(guideline_provenance=tier, provenance_notes="   ")
+    r = client.post("/api/v1/eval-cases", json=payload)
+    assert r.status_code == 422
+    assert "which parts came from where" in r.json()["detail"]["errors"][0].lower()
+
+
+def test_create_nstg_only_needs_no_notes(client):
+    """The whole point of the tier: when NSTG covers all of it, there is
+    nothing to attribute, so the notes stay empty and submission passes."""
+    payload = valid_payload(guideline_provenance="nstg_only", provenance_notes="")
+    r = client.post("/api/v1/eval-cases", json=payload)
+    assert r.status_code == 201, r.text
+    body = client.get(f"/api/v1/eval-cases/{r.json()['id']}").json()
+    assert body["guideline_provenance"] == "nstg_only"
+    assert body["expected_response"]["guideline_provenance"] == "nstg_only"
+
+
+def test_update_enforces_provenance_too(client):
+    """Save-of-edit runs the same gate as submit, so an existing case with a
+    null tier can be saved only once its author picks one."""
+    created = client.post("/api/v1/eval-cases", json=valid_payload()).json()
+    r = client.put(
+        f"/api/v1/eval-cases/{created['id']}",
+        json=valid_payload(guideline_provenance=None),
+    )
+    assert r.status_code == 422
+
+    r = client.put(
+        f"/api/v1/eval-cases/{created['id']}",
+        json=valid_payload(guideline_provenance="judgment_primary", provenance_notes="Mostly WHO guidance."),
+    )
+    assert r.status_code == 200, r.text
+    body = client.get(f"/api/v1/eval-cases/{created['id']}").json()
+    assert body["guideline_provenance"] == "judgment_primary"
 
 
 def test_create_situational_missing_trigger_warns_not_blocks(client):
@@ -523,6 +578,55 @@ def test_upsert_and_revise_response(client):
     assert r.json()["split_count"] is None and r.json()["split_labels"] is None
 
 
+def test_new_response_stamped_with_current_briefing(client):
+    """Rating answers carry the briefing wording the rater actually read, so
+    the two raters who finished under v1 stay separable in the analysis."""
+    from clinicalguard.api.routers.decomposition import BRIEFING_VERSION
+
+    r = client.put(
+        "/api/v1/decomposition/responses/1",
+        json={"decision": "keep_whole", "split_count": None, "split_labels": None, "reason": "One decision."},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["briefing_version"] == BRIEFING_VERSION == "v2"
+
+
+def test_revision_keeps_the_briefing_it_was_answered_under(client, db_session, test_user):
+    """A revision does not reassign an answer to a briefing the rater never
+    read — the v1 rows stay v1 even if their author edits them."""
+    from clinicalguard.db.models import DecompositionResponse
+
+    client.put(
+        "/api/v1/decomposition/responses/2",
+        json={"decision": "keep_whole", "split_count": None, "split_labels": None, "reason": "One decision."},
+    )
+    row = (
+        db_session.query(DecompositionResponse)
+        .filter_by(item_id=2, rater_user_id=test_user.id)
+        .one()
+    )
+    row.briefing_version = "v1"
+    db_session.commit()
+
+    r = client.put(
+        "/api/v1/decomposition/responses/2",
+        json={"decision": "split", "split_count": 2, "split_labels": ["a", "b"], "reason": "Two decisions."},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["briefing_version"] == "v1"
+
+
+def test_export_carries_briefing_version(client, monkeypatch):
+    monkeypatch.setattr(settings, "owner_email", "drtest@example.com")
+    client.put(
+        "/api/v1/decomposition/responses/3",
+        json={"decision": "keep_whole", "split_count": None, "split_labels": None, "reason": "One decision."},
+    )
+    r = client.get("/api/v1/decomposition/export?format=csv")
+    assert r.status_code == 200, r.text
+    assert "briefing_version" in r.text.splitlines()[0]
+
+
 def test_reason_required(client):
     r = client.put("/api/v1/decomposition/responses/2", json=decomp_payload(reason="   "))
     assert r.status_code == 422
@@ -594,3 +698,54 @@ def test_export_owner_only(client, db_session, test_user, monkeypatch):
     rows = json_r.json()["responses"]
     mine = next(r for r in rows if r["item_id"] == 4 and r["rater"] == TEST_AUTHOR_NAME)
     assert mine["split_labels"] == ["fluids first", "saline"]
+
+
+# --- provenance is metadata, not a scoring input (ADR-033) --------------------
+
+def test_guideline_provenance_does_not_change_scores(db_session, monkeypatch):
+    """The provenance tier is descriptive metadata: it rides along in the case
+    JSON for stratified reporting and no scoring path reads it. With the judge
+    model stubbed, the same case scores identically with and without it — any
+    future branch on the field would break this."""
+    import json as _json
+
+    from clinicalguard.retrieval import eval_scorer
+
+    judged = {
+        dim: {"critical_coverage": 0.8, "thoroughness": 0.5, "score": 0.0, "findings": []}
+        for dim in ("treatment_correctness", "investigation_appropriateness", "completeness")
+    }
+
+    class _Msg:
+        content = _json.dumps(judged)
+
+    class _Choice:
+        message = _Msg()
+
+    class _Completion:
+        choices = [_Choice()]
+
+    monkeypatch.setattr(
+        eval_scorer.client.chat.completions,
+        "create",
+        lambda **kwargs: _Completion(),
+    )
+
+    expected = {
+        "query": "Adult with high fever — diagnosis and management",
+        "expected_diagnoses": {"required": {"primary": "Severe malaria", "critical_differentials": []}},
+        "required_investigations": {"required": ["Blood smear"], "expected": [], "situational": []},
+        "required_treatments": {"required": ["Parenteral artesunate"], "expected": [], "situational": []},
+        "provenance_notes": "Fully NSTG-grounded.",
+    }
+    args = ("Adult with high fever — diagnosis and management", "Give artesunate.", )
+
+    without = eval_scorer.score_response_against_expected(
+        *args, expected, [MALARIA_ID], db_session
+    )
+    with_tier = eval_scorer.score_response_against_expected(
+        *args, {**expected, "guideline_provenance": "nstg_plus_other"}, [MALARIA_ID], db_session
+    )
+
+    assert with_tier.overall_score == without.overall_score
+    assert with_tier == without

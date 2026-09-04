@@ -373,6 +373,12 @@ class DecompositionResponse(Base):
     # (the carve, not just the count). Required alongside split_count.
     split_labels: Mapped[str | None] = mapped_column(Text, nullable=True)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    # Which wording of the task briefing the rater read before answering.
+    # Set once, when the row is first written — a later revision does not
+    # retroactively reassign an answer to a briefing the rater never saw.
+    briefing_version: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="v1"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
     )
@@ -411,6 +417,13 @@ class EvalCase(Base):
     # whether required_safety_flags.free_text is non-empty in expected_response.
     safety_none_declared: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
+    )
+    # How much of the authored answer NSTG actually covers (ADR-033).
+    # Descriptive metadata for stratified reporting by guideline density —
+    # the scorer ignores it, exactly as it ignores provenance_notes. Nullable
+    # because every row authored before v1.6 predates the question.
+    guideline_provenance: Mapped[str | None] = mapped_column(
+        String(30), nullable=True
     )
     # Nullable: rows predating auth (v1.3.1 and earlier) have no session-backed
     # author. A legacy case must go through the one-time backfill (matching

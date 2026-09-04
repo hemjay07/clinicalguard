@@ -20,6 +20,11 @@ from clinicalguard.decomposition_items import ITEM_GROUPS, ITEMS_BY_ID, TASK_VER
 router = APIRouter(prefix="/decomposition", tags=["decomposition"])
 
 DECISIONS = ("keep_whole", "split")
+# The wording of the task briefing currently on the page. Stamped on a row
+# when it is first written, never on a revision — an answer belongs to the
+# briefing the rater actually read. Two raters completed the task under "v1";
+# the analysis has to be able to hold them apart from everyone after.
+BRIEFING_VERSION = "v2"
 
 
 class ResponseIn(BaseModel):
@@ -53,6 +58,7 @@ class ResponseOut(BaseModel):
     split_count: int | None
     split_labels: list[str] | None
     reason: str
+    briefing_version: str
     updated_at: str | None
 
 
@@ -67,6 +73,7 @@ def _out(row: DecompositionResponse) -> ResponseOut:
         split_count=row.split_count,
         split_labels=_labels(row),
         reason=row.reason,
+        briefing_version=row.briefing_version,
         updated_at=(row.updated_at or row.created_at).isoformat(),
     )
 
@@ -146,6 +153,7 @@ def upsert_response(
             split_count=payload.split_count,
             split_labels=labels_json,
             reason=payload.reason,
+            briefing_version=BRIEFING_VERSION,
         )
         db.add(row)
     db.commit()
@@ -179,6 +187,7 @@ def export_responses(
             "split_count": resp.split_count,
             "split_labels": _labels(resp),
             "reason": resp.reason,
+            "briefing_version": resp.briefing_version,
             "updated_at": (resp.updated_at or resp.created_at).isoformat(),
         }
         for resp, user in rows
@@ -191,7 +200,8 @@ def export_responses(
         buf,
         fieldnames=[
             "rater", "rater_email", "rater_cadre", "item_id", "item_text",
-            "decision", "split_count", "split_labels", "reason", "updated_at",
+            "decision", "split_count", "split_labels", "reason",
+            "briefing_version", "updated_at",
         ],
     )
     writer.writeheader()

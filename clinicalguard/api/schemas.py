@@ -71,6 +71,12 @@ class EvalCaseCreate(BaseModel):
     # Graduated-provenance transparency: what parts of the ground truth are
     # guideline-grounded vs authored from clinical judgment (ADR-026).
     provenance_notes: str = ""
+    # Case-level provenance tier (ADR-033): how much of the answer NSTG
+    # covers. Required at submission; when it says another source or the
+    # author's own judgment carried part of the answer, provenance_notes must
+    # say which parts. Enforced in routers/eval_cases.py alongside the safety
+    # check, not here, so both surface as the same structured error shape.
+    guideline_provenance: Optional[str] = None
     diagnoses: Diagnoses = Field(default_factory=Diagnoses)
     investigations: TierGroup = Field(default_factory=TierGroup)
     treatments: TierGroup = Field(default_factory=TierGroup)

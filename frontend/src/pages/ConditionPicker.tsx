@@ -51,7 +51,7 @@ export function ConditionPicker() {
       <p className="mt-1 max-w-2xl text-neutral-600">
         Which condition is your case about? If it involves more than one (say, TB with HIV
         co-infection), add each of them, so the guideline for every one sits beside you as you
-        write. You're writing one case, not one per condition. Pick something you manage often.
+        write. You're writing one case, not one per condition.
       </p>
 
       {/* An author arriving here to start a case is often the same author who
@@ -126,7 +126,7 @@ export function ConditionPicker() {
               >
                 <span className="font-medium text-neutral-700">{c.name}</span>
                 <span className={`text-xs ${added ? "text-brand-700" : "text-neutral-400"}`}>
-                  {added ? "✓ selected — remove" : "+ add"}
+                  {added ? "✓ selected, remove" : "+ add"}
                 </span>
               </button>
             );

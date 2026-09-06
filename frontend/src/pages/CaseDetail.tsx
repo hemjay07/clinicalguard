@@ -114,7 +114,7 @@ export function CaseDetail() {
           <div className="mt-5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3.5">
             {optedIn ? (
               <p className="text-sm font-medium text-brand-800">
-                Noted — thank you. That genuinely helps this research.
+                Noted. Thank you, that genuinely helps this research.
               </p>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -197,7 +197,7 @@ export function CaseDetail() {
                   <p className="mt-2 text-sm text-slate-500">
                     <span className="font-medium">{LABELS.provenance}: </span>
                     {data.guideline_provenance && (PROVENANCE_LABELS[data.guideline_provenance] ?? data.guideline_provenance)}
-                    {data.guideline_provenance && e.provenance_notes ? " — " : ""}
+                    {data.guideline_provenance && e.provenance_notes ? ": " : ""}
                     {e.provenance_notes}
                   </p>
                 )}
@@ -246,8 +246,8 @@ export function CaseDetail() {
                 {e.required_monitoring?.required_principle && (
                   <p className="mb-2 text-sm italic text-slate-600">{e.required_monitoring.required_principle}</p>
                 )}
-                <TierBlock label="Monitoring — required" items={e.required_monitoring?.required_elements} />
-                <TierBlock label="Monitoring — expected" items={e.required_monitoring?.expected_elements} />
+                <TierBlock label="Monitoring: required" items={e.required_monitoring?.required_elements} />
+                <TierBlock label="Monitoring: expected" items={e.required_monitoring?.expected_elements} />
                 {/* Escalation is flat (ADR-028); legacy blobs may still carry the old tiered shape. */}
                 <TierBlock label={LABELS.escalation} items={
                   e.escalation_triggers

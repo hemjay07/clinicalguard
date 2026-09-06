@@ -71,7 +71,7 @@ export function NoteLink({ flow, context, label = "Something unclear on this scr
         <>
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs leading-relaxed text-neutral-500">
-              Jot it here and keep going — it helps me fix the tool. No need to wait for a reply.
+              Jot it here and keep going, it helps me fix the tool. No need to wait for a reply.
             </p>
             <button onClick={() => { setOpen(false); setState("idle"); }} aria-label="Close" className="text-neutral-400 hover:text-neutral-600">✕</button>
           </div>
@@ -90,7 +90,7 @@ export function NoteLink({ flow, context, label = "Something unclear on this scr
             </button>
           </div>
           {state === "error" && (
-            <p className="mt-1.5 text-xs text-red-600">Couldn't save — try again.</p>
+            <p className="mt-1.5 text-xs text-red-600">Couldn't save. Try again.</p>
           )}
         </>
       )}
@@ -139,7 +139,7 @@ export function ExitFeedback({ flow, context, onDone }: {
         </button>
         <button onClick={skip} className="cg-btn-ghost px-3 py-1.5 text-sm">Skip</button>
       </div>
-      {state === "error" && <p className="mt-1.5 text-xs text-red-600">Couldn't save — try again.</p>}
+      {state === "error" && <p className="mt-1.5 text-xs text-red-600">Couldn't save. Try again.</p>}
     </div>
   );
 }

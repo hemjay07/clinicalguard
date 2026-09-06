@@ -38,7 +38,7 @@ export function Home() {
         </h1>
         <p className="mt-5 text-[17px] leading-relaxed text-neutral-700">
           You write a clinical question for an AI to answer, then a marking scheme for the ideal
-          response — what a good answer must include, and what it must never get wrong. We use these
+          response: what a good answer must include, and what it must never get wrong. We use these
           to test whether AI systems follow the standard of care where they'd actually be used.
         </p>
         <p className="mt-4 text-[17px] leading-relaxed text-neutral-700">
@@ -56,7 +56,7 @@ export function Home() {
         <p className="mt-3 text-[17px] leading-relaxed text-neutral-700">
           Medical AI is already being used where mistakes are serious, and most of it is barely
           tested against the guidelines it's meant to follow. Your marking scheme becomes part of how
-          we check whether these systems are actually safe — in a Nigerian context, against Nigerian
+          we check whether these systems are actually safe, in a Nigerian context, against Nigerian
           guidelines.
         </p>
       </section>
@@ -67,7 +67,7 @@ export function Home() {
         <p className="mt-3 text-[17px] leading-relaxed text-neutral-700">
           You'll <strong className="font-semibold text-neutral-900">write</strong> a realistic
           clinical question, then mark what a correct response must include: the diagnosis, the key
-          investigations and treatments, and — most importantly — the safety points, the things an AI
+          investigations and treatments, and above all the safety points: the things an AI
           must never miss or get wrong.
         </p>
         <p className="mt-4 text-[17px] leading-relaxed text-neutral-700">

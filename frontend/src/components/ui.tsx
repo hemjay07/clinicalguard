@@ -32,7 +32,7 @@ export function Spinner({ label = "Loading…" }: { label?: string }) {
       {slow && (
         <>
           <p className="mt-2 text-xs text-neutral-400">
-            The server is waking up from sleep — this first load can take up to a minute. Subsequent pages will be fast.
+            The server is waking up from sleep. This first load can take up to a minute, subsequent pages will be fast.
           </p>
           {/* A bounded-feeling wait: eases toward 95% over ~50s (the typical
               cold start) and holds there until the real data lands. */}

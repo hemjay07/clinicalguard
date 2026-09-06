@@ -70,7 +70,7 @@ export function safetyAnswered(f: FormState): boolean {
 // Quiet copy for the one required section — shown inline on the safety
 // screen (not a red server-error box) and reused as the server-error message
 // if the check is somehow bypassed client-side.
-export const SAFETY_PROMPT = "Answer the safety question to finish — either list the dangers, or confirm there are none.";
+export const SAFETY_PROMPT = "Answer the safety question to finish: either list the dangers, or confirm there are none.";
 
 // Same shape, for the second required answer (ADR-033). Mirrors the server's
 // two checks so an unresolved provenance question never round-trips.

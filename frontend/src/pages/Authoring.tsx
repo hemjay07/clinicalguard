@@ -56,7 +56,7 @@ function StartOverlay({ needsCadre, onStart }: {
     try {
       await onStart(view, needsCadre ? { cadre, other: cadre === "Other" ? other.trim() : null } : null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save — try again.");
+      setError(e instanceof Error ? e.message : "Couldn't save. Try again.");
       setBusy(false);
     }
   }

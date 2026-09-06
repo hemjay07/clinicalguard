@@ -94,8 +94,8 @@ export function Decompose() {
       return { error: "How many pieces would you split it into? (at least 2)" };
     const labels = count ? Array.from({ length: count }, (_, i) => (d.labels[i] ?? "").trim()) : null;
     if (labels && labels.some((l) => !l))
-      return { error: "Name each piece in a few words — that's the part that captures how you cut it." };
-    if (!d.reason.trim()) return { error: "A one-line reason is required — it's the most useful part." };
+      return { error: "Name each piece in a few words. That's the part that captures how you cut it." };
+    if (!d.reason.trim()) return { error: "A one-line reason is required, it's the most useful part." };
     return { payload: { decision: d.decision, split_count: count, split_labels: labels, reason: d.reason.trim() } };
   }
 
@@ -152,8 +152,8 @@ export function Decompose() {
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
       <span>
         {failed.size === 1
-          ? `Item ${[...failed][0]} didn't save — your answer is kept here.`
-          : `Items ${[...failed].sort((a, b) => a - b).join(", ")} didn't save — your answers are kept here.`}
+          ? `Item ${[...failed][0]} didn't save, your answer is kept here.`
+          : `Items ${[...failed].sort((a, b) => a - b).join(", ")} didn't save, your answers are kept here.`}
       </span>
       <button onClick={retryFailed} className="cg-btn-secondary px-3 py-1.5 text-sm">
         Retry
@@ -215,7 +215,7 @@ export function Decompose() {
 
           {/* Priming: legitimize notes up front so mid-task use feels normal. */}
           <p className="mt-5 text-xs text-neutral-400">
-            If anything's unclear along the way, use the note link under any screen — it helps
+            If anything's unclear along the way, use the note link under any screen, it helps
             me fix the tool, and you just keep going.
           </p>
           <div className="mt-2">
@@ -231,9 +231,9 @@ export function Decompose() {
     return (
       <PageContainer>
         <div className="mx-auto w-full max-w-2xl">
-          <h1 className="font-serif text-2xl font-semibold text-neutral-900">That's all 15 — thank you.</h1>
+          <h1 className="font-serif text-2xl font-semibold text-neutral-900">That's all 15. Thank you.</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">
-            Thanks for doing this carefully — the reasons you wrote are the most useful part.
+            Thanks for doing this carefully, the reasons you wrote are the most useful part.
           </p>
           <p className="mt-2 text-sm text-neutral-500">
             You can still revise any answer below; your changes save the same way.
@@ -263,7 +263,7 @@ export function Decompose() {
                     <span className="font-semibold text-brand-700">{item.id}</span>
                     <span className="flex-1 truncate text-neutral-700">{item.text}</span>
                     <span className="shrink-0 text-xs text-neutral-400">
-                      {d.decision === "split" ? `split · ${d.split_count}` : d.decision ? "kept whole" : "—"}
+                      {d.decision === "split" ? `split · ${d.split_count}` : d.decision ? "kept whole" : "not answered"}
                     </span>
                   </button>
                 </li>
@@ -307,7 +307,7 @@ export function Decompose() {
         <div className="mt-4 rounded-xl border border-neutral-300 bg-white px-5 py-4">
           <p className="font-mono text-[14px] leading-relaxed text-neutral-800">
             {item.text}
-            {item.source_note && <span className="ml-2 font-sans text-sm text-neutral-400">— {item.source_note}</span>}
+            {item.source_note && <span className="ml-2 font-sans text-sm text-neutral-400">({item.source_note})</span>}
           </p>
         </div>
 
@@ -344,7 +344,7 @@ export function Decompose() {
               if (!n || n < 2) return null;
               return (
                 <div className="mt-3">
-                  <label className="cg-label">Name each piece — a few words is plenty</label>
+                  <label className="cg-label">Name each piece, a few words is plenty</label>
                   <div className="space-y-2">
                     {Array.from({ length: Math.min(n, 10) }, (_, i) => (
                       <input
@@ -376,8 +376,8 @@ export function Decompose() {
               onChange={(e) => setDraft(item.id, { reason: e.target.value })}
               placeholder={
                 d.decision === "split"
-                  ? "Why these are separately-checkable decisions — or what feels ambiguous"
-                  : "Why this is one decision — or what feels ambiguous"
+                  ? "Why these are separately-checkable decisions, or what feels ambiguous"
+                  : "Why this is one decision, or what feels ambiguous"
               }
             />
           </div>

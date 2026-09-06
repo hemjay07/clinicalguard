@@ -183,10 +183,10 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting, onO
           <div>
             <h3 className="cg-eyebrow mb-2">Monitoring &amp; escalation</h3>
             <div className="grid gap-x-4 sm:grid-cols-2">
-              <Field label="Monitoring — required"><textarea rows={2} className="cg-textarea" value={form.mon_required} onChange={(e) => set({ mon_required: e.target.value })} placeholder="One per line" /></Field>
-              <Field label="Monitoring — expected"><textarea rows={2} className="cg-textarea" value={form.mon_expected} onChange={(e) => set({ mon_expected: e.target.value })} placeholder="One per line" /></Field>
+              <Field label="Monitoring: required"><textarea rows={2} className="cg-textarea" value={form.mon_required} onChange={(e) => set({ mon_required: e.target.value })} placeholder="One per line" /></Field>
+              <Field label="Monitoring: expected"><textarea rows={2} className="cg-textarea" value={form.mon_expected} onChange={(e) => set({ mon_expected: e.target.value })} placeholder="One per line" /></Field>
             </div>
-            <Field label={LABELS.escalation} hint="One per line: [finding] — [escalation action]. Flat — a finding either warrants escalation or it does not.">
+            <Field label={LABELS.escalation} hint="One per line: [finding] — [escalation action]. Flat: a finding either warrants escalation or it does not.">
               <textarea rows={2} className="cg-textarea" value={form.escalation} onChange={(e) => set({ escalation: e.target.value })} placeholder="Rifampicin resistance on GeneXpert — escalate to MDR-TB pathway" />
             </Field>
           </div>

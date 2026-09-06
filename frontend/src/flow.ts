@@ -81,7 +81,7 @@ export const SCREENS: ScreenDef[] = [
   {
     id: "2.7", phase: 2, kind: "tx_required", crumb: "Treatments the AI must recommend",
     question: "What treatments must the AI recommend?",
-    help: "One per line. Treatments whose omission is a clinical failure — a response missing one fails the case.",
+    help: "One per line. Treatments whose omission is a clinical failure. A response missing one fails the case.",
   },
   // Provenance keeps id 1.5 from when it sat in Phase 1 (ADR-033 moved it
   // here, to the point where the author has just finished the answer and can
@@ -117,7 +117,7 @@ export const SCREENS: ScreenDef[] = [
   {
     id: "2.10", phase: 2, kind: "complications", crumb: "Complications", optional: true,
     question: "What complications should the AI address?",
-    help: "One per line. Complications relevant to this acute presentation and its management — not long-term complications of the underlying condition.",
+    help: "One per line. Complications relevant to this acute presentation and its management, not long-term complications of the underlying condition.",
   },
   {
     id: "2.11", phase: 2, kind: "monitoring", crumb: "Monitoring", optional: true,
@@ -127,7 +127,7 @@ export const SCREENS: ScreenDef[] = [
   {
     id: "2.12", phase: 2, kind: "escalation", crumb: "Escalation triggers", optional: true,
     question: "What escalation triggers should the AI address?",
-    help: "One per line, as [finding] — [escalation action]. A finding either warrants escalation or it does not — there is no required/expected tier here.",
+    help: "One per line, as [finding] — [escalation action]. A finding either warrants escalation or it does not. There is no required/expected tier here.",
   },
   {
     id: "2.3", phase: 2, kind: "other_considerations", crumb: "Other considerations", optional: true,
@@ -145,7 +145,7 @@ export const SCREENS: ScreenDef[] = [
   {
     id: "1.4", phase: 2, kind: "scope", crumb: "How far the answer should go", optional: true,
     question: "What is the scope of the scenario?",
-    help: "Bounds what the AI is checked on — e.g. “diagnosis and initial management; excludes long-term glycaemic control planning”.",
+    help: "Bounds what the AI is checked on, e.g. “diagnosis and initial management; excludes long-term glycaemic control planning”.",
   },
 
   // --- Phase 3: Safety ---
@@ -373,7 +373,7 @@ export function screenSummary(kind: ScreenKind, form: FormState): string {
       if (!form.guideline_provenance) return "";
       const tier = PROVENANCE_LABELS[form.guideline_provenance] ?? form.guideline_provenance;
       const notes = form.provenance_notes.trim();
-      return notes ? `${tier} — ${truncate(notes, 70)}` : tier;
+      return notes ? `${tier}: ${truncate(notes, 70)}` : tier;
     }
     case "primary": return form.primary.trim();
     case "critical_differentials": return lines(form.critical_differentials).join(" · ");

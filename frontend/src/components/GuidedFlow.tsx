@@ -79,7 +79,7 @@ function PhaseBar({ current, goTo, form }: { current: FlowStep; goTo: (id: strin
             : st.groups.some((g) => groupScreens(g).some((s) => screenFilled(s.kind, form)));
           const title = st.kind === "screen"
             ? screenLabel(st.screen.kind)
-            : "Add more detail — optional";
+            : "Add more detail, optional";
           return (
             <button
               key={st.id}
@@ -170,17 +170,17 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
     case "primary":
       return <input {...inputProps("primary", "The diagnosis the AI should reach")} autoFocus />;
     case "critical_differentials":
-      return <textarea {...textareaProps("critical_differentials", 3, "One per line — e.g. Hyperosmolar hyperglycaemic state (HHS)")} />;
+      return <textarea {...textareaProps("critical_differentials", 3, "One per line, e.g. Hyperosmolar hyperglycaemic state (HHS)")} />;
     case "other_considerations":
-      return <textarea {...textareaProps("other_considerations", 3, "One per line — e.g. Identification and treatment of the precipitating cause")} />;
+      return <textarea {...textareaProps("other_considerations", 3, "One per line, e.g. Identification and treatment of the precipitating cause")} />;
     case "inv_required":
-      return <textarea {...textareaProps("inv_required", 3, "One per line — e.g. Venous or arterial blood gas")} />;
+      return <textarea {...textareaProps("inv_required", 3, "One per line, e.g. Venous or arterial blood gas")} />;
     case "inv_expected":
-      return <textarea {...textareaProps("inv_expected", 3, "One per line — e.g. Serum ketones (beta-hydroxybutyrate)")} />;
+      return <textarea {...textareaProps("inv_expected", 3, "One per line, e.g. Serum ketones (beta-hydroxybutyrate)")} />;
     case "tx_required":
-      return <textarea {...textareaProps("tx_required", 3, "One per line — e.g. IV fluid resuscitation with 0.9% normal saline initiated first, before insulin")} />;
+      return <textarea {...textareaProps("tx_required", 3, "One per line, e.g. IV fluid resuscitation with 0.9% normal saline initiated first, before insulin")} />;
     case "tx_expected":
-      return <textarea {...textareaProps("tx_expected", 3, "One per line — e.g. Change to 5% dextrose-containing fluid when blood glucose falls below 14 mmol/L")} />;
+      return <textarea {...textareaProps("tx_expected", 3, "One per line, e.g. Change to 5% dextrose-containing fluid when blood glucose falls below 14 mmol/L")} />;
     case "inv_situational":
     case "tx_situational": {
       const key = screen.kind as "inv_situational" | "tx_situational";
@@ -193,7 +193,7 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
       );
     }
     case "complications":
-      return <textarea {...textareaProps("complications", 3, "One per line — e.g. Cerebral edema (rare but catastrophic; particularly in young patients)")} />;
+      return <textarea {...textareaProps("complications", 3, "One per line, e.g. Cerebral edema (rare but catastrophic; particularly in young patients)")} />;
     case "monitoring":
       // Stacks on a phone: side-by-side, each textarea was too narrow to read
       // a monitoring line in.
@@ -201,11 +201,11 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <div className="cg-label">Required</div>
-            <textarea {...textareaProps("mon_required", 4, "One per line — e.g. Hourly vital signs")} />
+            <textarea {...textareaProps("mon_required", 4, "One per line, e.g. Hourly vital signs")} />
           </div>
           <div>
             <div className="cg-label">Expected</div>
-            <textarea {...textareaProps("mon_expected", 4, "One per line — e.g. Temperature monitoring for infection precipitant tracking")} />
+            <textarea {...textareaProps("mon_expected", 4, "One per line, e.g. Temperature monitoring for infection precipitant tracking")} />
           </div>
         </div>
       );

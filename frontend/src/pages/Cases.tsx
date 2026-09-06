@@ -58,7 +58,7 @@ export function Cases() {
           {data.length === 0 && (
             <li className="cg-card px-4 py-10 text-center text-sm text-neutral-500">
               {drafts.length > 0
-                ? "Nothing submitted yet — finish one of the cases above."
+                ? "Nothing submitted yet. Finish one of the cases above."
                 : "No cases yet. Cases you author will appear here."}
             </li>
           )}

@@ -50,7 +50,7 @@ export function DraftList({ drafts, remove, heading = true }: {
   return (
     <section>
       {heading && (
-        <h2 className="cg-eyebrow">Unfinished — on this device</h2>
+        <h2 className="cg-eyebrow">Unfinished, on this device</h2>
       )}
       <ul className="mt-2.5 space-y-2.5">
         {drafts.map((d) => {

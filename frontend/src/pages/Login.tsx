@@ -56,7 +56,7 @@ export function Login() {
       <div className="mx-auto w-full max-w-sm">
         <h1 className="font-serif text-xl font-semibold text-neutral-900">Sign in</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Identifies you as the author of what you submit. One tap — no account to create.
+          Identifies you as the author of what you submit. One tap, no account to create.
         </p>
 
         <div className="mt-6 space-y-4">
@@ -84,7 +84,7 @@ export function Login() {
 
           {linkSent ? (
             <p className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-              Check your email — we sent a sign-in link to <strong>{email.trim()}</strong>.
+              Check your email, we sent a sign-in link to <strong>{email.trim()}</strong>.
             </p>
           ) : (
             <form onSubmit={sendMagicLink} className="space-y-3">

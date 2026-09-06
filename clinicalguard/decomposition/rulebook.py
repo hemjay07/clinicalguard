@@ -57,9 +57,26 @@ class ChangelogEntry(BaseModel):
     items_affected: str
 
 
+class Scaffolding(BaseModel):
+    """The fixed prompt text the rules are assembled into: framing, the
+    lead-in, the split/bundle test, the output schema, the closing.
+
+    It lives in the rulebook rather than in source because it states the
+    decomposition criteria as plainly as the rules do, and the study depends
+    on none of that being readable from the public repository while rating is
+    open. prompt_builder.py holds assembly order only."""
+
+    intro: str
+    rules_lead_in: str
+    test_question: str
+    output_schema: str
+    closing: str
+
+
 class Rulebook(BaseModel):
     version: int
     last_updated: str
+    scaffolding: Scaffolding
     rules: list[Rule]
     constraints: list[Constraint] = []
     open_rulings: list[OpenRuling] = []

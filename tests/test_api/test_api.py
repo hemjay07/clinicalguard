@@ -526,7 +526,24 @@ def test_case_count_is_public(unauthenticated_client):
 
 # --- decomposition task (ADR-032) -------------------------------------------
 
-RULEBOOK_MARKERS = ("sequencing", "named", "standardized unit", "selection", "parameter")
+def rulebook_markers() -> tuple[str, ...]:
+    """Vocabulary that must never reach a rater-facing surface, read from the
+    rulebook rather than restated here: holding the rulebook privately buys
+    nothing if its vocabulary is enumerated in public source. Returns () when
+    the rulebook is absent (CI, and any checkout without it), in which case the
+    guard below skips rather than passing vacuously."""
+    from clinicalguard.decomposition.rulebook import RulebookError, load_rulebook
+
+    try:
+        rb = load_rulebook()
+    except RulebookError:
+        return ()
+    terms = {r.id.replace("_", " ").lower() for r in rb.rules}
+    for r in rb.rules:
+        _, _, tail = r.prompt_heading.partition("\u2014")
+        if tail.strip():
+            terms.add(tail.strip().lower())
+    return tuple(sorted(terms))
 
 
 def decomp_payload(**overrides):
@@ -543,8 +560,12 @@ def test_items_fixed_and_rule_free(client):
     flat = [i for g in body["groups"] for i in g["items"]]
     assert [i["id"] for i in flat] == list(range(1, 16))
     # The decomposition rules must appear nowhere rater-facing.
+    markers = rulebook_markers()
+    if not markers:
+        pytest.skip("rulebook not present (held privately) - rule-leak guard not run")
     blob = str(body).lower()
-    assert not any(marker in blob for marker in RULEBOOK_MARKERS)
+    leaked = [m for m in markers if m in blob]
+    assert not leaked, f"rulebook vocabulary reached a rater-facing surface: {leaked}"
 
 
 def test_items_require_auth(unauthenticated_client):

@@ -31,3 +31,18 @@ data/raw/
 .vercel/
 evaluation/.variance_checkpoint.json
 
+# The decomposition rulebook is held privately until the study closes
+# (hemjay07/clinicalguard-rulebook). The study measures what raters bring to
+# the task unaided, so the rules must not be readable from a public repo while
+# rating is open. See docs/decomposition_rulebook.README.md.
+docs/decomposition_rulebook.yaml
+docs/decomposition_rulebook.md
+
+# Rule-bearing decomposition working files: the iteration scripts carry the
+# prompt and its rules inline, and the report carries the bundle_reason
+# vocabulary. Same reasoning as the rulebook itself.
+decompose_test.py
+decompose_test_v2.py
+tmp_v2_detail.py
+evaluation/decompose_report_*.json
+

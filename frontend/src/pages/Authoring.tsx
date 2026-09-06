@@ -17,7 +17,7 @@ import { saveDraft, loadDraft, clearDraft } from "../storage";
 import { useAuth } from "../AuthContext";
 import { decodeConditions, draftSlug } from "../selection";
 import {
-  EMPTY, toPayload, fromExpectedResponse, safetyAnswered, provenanceAnswered,
+  EMPTY, toPayload, fromExpectedResponse, safetyAnswered, provenanceAnswered, isBlank,
   SAFETY_PROMPT, PROVENANCE_PROMPT, PROVENANCE_NOTES_PROMPT,
 } from "../caseForm";
 import type { FormState, ValidationIssue } from "../caseForm";
@@ -222,7 +222,18 @@ export function Authoring() {
 
   useEffect(() => {
     if (isEdit || !loadedDraft) return;
-    setSavedAt(saveDraft(slug, form));
+    // An untouched visit leaves nothing behind. This effect fires once on load
+    // with a pristine form, so without the guard, merely opening a condition
+    // and backing out wrote a draft — which then showed up as an unfinished
+    // case the author never started, and made the header claim "Saved" with
+    // nothing typed. Clearing covers a draft the author has just emptied out.
+    if (isBlank(form)) {
+      clearDraft(slug);
+      setSavedAt(null);
+      setSaveKind("none");
+      return;
+    }
+    setSavedAt(saveDraft(slug, form, screenId));
     setSaveKind("auto");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);

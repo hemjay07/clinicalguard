@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { PageContainer, Spinner, ErrorBox } from "../components/ui";
+import { DraftList, useDrafts } from "../components/DraftList";
 
 function truncate(s: string, n = 160) {
   return s.length > n ? s.slice(0, n) + "…" : s;
@@ -9,11 +10,24 @@ function truncate(s: string, n = 160) {
 
 export function Cases() {
   const { data, error, loading } = useFetch(() => api.listEvalCases(), []);
+  const { drafts, remove } = useDrafts();
 
   return (
     <PageContainer>
       <h1 className="text-2xl font-semibold text-neutral-900">Cases</h1>
       <p className="mt-1 text-neutral-500">Evaluation cases authored so far. Tap a case to view it.</p>
+
+      {/* Unfinished work first: this is the page an author goes to looking for
+          a case they started, and until now it only ever showed submitted
+          ones. */}
+      {drafts.length > 0 && (
+        <div className="mt-6">
+          <DraftList drafts={drafts} remove={remove} />
+        </div>
+      )}
+      {drafts.length > 0 && (
+        <h2 className="cg-eyebrow mt-8">Submitted</h2>
+      )}
 
       {loading && <div className="mt-6"><Spinner /></div>}
       {error && <div className="mt-6"><ErrorBox message={error} /></div>}
@@ -43,7 +57,9 @@ export function Cases() {
           ))}
           {data.length === 0 && (
             <li className="cg-card px-4 py-10 text-center text-sm text-neutral-500">
-              No cases yet. Cases you author will appear here.
+              {drafts.length > 0
+                ? "Nothing submitted yet — finish one of the cases above."
+                : "No cases yet. Cases you author will appear here."}
             </li>
           )}
         </ul>

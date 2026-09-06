@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { useFetch } from "../useFetch";
 import { PageContainer, Spinner, ErrorBox } from "../components/ui";
 import { NoteLink } from "../components/FeedbackNote";
+import { DraftList, useDrafts } from "../components/DraftList";
 import { encodeConditions } from "../selection";
 import type { SelectedCondition } from "../types";
 
@@ -17,6 +18,7 @@ export function ConditionPicker() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<SelectedCondition[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
+  const { drafts, remove } = useDrafts();
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -51,6 +53,16 @@ export function ConditionPicker() {
         co-infection), add each of them, so the guideline for every one sits beside you as you
         write. You're writing one case, not one per condition. Pick something you manage often.
       </p>
+
+      {/* An author arriving here to start a case is often the same author who
+          already began one and lost it. Show the unfinished ones before the
+          condition list, so picking a condition isn't the only way forward. */}
+      {drafts.length > 0 && selected.length === 0 && (
+        <div className="mt-5">
+          <DraftList drafts={drafts} remove={remove} />
+          <p className="mt-4 text-xs font-medium uppercase tracking-wider text-neutral-400">Or start a new case</p>
+        </div>
+      )}
 
       {/* Selected chips */}
       {selected.length > 0 && (

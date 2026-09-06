@@ -50,6 +50,18 @@ export const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n) 
 // deliberate exception to v1.3.1's "nothing is required at submission"
 // (ADR-029). Both empty (skipped) and both filled (contradictory) are
 // invalid; only these two states count as a resolved answer.
+// Nothing typed, ticked or chosen yet. Used to keep an untouched visit from
+// leaving a draft behind: opening a condition and backing out should not
+// create something that later shows up in the author's list of unfinished
+// cases, and should not claim "Saved" when there is nothing to save.
+export function isBlank(f: FormState): boolean {
+  return (
+    Object.values(f).every((v) =>
+      typeof v === "string" ? !v.trim() : Array.isArray(v) ? v.length === 0 : !v
+    )
+  );
+}
+
 export function safetyAnswered(f: FormState): boolean {
   const hasText = lines(f.safety_harm_text).length > 0;
   return hasText !== f.safety_none_declared;

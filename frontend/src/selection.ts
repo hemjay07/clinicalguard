@@ -29,3 +29,13 @@ export function draftSlug(refs: ConditionRef[]): string {
     .sort()
     .join("|");
 }
+
+// Inverse of draftSlug: recover the condition refs a draft was keyed by, so a
+// saved draft can be turned back into a compose URL from a list.
+export function refsFromSlug(slug: string): ConditionRef[] {
+  if (!slug) return [];
+  return slug.split("|").map((part) => {
+    const [id, subtype] = part.split(":");
+    return { condition_id: Number(id), subtype: subtype || null };
+  }).filter((r) => Number.isFinite(r.condition_id));
+}

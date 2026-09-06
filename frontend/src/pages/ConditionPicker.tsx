@@ -72,9 +72,11 @@ export function ConditionPicker() {
               </div>
             ))}
           </div>
+          {/* Each on its own row: both are inline-level, so without `block`
+              the link and the primary button share a line and collide. */}
           <button
             onClick={() => { setQ(""); searchRef.current?.focus(); }}
-            className="mt-2 text-xs font-medium text-brand-700 hover:underline"
+            className="mt-2 block text-xs font-medium text-brand-700 hover:underline"
           >
             + add another condition it involves
           </button>

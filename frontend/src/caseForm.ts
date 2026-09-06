@@ -62,6 +62,21 @@ export function isBlank(f: FormState): boolean {
   );
 }
 
+// Fold a fetched draft under whatever the author has already typed. Loading a
+// draft is asynchronous, so on a cold backend an author can start writing
+// before it lands; taking either side wholesale loses real work, so each field
+// resolves independently and anything they have actually filled wins.
+export function mergeDraft(fetched: FormState, typed: FormState): FormState {
+  const out = { ...fetched };
+  for (const key of Object.keys(typed) as (keyof FormState)[]) {
+    const v = typed[key];
+    const filled =
+      typeof v === "string" ? !!v.trim() : Array.isArray(v) ? v.length > 0 : !!v;
+    if (filled) (out as Record<string, unknown>)[key] = v;
+  }
+  return out;
+}
+
 export function safetyAnswered(f: FormState): boolean {
   const hasText = lines(f.safety_harm_text).length > 0;
   return hasText !== f.safety_none_declared;

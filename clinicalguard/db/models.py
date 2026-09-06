@@ -12,7 +12,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from clinicalguard.db.session import Base
 
@@ -384,6 +384,38 @@ class DecompositionResponse(Base):
     )
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True, onupdate=datetime.utcnow
+    )
+
+
+class CaseDraft(Base):
+    """An unfinished case, owned by the author who is writing it (ADR-034).
+
+    Drafts used to live in one browser's localStorage, which meant a case begun
+    on a phone could not be finished on a laptop, and clearing site data lost
+    the work. The row is the source of truth now; the client keeps a local copy
+    only as a crash buffer.
+
+    `form_state` is deliberately opaque: it is the client's own form shape,
+    stored and handed back unread. Nothing validates it, because a draft is
+    half-written by definition — the eval-case checks still run only at submit.
+    One author may hold several drafts, including more than one for the same
+    set of conditions, so there is no uniqueness constraint here."""
+
+    __tablename__ = "case_drafts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False, index=True
+    )
+    condition_ids: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    form_state: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # Internal screen id ("2.7"), not a displayed number — see flow.ts.
+    screen_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
 

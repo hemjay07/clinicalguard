@@ -185,6 +185,19 @@ export interface EvalCasePayload {
   safety: { free_text: string[]; none_declared: boolean };
   reasoning_archetypes: string[];
   other_archetypes: string[];
+  // Set so a successful submit retires the draft it came from.
+  draft_id?: string | null;
+}
+
+// An unfinished case, owned server-side (ADR-034) so it follows the author
+// between devices instead of living in one browser.
+export interface CaseDraftDto {
+  id: string;
+  condition_ids: ConditionRef[];
+  form_state: Record<string, unknown>;
+  screen_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreatedCase {

@@ -1,11 +1,10 @@
-// LocalStorage draft autosave for the authoring form, keyed by condition+subtype.
-// Stores the editable form state (textarea strings) so a reload restores exactly
-// what the author typed.
+// LocalStorage form storage. Since v1.7 this is no longer where drafts live —
+// the server is (ADR-034, see drafts.ts). Two jobs remain:
 //
-// Drafts live on one device, in one browser. That is the known limit of this
-// mechanism: a case begun on a phone is not on the laptop, and clearing site
-// data loses it. Making drafts follow the author is a server-side change; until
-// then, listDrafts at least makes them findable where they were written.
+//   1. the crash buffer, keyed by draft id, holding the seconds between a
+//      keystroke and the debounced PUT that follows it;
+//   2. reading drafts written under the old condition-keyed scheme, so
+//      migrateLegacyDrafts can push them up once and clear them.
 
 const PREFIX = "cg_draft:";
 

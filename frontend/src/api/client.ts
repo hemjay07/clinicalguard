@@ -10,6 +10,7 @@ import type {
   EvalCaseDetail,
   EvalCasePayload,
   CreatedCase,
+  CaseDraftDto,
   AuthUser,
   DecompositionItemsPayload,
   DecompositionResponse,
@@ -140,6 +141,10 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
+  listDrafts: () => request<CaseDraftDto[]>("/api/v1/drafts"),
+  saveDraft: (id: string, body: { condition_ids: unknown; form_state: unknown; screen_id: string | null }) =>
+    request<CaseDraftDto>(`/api/v1/drafts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteDraft: (id: string) => request<void>(`/api/v1/drafts/${id}`, { method: "DELETE" }),
   me: () => request<AuthUser>("/api/v1/auth/me"),
   setCadre: (cadre: string, cadreOther: string | null) =>
     request<AuthUser>("/api/v1/auth/me/cadre", {

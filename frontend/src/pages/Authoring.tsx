@@ -13,11 +13,13 @@ import { FullForm } from "../components/FullForm";
 import { GuidedFlow } from "../components/GuidedFlow";
 import { CasePreview } from "../components/CasePreview";
 import { NoteLink } from "../components/FeedbackNote";
-import { saveDraft, loadDraft, clearDraft } from "../storage";
-import { useAuth } from "../AuthContext";
-import { decodeConditions, draftSlug } from "../selection";
 import {
-  EMPTY, toPayload, fromExpectedResponse, safetyAnswered, provenanceAnswered, isBlank,
+  mintDraftId, writeBuffer, readBuffer, dropBuffer, bufferIsAhead,
+} from "../drafts";
+import { useAuth } from "../AuthContext";
+import { decodeConditions } from "../selection";
+import {
+  EMPTY, toPayload, fromExpectedResponse, safetyAnswered, provenanceAnswered, isBlank, mergeDraft,
   SAFETY_PROMPT, PROVENANCE_PROMPT, PROVENANCE_NOTES_PROMPT,
 } from "../caseForm";
 import type { FormState, ValidationIssue } from "../caseForm";
@@ -139,7 +141,18 @@ export function Authoring() {
     }
     return decodeConditions(searchParams.get("conditions"));
   }, [isEdit, editCase.data, searchParams]);
-  const slug = useMemo(() => draftSlug(refs), [refs]);
+  // Keys the source-material fetch only. Draft identity is the draft id now
+  // (ADR-034), so two cases about the same condition are two drafts.
+  const slug = useMemo(
+    () => refs.map((r) => `${r.condition_id}:${r.subtype ?? ""}`).sort().join("|"),
+    [refs]
+  );
+
+  // Minted once per compose session and kept in the URL, so a reload — or a
+  // response that lands after one — writes to the same row rather than
+  // spawning a second draft.
+  const draftParam = searchParams.get("draft");
+  const [draftId] = useState<string>(() => draftParam || mintDraftId());
 
   const sources = useFetch<SourceEntry[]>(
     () => Promise.all(refs.map((r) => api.sourceMaterial(r.condition_id, r.subtype).then((data) => ({ ref: r, data })))),
@@ -201,51 +214,137 @@ export function Authoring() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, editCase.data]);
 
-  // Create mode: resume an autosaved draft, if any.
+  // Create mode: resume the draft, server first (ADR-034). The local buffer is
+  // consulted only when it is genuinely ahead — i.e. the tab died between a
+  // keystroke and its debounced PUT. Otherwise the server copy wins, which is
+  // what lets an edit made on another device be authoritative here.
   useEffect(() => {
     if (isEdit) return;
-    const d = loadDraft<FormState>(slug);
-    const base = d ? { ...EMPTY, ...d.state } : { ...EMPTY };
-    // Drafts saved before v1.3.1 carried tiered escalation — merge into the flat field.
-    const legacy = d?.state as (FormState & { esc_required?: string; esc_expected?: string }) | undefined;
-    if (legacy && !base.escalation && (legacy.esc_required || legacy.esc_expected)) {
-      base.escalation = [legacy.esc_required, legacy.esc_expected].filter(Boolean).join("\n");
-    }
-    setForm(base);
-    setSavedAt(d ? d.savedAt : null);
-    setSaveKind(d ? "auto" : "none");
-    setLoadedDraftAt(d ? d.savedAt : null);
-    setLoadedDraft(true);
-    setActiveTab(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEdit, slug]);
+    let cancelled = false;
 
+    (async () => {
+      let serverState: FormState | null = null;
+      let serverUpdatedAt: string | null = null;
+      try {
+        const rows = await api.listDrafts();
+        const mine = rows.find((r) => r.id === draftId);
+        if (mine) {
+          serverState = mine.form_state as unknown as FormState;
+          serverUpdatedAt = mine.updated_at;
+        }
+      } catch {
+        // Offline or signed out: fall back to whatever the buffer holds.
+      }
+      if (cancelled) return;
+
+      const buf = readBuffer(draftId);
+      const useBuffer = bufferIsAhead(draftId, serverUpdatedAt);
+      const source = useBuffer ? buf?.state ?? null : serverState ?? buf?.state ?? null;
+      const savedStamp = useBuffer ? buf?.savedAt ?? null : serverUpdatedAt ?? buf?.savedAt ?? null;
+
+      const base = source ? { ...EMPTY, ...source } : { ...EMPTY };
+      // Drafts saved before v1.3.1 carried tiered escalation, merge into the flat field.
+      const legacy = source as (FormState & { esc_required?: string; esc_expected?: string }) | null;
+      if (legacy && !base.escalation && (legacy.esc_required || legacy.esc_expected)) {
+        base.escalation = [legacy.esc_required, legacy.esc_expected].filter(Boolean).join("\n");
+      }
+
+      // Never overwrite typing. Fetching the draft is asynchronous, and on a
+      // cold backend it can take most of a minute — long enough for an author
+      // to have written a paragraph by the time it lands. Seeding the form
+      // unconditionally erased exactly that work, which is the failure this
+      // whole feature exists to prevent. If they have already started, their
+      // text stands and the autosave below pushes it up over the draft.
+      let seeded = true;
+      setForm((current) => {
+        if (isBlank(current)) return base;
+        // They typed while it was loading. Keep both: the draft underneath,
+        // their words on top, field by field.
+        seeded = false;
+        return mergeDraft(base, current);
+      });
+      if (seeded) {
+        setSavedAt(savedStamp);
+        setSaveKind(source ? "auto" : "none");
+        setLoadedDraftAt(source && !isBlank(base) ? savedStamp : null);
+      }
+      setLoadedDraft(true);
+      setActiveTab(0);
+
+      // The buffer has served its purpose the moment the server is level with
+      // it; push a crash-recovered form up rather than leaving it stranded.
+      if (useBuffer && buf && !isBlank(base)) {
+        try {
+          await api.saveDraft(draftId, { condition_ids: refs, form_state: base, screen_id: buf.screen ?? null });
+          dropBuffer(draftId);
+        } catch { /* the debounced autosave below will retry */ }
+      } else {
+        dropBuffer(draftId);
+      }
+    })();
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, draftId, slug]);
+
+  // Autosave: buffer immediately, PUT on a debounce.
+  //
+  // An untouched visit leaves nothing behind. This effect fires once on load
+  // with a pristine form, so without the guard, merely opening a condition and
+  // backing out created a draft the author never started, and made the header
+  // claim "Saved" with nothing typed. The server repeats the check.
   useEffect(() => {
     if (isEdit || !loadedDraft) return;
-    // An untouched visit leaves nothing behind. This effect fires once on load
-    // with a pristine form, so without the guard, merely opening a condition
-    // and backing out wrote a draft — which then showed up as an unfinished
-    // case the author never started, and made the header claim "Saved" with
-    // nothing typed. Clearing covers a draft the author has just emptied out.
     if (isBlank(form)) {
-      clearDraft(slug);
+      dropBuffer(draftId);
       setSavedAt(null);
       setSaveKind("none");
       return;
     }
-    setSavedAt(saveDraft(slug, form, screenId));
-    setSaveKind("auto");
+
+    // Synchronous, so a crash in the next second loses nothing.
+    writeBuffer(draftId, form, screenId);
+
+    const t = setTimeout(async () => {
+      try {
+        const saved = await api.saveDraft(draftId, {
+          condition_ids: refs,
+          form_state: form,
+          screen_id: screenId,
+        });
+        setSavedAt(saved.updated_at);
+        setSaveKind("auto");
+        // Server is level with the buffer, so the buffer has done its job.
+        dropBuffer(draftId);
+        // A draft that exists server-side belongs in the URL, so a reload or a
+        // shared link resumes it rather than starting a second one.
+        if (!searchParams.get("draft")) {
+          setSearchParams((prev) => {
+            const p = new URLSearchParams(prev);
+            p.set("draft", draftId);
+            return p;
+          }, { replace: true });
+        }
+      } catch {
+        // Buffer still holds it; the next edit retries.
+        setSaveKind("auto");
+      }
+    }, 1500);
+
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form]);
+  }, [form, screenId, loadedDraft]);
 
   const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
   const toggleArchetype = (value: string) =>
     setForm((prev) => ({ ...prev, archetypes: prev.archetypes.includes(value) ? prev.archetypes.filter((x) => x !== value) : [...prev.archetypes, value] }));
 
   function discardDraft() {
-    // The one destructive control on this page — always confirm.
+    // The one destructive control on this page, always confirm.
     if (!window.confirm("Discard this draft and start fresh? Everything entered for this case will be cleared.")) return;
-    clearDraft(slug); setForm(EMPTY); setSavedAt(null); setSaveKind("none"); setLoadedDraftAt(null);
+    dropBuffer(draftId);
+    api.deleteDraft(draftId).catch(() => { /* the row is empty-formed below either way */ });
+    setForm(EMPTY); setSavedAt(null); setSaveKind("none"); setLoadedDraftAt(null);
   }
 
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -263,7 +362,12 @@ export function Authoring() {
 
   const names = useMemo(() => (sources.data ?? []).map((s) => s.data.condition.name), [sources.data]);
 
-  const payload = useMemo(() => toPayload(form, refs), [form, refs]);
+  // draft_id rides along so a successful submit retires the draft it came
+  // from, instead of leaving a finished case in the unfinished list.
+  const payload = useMemo(
+    () => ({ ...toPayload(form, refs), draft_id: isEdit ? null : draftId }),
+    [form, refs, isEdit, draftId]
+  );
 
   // Where a friction note would land: flow position (guided screen or full
   // form) plus which case, so repeated confusions map back to a screen/field.
@@ -321,7 +425,7 @@ export function Authoring() {
       } else {
         const created = await api.createEvalCase(payload);
         setSaveKind("submitted"); setSavedAt(new Date().toISOString());
-        clearDraft(slug);
+        dropBuffer(draftId);
         // Land the author on their own case, with a success banner (and any
         // server warnings) — not on an anonymous list.
         navigate(`/cases/${created.id}`, { state: { submitted: true, warnings: created.warnings } });

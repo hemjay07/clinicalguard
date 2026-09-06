@@ -2,6 +2,7 @@
 
 import json
 import logging
+import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,6 +12,7 @@ from clinicalguard.api.deps import get_current_user, get_db, is_owner
 from clinicalguard.api.schemas import EvalCaseCreate, EvalCaseCreated
 from clinicalguard.db.models import (
     CandidateSafetyRule,
+    CaseDraft,
     Condition,
     EvalCase,
     User,
@@ -214,6 +216,30 @@ def _validate_and_build(
     return ids, case_id, expected, warnings
 
 
+def _retire_draft(payload: EvalCaseCreate, db: Session, current_user: User) -> None:
+    """Drop the draft a submitted case came from (ADR-034). Best-effort: the
+    case is already committed, and failing the request because a draft could
+    not be cleaned up would be the wrong trade. A draft belonging to someone
+    else is simply not touched."""
+    if not payload.draft_id:
+        return
+    try:
+        row = (
+            db.query(CaseDraft)
+            .filter_by(id=uuid.UUID(payload.draft_id), user_id=current_user.id)
+            .first()
+        )
+        if row:
+            db.delete(row)
+            db.commit()
+    except (ValueError, TypeError):
+        # Malformed id from an older client — nothing to retire.
+        pass
+    except Exception:
+        db.rollback()
+        logger.warning("Failed to retire draft %s", payload.draft_id, exc_info=True)
+
+
 def _collect_candidate_safety_rules(
     payload: EvalCaseCreate, db: Session, eval_case_id: int, condition_ids: list[int], proposed_by: str
 ) -> None:
@@ -271,6 +297,7 @@ def create_eval_case(
     db.refresh(row)
 
     _collect_candidate_safety_rules(payload, db, row.id, ids, current_user.display_name)
+    _retire_draft(payload, db, current_user)
 
     return EvalCaseCreated(id=row.id, case_id=case_id, warnings=warnings)
 

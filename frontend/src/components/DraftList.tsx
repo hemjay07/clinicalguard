@@ -1,19 +1,18 @@
-// Unfinished cases, read from this device's localStorage drafts.
+// Unfinished cases, read from the server (ADR-034).
 //
-// Before this, a draft was reachable only by its exact URL: nothing in the app
-// listed them, and the Cases page showed submitted cases only — so an author
-// who closed the tab had no route back to work they had already done, and the
-// Cases empty state told them "No cases yet" while their draft sat in storage.
-// This is the index that was missing.
+// Before v1.6 a draft was reachable only by its exact URL: nothing in the app
+// listed them, and Cases showed submitted cases only, so an author who closed
+// the tab had no route back to work they had already done. v1.6 added this list
+// over localStorage; v1.7 moved the store to the server, so the list is now the
+// same on every device the author signs in on.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import { listDrafts, clearDraft } from "../storage";
-import type { DraftEntry } from "../storage";
-import { encodeConditions, refsFromSlug } from "../selection";
+import { migrateLegacyDrafts, dropBuffer, toUnfinished } from "../drafts";
+import type { UnfinishedCase } from "../drafts";
+import { encodeConditions } from "../selection";
 import { screenSummary } from "../flow";
-import type { FormState } from "../caseForm";
 
 function timeAgo(iso: string): string {
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -26,73 +25,84 @@ function timeAgo(iso: string): string {
 }
 
 export function useDrafts() {
-  const [drafts, setDrafts] = useState<DraftEntry<FormState>[]>([]);
-  useEffect(() => { setDrafts(listDrafts<FormState>()); }, []);
-  const remove = (slug: string) => {
-    clearDraft(slug);
-    setDrafts((d) => d.filter((x) => x.slug !== slug));
+  const [drafts, setDrafts] = useState<UnfinishedCase[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      // Anything still sitting in the old local store is pushed up first, so a
+      // case begun before v1.7 appears in this list rather than vanishing.
+      await migrateLegacyDrafts();
+      const rows = await api.listDrafts();
+      setDrafts(rows.map(toUnfinished));
+    } catch {
+      // Signed out, or the backend is still waking. This list is additive, so
+      // an empty one costs the author nothing a failed page would not.
+      setDrafts([]);
+    } finally {
+      setLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const remove = async (id: string) => {
+    setDrafts((d) => d.filter((x) => x.id !== id));
+    dropBuffer(id);
+    try {
+      await api.deleteDraft(id);
+    } catch {
+      load(); // put it back if the server disagreed
+    }
   };
-  return { drafts, remove };
+
+  return { drafts, remove, loaded, reload: load };
 }
 
 export function DraftList({ drafts, remove, heading = true }: {
-  drafts: DraftEntry<FormState>[];
-  remove: (slug: string) => void;
+  drafts: UnfinishedCase[];
+  remove: (id: string) => void;
   heading?: boolean;
 }) {
-  // Names come from the conditions list, which is already cached — so a draft
-  // written before this existed still shows a real condition name rather than
-  // the numeric slug it was keyed by.
   const conditions = useConditionNames();
 
   if (drafts.length === 0) return null;
 
   return (
     <section>
-      {heading && (
-        <h2 className="cg-eyebrow">Unfinished, on this device</h2>
-      )}
+      {heading && <h2 className="cg-eyebrow">Unfinished</h2>}
       <ul className="mt-2.5 space-y-2.5">
         {drafts.map((d) => {
-          const refs = refsFromSlug(d.slug);
-          // Back to the question they stopped on, not the top of the flow.
-          const href = `/author/compose?conditions=${encodeConditions(refs)}`
-            + (d.screen ? `&screen=${d.screen}` : "");
-          const names = refs
-            .map((r) => conditions[r.condition_id])
-            .filter(Boolean)
-            .join(", ");
+          const names = d.refs.map((r) => conditions[r.condition_id]).filter(Boolean).join(", ");
+          // Back to the question they stopped on, not the top of the flow. The
+          // draft id rides along so the resumed session writes to the same row.
+          const href = `/author/compose?conditions=${encodeConditions(d.refs)}&draft=${d.id}`
+            + (d.screenId ? `&screen=${d.screenId}` : "");
           const scenario = screenSummary("query", d.state);
-          const primary = d.state.primary?.trim();
+          const primary = d.state?.primary?.trim();
           return (
-            <li key={d.slug} className="cg-card px-4 py-3.5 sm:px-5">
+            <li key={d.id} className="cg-card px-4 py-3.5 sm:px-5">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <Link
-                    to={href}
-                    className="block"
-                  >
+                  <Link to={href} className="block">
                     <span className="text-sm font-medium text-brand-700">
-                      {names || `Case in progress`}
+                      {names || "Case in progress"}
                     </span>
                     <p className="mt-1 line-clamp-2 text-[15px] leading-relaxed text-neutral-800">
                       {scenario || primary || <span className="italic text-neutral-400">Nothing written yet</span>}
                     </p>
                     <span className="mt-1.5 block text-xs text-neutral-400">
-                      Last edited {timeAgo(d.savedAt)}
+                      Last edited {timeAgo(d.updatedAt)}
                     </span>
                   </Link>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
-                  <Link
-                    to={href}
-                    className="cg-btn-secondary px-3 py-1.5 text-xs"
-                  >
+                  <Link to={href} className="cg-btn-secondary px-3 py-1.5 text-xs">
                     Continue
                   </Link>
                   <button
                     onClick={() => {
-                      if (window.confirm("Discard this unfinished case? What you entered will be cleared.")) remove(d.slug);
+                      if (window.confirm("Discard this unfinished case? What you entered will be cleared.")) remove(d.id);
                     }}
                     className="text-xs text-neutral-400 transition-colors hover:text-neutral-600"
                   >
@@ -120,7 +130,7 @@ function useConditionNames(): Record<number, string> {
         if (cancelled) return;
         setMap(Object.fromEntries(cs.map((c) => [c.id, c.name])));
       })
-      .catch(() => { /* label-only — the link still works */ });
+      .catch(() => { /* label-only, the link still works */ });
     return () => { cancelled = true; };
   }, []);
   return map;

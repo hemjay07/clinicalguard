@@ -749,3 +749,145 @@ def test_guideline_provenance_does_not_change_scores(db_session, monkeypatch):
 
     assert with_tier.overall_score == without.overall_score
     assert with_tier == without
+
+
+# --- server-side drafts (ADR-034) ---------------------------------------------
+
+def _draft_body(**overrides):
+    body = {
+        "condition_ids": [{"condition_id": MALARIA_ID, "subtype": None}],
+        "form_state": {"query": "Adult with fever", "primary": "", "archetypes": []},
+        "screen_id": "1.2",
+    }
+    body.update(overrides)
+    return body
+
+
+def test_draft_upsert_creates_then_updates(client):
+    """The client mints the id, so a draft keeps one identity across debounced
+    saves rather than multiplying as the author types."""
+    did = str(uuid.uuid4())
+
+    r = client.put(f"/api/v1/drafts/{did}", json=_draft_body())
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == did
+    assert r.json()["screen_id"] == "1.2"
+
+    r = client.put(
+        f"/api/v1/drafts/{did}",
+        json=_draft_body(form_state={"query": "Adult with fever and altered consciousness"}, screen_id="2.7"),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["form_state"]["query"].endswith("altered consciousness")
+    assert r.json()["screen_id"] == "2.7"
+
+    listed = client.get("/api/v1/drafts").json()
+    assert len([d for d in listed if d["id"] == did]) == 1
+
+
+def test_draft_pristine_form_creates_nothing(client):
+    """Opening a condition and backing out must not leave a draft behind — the
+    client's autosave fires once on load with an empty form."""
+    did = str(uuid.uuid4())
+    r = client.put(
+        f"/api/v1/drafts/{did}",
+        json=_draft_body(form_state={"query": "", "primary": "   ", "archetypes": [], "safety_none_declared": False}),
+    )
+    assert r.status_code == 422
+    assert client.get("/api/v1/drafts").status_code == 200
+    assert all(d["id"] != did for d in client.get("/api/v1/drafts").json())
+
+
+def test_draft_list_scoped_to_user(client, db_session, test_user, monkeypatch):
+    """A rater sees their own unfinished cases and nobody else's."""
+    from clinicalguard.api.deps import get_current_user
+    from clinicalguard.api.main import app
+    from clinicalguard.db.models import CaseDraft
+
+    other = make_user(db_session, "someone.else@example.com", "Dr Other")
+    db_session.add(
+        CaseDraft(
+            id=uuid.uuid4(),
+            user_id=other.id,
+            condition_ids=[{"condition_id": MALARIA_ID, "subtype": None}],
+            form_state={"query": "not yours"},
+            screen_id="1.1",
+        )
+    )
+    db_session.commit()
+
+    mine = str(uuid.uuid4())
+    client.put(f"/api/v1/drafts/{mine}", json=_draft_body())
+
+    listed = client.get("/api/v1/drafts").json()
+    assert [d["id"] for d in listed] == [mine]
+    assert all(d["form_state"].get("query") != "not yours" for d in listed)
+
+
+def test_draft_cross_user_access_404(client, db_session, test_user):
+    """Someone else's draft is not found, rather than forbidden — its existence
+    is not a fact another user gets to learn."""
+    from clinicalguard.db.models import CaseDraft
+
+    other = make_user(db_session, "third.party@example.com", "Dr Third")
+    theirs = uuid.uuid4()
+    db_session.add(
+        CaseDraft(
+            id=theirs,
+            user_id=other.id,
+            condition_ids=[],
+            form_state={"query": "not yours"},
+            screen_id=None,
+        )
+    )
+    db_session.commit()
+
+    assert client.put(f"/api/v1/drafts/{theirs}", json=_draft_body()).status_code == 404
+    assert client.delete(f"/api/v1/drafts/{theirs}").status_code == 404
+
+    # And it survives the attempt.
+    still = db_session.query(CaseDraft).filter_by(id=theirs).first()
+    assert still is not None and still.form_state["query"] == "not yours"
+
+
+def test_draft_delete(client):
+    did = str(uuid.uuid4())
+    client.put(f"/api/v1/drafts/{did}", json=_draft_body())
+    assert client.delete(f"/api/v1/drafts/{did}").status_code == 204
+    assert all(d["id"] != did for d in client.get("/api/v1/drafts").json())
+    # Deleting an already-gone draft succeeds: the same cleanup may run twice.
+    assert client.delete(f"/api/v1/drafts/{did}").status_code == 204
+
+
+def test_submit_retires_its_draft(client):
+    """Submitting a case clears the draft it came from, so a finished case
+    does not linger in the author's unfinished list."""
+    did = str(uuid.uuid4())
+    client.put(f"/api/v1/drafts/{did}", json=_draft_body())
+    assert any(d["id"] == did for d in client.get("/api/v1/drafts").json())
+
+    r = client.post("/api/v1/eval-cases", json=valid_payload(draft_id=did))
+    assert r.status_code == 201, r.text
+    assert all(d["id"] != did for d in client.get("/api/v1/drafts").json())
+
+
+def test_submit_without_draft_id_still_works(client):
+    """An older client that sends no draft_id submits exactly as before."""
+    r = client.post("/api/v1/eval-cases", json=valid_payload())
+    assert r.status_code == 201, r.text
+
+
+def test_drafts_require_auth(unauthenticated_client):
+    assert unauthenticated_client.get("/api/v1/drafts").status_code == 401
+    assert unauthenticated_client.put(
+        f"/api/v1/drafts/{uuid.uuid4()}", json=_draft_body()
+    ).status_code == 401
+
+
+def test_draft_timestamps_carry_utc_offset(client):
+    """Naive isoformat() is read as local time by the browser, which rendered a
+    draft saved seconds ago as "1 hour ago" for anyone off UTC."""
+    did = str(uuid.uuid4())
+    body = client.put(f"/api/v1/drafts/{did}", json=_draft_body()).json()
+    assert body["updated_at"].endswith("+00:00"), body["updated_at"]
+    assert body["created_at"].endswith("+00:00"), body["created_at"]

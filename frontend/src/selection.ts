@@ -30,8 +30,8 @@ export function draftSlug(refs: ConditionRef[]): string {
     .join("|");
 }
 
-// Inverse of draftSlug: recover the condition refs a draft was keyed by, so a
-// saved draft can be turned back into a compose URL from a list.
+// Inverse of draftSlug, for reading drafts written under the pre-v1.7
+// condition-keyed scheme during the one-time migration to server drafts.
 export function refsFromSlug(slug: string): ConditionRef[] {
   if (!slug) return [];
   return slug.split("|").map((part) => {

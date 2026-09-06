@@ -61,6 +61,10 @@ class ConditionRef(BaseModel):
 
 
 class EvalCaseCreate(BaseModel):
+    # The draft this case was written in, if any. Sent so a successful submit
+    # can retire it server-side (ADR-034) — the author should not have to go
+    # and discard the draft of a case they have already submitted.
+    draft_id: Optional[str] = None
     # A case references one or more conditions; each carries its own subtype.
     conditions: list[ConditionRef] = Field(default_factory=list)
     # No authored_by field (ADR-030): identity comes from the authenticated

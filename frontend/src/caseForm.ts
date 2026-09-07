@@ -86,6 +86,27 @@ export function safetyAnswered(f: FormState): boolean {
 // screen (not a red server-error box) and reused as the server-error message
 // if the check is somehow bypassed client-side.
 export const SAFETY_PROMPT = "Answer the safety question to finish: either list the dangers, or confirm there are none.";
+// The other way to fail the same check. A physician who had listed two real
+// constraints AND ticked the box was shown SAFETY_PROMPT, which told them to
+// do the thing they had just done, and gave them no way to work out that the
+// tick was the problem. The invalid state is now unreachable in the UI; this
+// message exists for a draft already saved in it, and for the server.
+export const SAFETY_CONFLICT_PROMPT = "You've listed dangers and also ticked \"Nothing here rises to that level\". Untick the box, or clear the list.";
+
+export function safetyConflict(f: FormState): boolean {
+  return lines(f.safety_harm_text).length > 0 && f.safety_none_declared;
+}
+
+export const safetyPromptFor = (f: FormState): string =>
+  safetyConflict(f) ? SAFETY_CONFLICT_PROMPT : SAFETY_PROMPT;
+
+// The invariant the XOR rule depends on: written constraints and "there are
+// none" cannot both hold. Text is the higher-signal answer, so it wins — a
+// tick carries no words to lose. Applied when a draft loads, so a case already
+// saved in the invalid state opens in a state its author can submit.
+export function normaliseSafety(f: FormState): FormState {
+  return safetyConflict(f) ? { ...f, safety_none_declared: false } : f;
+}
 
 // Same shape, for the second required answer (ADR-033). Mirrors the server's
 // two checks so an unresolved provenance question never round-trips.

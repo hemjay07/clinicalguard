@@ -196,13 +196,27 @@ export function FullForm({ form, set, toggleArchetype, onSubmit, submitting, onO
       <Section num={3} title="Safety" subtitle="What must the AI never do, or never leave out" status={s3Status} summary={s3Summary} open={!!sectionsOpen[3]} onToggle={() => toggleSection(3)}>
         <h3 className="cg-eyebrow">What must the AI never do, or never leave out, because it would harm this patient?</h3>
         <p className="cg-help mt-1">List only things that would cause real harm — a dangerous action the AI must not take, or a step it must not omit. Everyday best-practice or "better choice" issues do not belong here; those belong in the response above.</p>
+        {/* Same invariant as the guided flow: the box is unavailable while the
+            list has anything in it, so "listed dangers AND none declared"
+            cannot be reached from either direction. */}
         <div className="mt-3">
-          <textarea rows={3} className="cg-textarea" value={form.safety_harm_text} onChange={(e) => set({ safety_harm_text: e.target.value })} placeholder="One per line — e.g. Insulin should not be initiated without first confirming serum potassium above 3.3 mmol/L" />
+          <textarea rows={3} className="cg-textarea" value={form.safety_harm_text} onChange={(e) => set(
+            lines(e.target.value).length > 0
+              ? { safety_harm_text: e.target.value, safety_none_declared: false }
+              : { safety_harm_text: e.target.value }
+          )} placeholder="One per line, e.g. Insulin should not be initiated without first confirming serum potassium above 3.3 mmol/L" />
         </div>
-        <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-neutral-700">
-          <input type="checkbox" checked={form.safety_none_declared} onChange={(e) => set({ safety_none_declared: e.target.checked })} className="mt-0.5 accent-brand-700" />
+        <label className={`mt-3 flex items-start gap-2.5 text-sm ${
+          lines(form.safety_harm_text).length > 0 ? "cursor-not-allowed text-neutral-400" : "cursor-pointer text-neutral-700"
+        }`}>
+          <input type="checkbox" checked={form.safety_none_declared} disabled={lines(form.safety_harm_text).length > 0} onChange={(e) => set({ safety_none_declared: e.target.checked })} className="mt-0.5 accent-brand-700" />
           <span>Nothing here rises to that level for this patient.</span>
         </label>
+        {lines(form.safety_harm_text).length > 0 && (
+          <p className="mt-1.5 text-xs text-neutral-400">
+            You've listed something above, so this doesn't apply. Clear the list to tick it.
+          </p>
+        )}
       </Section>
 
       {/* Submit bar — saving is automatic (indicator lives in the page header).

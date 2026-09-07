@@ -176,10 +176,23 @@ def _validate_and_build(
     # resolved, either with constraints or an explicit declared-empty.
     # Both empty and both-filled are invalid — exactly one must hold.
     if bool(payload.safety.free_text) == payload.safety.none_declared:
-        raise HTTPException(
-            status_code=422,
-            detail={"errors": ["Answer the safety question to finish — either list the dangers, or confirm there are none."]},
-        )
+        # Two different failures, and telling them apart matters: a physician
+        # who listed real constraints and also ticked "nothing rises to that
+        # level" was told to "either list the dangers, or confirm there are
+        # none", which is exactly what they had done, and never mentioned the
+        # tick. The client now makes that state unreachable; this stays as the
+        # backstop for older clients and direct API callers.
+        if payload.safety.free_text and payload.safety.none_declared:
+            message = (
+                "You listed dangers and also declared there are none. "
+                'Untick "Nothing here rises to that level", or clear the list.'
+            )
+        else:
+            message = (
+                "Answer the safety question to finish: either list the dangers, "
+                "or confirm there are none."
+            )
+        raise HTTPException(status_code=422, detail={"errors": [message]})
 
     # Provenance tier (ADR-033), the second required answer. A reviewer can
     # only check the answer if they know what to check it against; the two

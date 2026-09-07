@@ -20,7 +20,7 @@ import { useAuth } from "../AuthContext";
 import { decodeConditions } from "../selection";
 import {
   EMPTY, toPayload, fromExpectedResponse, safetyAnswered, provenanceAnswered, isBlank, mergeDraft,
-  SAFETY_PROMPT, PROVENANCE_PROMPT, PROVENANCE_NOTES_PROMPT,
+  normaliseSafety, safetyPromptFor, PROVENANCE_PROMPT, PROVENANCE_NOTES_PROMPT,
 } from "../caseForm";
 import type { FormState, ValidationIssue } from "../caseForm";
 import { screenById, FLOW_STEPS, isValidFlowParam, stepIndexForScreen, groupScreens } from "../flow";
@@ -209,7 +209,7 @@ export function Authoring() {
   useEffect(() => {
     if (!isEdit) return;
     if (!editCase.data) return;
-    setForm(fromExpectedResponse(editCase.data));
+    setForm(normaliseSafety(fromExpectedResponse(editCase.data)));
     setActiveTab(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, editCase.data]);
@@ -257,11 +257,11 @@ export function Authoring() {
       // text stands and the autosave below pushes it up over the draft.
       let seeded = true;
       setForm((current) => {
-        if (isBlank(current)) return base;
+        if (isBlank(current)) return normaliseSafety(base);
         // They typed while it was loading. Keep both: the draft underneath,
         // their words on top, field by field.
         seeded = false;
-        return mergeDraft(base, current);
+        return normaliseSafety(mergeDraft(base, current));
       });
       if (seeded) {
         setSavedAt(savedStamp);
@@ -401,7 +401,7 @@ export function Authoring() {
     // actively answered: harm (ADR-029) and provenance (ADR-033). Checked
     // before the request so neither round-trips to the server unresolved.
     if (!safetyAnswered(form)) {
-      setIssues([{ message: SAFETY_PROMPT, screenId: SAFETY_SCREEN }]);
+      setIssues([{ message: safetyPromptFor(form), screenId: SAFETY_SCREEN }]);
       if (view === "guided") goTo(SAFETY_SCREEN);
       else window.scrollTo({ top: 0, behavior: "smooth" });
       return;

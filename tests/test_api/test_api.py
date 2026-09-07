@@ -340,7 +340,22 @@ def test_create_safety_both_filled_422(client):
     payload = valid_payload(safety={"free_text": ["Mefloquine cautions"], "none_declared": True})
     r = client.post("/api/v1/eval-cases", json=payload)
     assert r.status_code == 422
-    assert "safety question" in r.json()["detail"]["errors"][0].lower()
+    # The message must name the tick. A physician hit this in the field and was
+    # told to "either list the dangers, or confirm there are none" while looking
+    # at the two dangers they had just listed, with nothing pointing at the
+    # checkbox that was actually blocking them.
+    msg = r.json()["detail"]["errors"][0]
+    assert "untick" in msg.lower(), msg
+    assert "also declared there are none" in msg.lower(), msg
+
+
+def test_create_safety_unanswered_message_is_the_other_one(client):
+    """The both-empty case keeps its own wording."""
+    r = client.post("/api/v1/eval-cases", json=valid_payload(safety={"free_text": [], "none_declared": False}))
+    assert r.status_code == 422
+    msg = r.json()["detail"]["errors"][0]
+    assert "either list the dangers" in msg.lower(), msg
+    assert "untick" not in msg.lower(), msg
 
 
 def test_create_without_provenance_tier_422(client):

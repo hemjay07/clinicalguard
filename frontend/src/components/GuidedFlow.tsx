@@ -4,7 +4,7 @@
 // the shared FormState + autosave in the Authoring shell.
 
 import type { FormState, ValidationIssue } from "../caseForm";
-import { SAFETY_PROMPT } from "../caseForm";
+import { lines, safetyConflict, safetyPromptFor } from "../caseForm";
 import { useState } from "react";
 import {
   PHASES, phaseScreens, screenFilled, screenSummary, screenLabel,
@@ -217,21 +217,44 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
         </div>
       );
     case "safety_harm": {
-      const checked = form.safety_none_declared;
+      // Listing constraints and declaring there are none are contradictory, so
+      // the box is unavailable while the list has anything in it. It used to be
+      // tickable: a physician listed two real constraints, ticked it as well,
+      // and was blocked with "either list the dangers, or confirm there are
+      // none" — which told them to do what they had just done, and never
+      // mentioned the tick. Typing also clears a tick made earlier, so the
+      // contradiction cannot be reached from either direction.
+      const hasConstraints = lines(form.safety_harm_text).length > 0;
       return (
         <div>
-          <textarea {...textareaProps("safety_harm_text", 5, SAFETY_PLACEHOLDER)} autoFocus />
-          <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-neutral-700">
+          <textarea
+            {...textareaProps("safety_harm_text", 5, SAFETY_PLACEHOLDER)}
+            onChange={(e) => set(
+              lines(e.target.value).length > 0
+                ? { safety_harm_text: e.target.value, safety_none_declared: false }
+                : { safety_harm_text: e.target.value }
+            )}
+            autoFocus
+          />
+          <label className={`mt-3 flex items-start gap-2.5 text-sm ${
+            hasConstraints ? "cursor-not-allowed text-neutral-400" : "cursor-pointer text-neutral-700"
+          }`}>
             <input
               type="checkbox"
-              checked={checked}
+              checked={form.safety_none_declared}
+              disabled={hasConstraints}
               onChange={(e) => set({ safety_none_declared: e.target.checked })}
               className="mt-0.5 accent-brand-700"
             />
             <span>Nothing here rises to that level for this patient.</span>
           </label>
+          {hasConstraints && (
+            <p className="mt-1.5 text-xs text-neutral-400">
+              You've listed something above, so this doesn't apply. Clear the list to tick it.
+            </p>
+          )}
           {showSafetyPrompt && (
-            <p className="mt-3 text-sm text-amber-700">{SAFETY_PROMPT}</p>
+            <p className="mt-3 text-sm text-amber-700">{safetyPromptFor(form)}</p>
           )}
         </div>
       );
@@ -325,15 +348,15 @@ function OptionalMenu({ groups, form, set, toggleArchetype, openKey }: {
 
 // --- review screen -------------------------------------------------------------
 
-function ReviewRow({ label, value, missing, onEdit }: {
-  label: string; value: string; missing?: boolean; onEdit: () => void;
+function ReviewRow({ label, value, missing, missingLabel, onEdit }: {
+  label: string; value: string; missing?: boolean; missingLabel?: string; onEdit: () => void;
 }) {
   return (
     <button type="button" onClick={onEdit}
       className="flex w-full items-baseline gap-3 px-4 py-2.5 text-left transition-colors hover:bg-neutral-50">
       <span className="w-40 shrink-0 text-xs font-medium text-neutral-500 sm:w-52">{label}</span>
       <span className={`min-w-0 flex-1 whitespace-pre-line text-sm ${missing ? "text-red-600" : "text-neutral-800"}`}>
-        {missing ? "Not provided" : value}
+        {missing ? (missingLabel ?? "Not provided") : value}
       </span>
       <span className="shrink-0 text-xs font-medium text-brand-700">Edit</span>
     </button>
@@ -388,6 +411,11 @@ function ReviewScreen({ form, goTo, issues }: {
                     label={screenLabel(s.kind)}
                     value={screenSummary(s.kind, form)}
                     missing={!screenFilled(s.kind, form)}
+                    // "Not provided" is wrong when the author provided
+                    // constraints and also ticked the box; say which it is.
+                    missingLabel={s.kind === "safety_harm" && safetyConflict(form)
+                      ? "Listed, but also ticked \"nothing rises to that level\""
+                      : undefined}
                     onEdit={() => goTo(s.id)}
                   />
                 ))}

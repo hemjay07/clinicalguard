@@ -362,6 +362,15 @@ export function Authoring() {
 
   const names = useMemo(() => (sources.data ?? []).map((s) => s.data.condition.name), [sources.data]);
 
+  // Name the tab after the case being written. Physicians author in gaps
+  // between clinics with a dozen tabs open, and a half-written case they
+  // cannot find again is a case that never gets finished.
+  useEffect(() => {
+    const label = names.length ? names.join(", ") : null;
+    document.title = label ? `${label} · ClinicalGuard` : "ClinicalGuard";
+    return () => { document.title = "ClinicalGuard"; };
+  }, [names]);
+
   // draft_id rides along so a successful submit retires the draft it came
   // from, instead of leaving a finished case in the unfinished list.
   const payload = useMemo(

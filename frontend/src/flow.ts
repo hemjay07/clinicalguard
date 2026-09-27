@@ -116,8 +116,10 @@ export const SCREENS: ScreenDef[] = [
   },
   {
     id: "2.11", phase: 2, kind: "monitoring", crumb: "Monitoring", optional: true,
-    question: "What monitoring parameters should the AI include?",
-    help: "Required: monitoring without which management is unsafe. Expected: monitoring a thorough plan would include.",
+    question: "What extra monitoring would a thorough plan include?",
+    // Required monitoring (without which management is unsafe) is captured on the
+    // Treatments screen now (ADR-035); this screen holds the expected tier only.
+    help: "Monitoring a thorough plan would include. Monitoring without which management is unsafe belongs on the Treatments screen, where it is saved as required.",
   },
   {
     id: "2.12", phase: 2, kind: "escalation", crumb: "Escalation triggers", optional: true,

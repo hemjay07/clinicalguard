@@ -22,6 +22,11 @@ export interface FormState {
   other_considerations: string;
   inv_required: string; inv_expected: string; inv_situational: string;
   tx_required: string; tx_expected: string; tx_situational: string;
+  // "Nothing to add" for the Should-do (expected) lists, kept distinct from an
+  // empty field so the corpus can tell "author declared none" from "skipped"
+  // (ADR-035). Optional, unlike safety — no submit gate.
+  expected_investigations_none_declared: boolean;
+  expected_treatments_none_declared: boolean;
   complications: string;
   mon_required: string; mon_expected: string;
   escalation: string;
@@ -38,6 +43,8 @@ export const EMPTY: FormState = {
   primary: "", critical_differentials: "", other_considerations: "",
   inv_required: "", inv_expected: "", inv_situational: "",
   tx_required: "", tx_expected: "", tx_situational: "",
+  expected_investigations_none_declared: false,
+  expected_treatments_none_declared: false,
   complications: "", mon_required: "", mon_expected: "",
   escalation: "", safety_harm_text: "", safety_none_declared: false,
   archetypes: [], other_checked: false, other_text: "",
@@ -108,6 +115,23 @@ export function normaliseSafety(f: FormState): FormState {
   return safetyConflict(f) ? { ...f, safety_none_declared: false } : f;
 }
 
+// Same "text wins" resolution for the two Should-do lists (ADR-035): a list
+// with items and its "Nothing to add" box both set is contradictory, so a
+// non-empty list clears the box. Applied on draft/edit load. Unlike safety,
+// neither state is required at submission.
+export function normaliseExpected(f: FormState): FormState {
+  return {
+    ...f,
+    expected_investigations_none_declared:
+      lines(f.inv_expected).length > 0 ? false : f.expected_investigations_none_declared,
+    expected_treatments_none_declared:
+      lines(f.tx_expected).length > 0 ? false : f.expected_treatments_none_declared,
+  };
+}
+
+// Apply every load-time normalisation in one place.
+export const normaliseForm = (f: FormState): FormState => normaliseExpected(normaliseSafety(f));
+
 // Same shape, for the second required answer (ADR-033). Mirrors the server's
 // two checks so an unresolved provenance question never round-trips.
 export const PROVENANCE_PROMPT = "Say where this answer came from before submitting.";
@@ -135,8 +159,8 @@ export function toPayload(f: FormState, conditions: ConditionRef[]): EvalCasePay
     provenance_notes: f.provenance_notes.trim(),
     guideline_provenance: f.guideline_provenance || null,
     diagnoses: { primary: f.primary.trim(), critical_differentials: lines(f.critical_differentials), other_considerations: lines(f.other_considerations) },
-    investigations: { required: lines(f.inv_required), expected: lines(f.inv_expected), situational: parseSituational(f.inv_situational) },
-    treatments: { required: lines(f.tx_required), expected: lines(f.tx_expected), situational: parseSituational(f.tx_situational) },
+    investigations: { required: lines(f.inv_required), expected: lines(f.inv_expected), expected_none_declared: f.expected_investigations_none_declared, situational: parseSituational(f.inv_situational) },
+    treatments: { required: lines(f.tx_required), expected: lines(f.tx_expected), expected_none_declared: f.expected_treatments_none_declared, situational: parseSituational(f.tx_situational) },
     complications: lines(f.complications),
     monitoring: { required_elements: lines(f.mon_required), expected_elements: lines(f.mon_expected) },
     escalation: lines(f.escalation),
@@ -177,6 +201,8 @@ export function fromExpectedResponse(detail: EvalCaseDetail): FormState {
     other_considerations: (diag.expected?.other_considerations ?? []).join("\n"),
     inv_required: (inv.required ?? []).join("\n"),
     inv_expected: (inv.expected ?? []).join("\n"),
+    expected_investigations_none_declared: !!inv.expected_none_declared,
+    expected_treatments_none_declared: !!tx.expected_none_declared,
     inv_situational: formatSituational(
       (inv.situational ?? []).map((s: { test: string; trigger: string }) => ({ item: s.test, trigger: s.trigger }))
     ),

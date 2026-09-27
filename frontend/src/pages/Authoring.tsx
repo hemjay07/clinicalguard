@@ -20,7 +20,7 @@ import { useAuth } from "../AuthContext";
 import { decodeConditions } from "../selection";
 import {
   EMPTY, toPayload, fromExpectedResponse, isBlank, mergeDraft,
-  normaliseSafety, requiredIssues,
+  normaliseForm, requiredIssues,
 } from "../caseForm";
 import type { FormState, ValidationIssue } from "../caseForm";
 import { screenById, FLOW_STEPS, isValidFlowParam, stepIndexForScreen, groupScreens } from "../flow";
@@ -207,7 +207,7 @@ export function Authoring() {
   useEffect(() => {
     if (!isEdit) return;
     if (!editCase.data) return;
-    setForm(normaliseSafety(fromExpectedResponse(editCase.data)));
+    setForm(normaliseForm(fromExpectedResponse(editCase.data)));
     setActiveTab(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, editCase.data]);
@@ -255,11 +255,11 @@ export function Authoring() {
       // text stands and the autosave below pushes it up over the draft.
       let seeded = true;
       setForm((current) => {
-        if (isBlank(current)) return normaliseSafety(base);
+        if (isBlank(current)) return normaliseForm(base);
         // They typed while it was loading. Keep both: the draft underneath,
         // their words on top, field by field.
         seeded = false;
-        return normaliseSafety(mergeDraft(base, current));
+        return normaliseForm(mergeDraft(base, current));
       });
       if (seeded) {
         setSavedAt(savedStamp);

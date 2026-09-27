@@ -927,3 +927,62 @@ def test_draft_timestamps_carry_utc_offset(client):
     body = client.put(f"/api/v1/drafts/{did}", json=_draft_body()).json()
     assert body["updated_at"].endswith("+00:00"), body["updated_at"]
     assert body["created_at"].endswith("+00:00"), body["created_at"]
+
+
+# --- ADR-035: Expected tier on core screens + section-fill stats -------------
+
+@pytest.fixture
+def owner_client(db_session):
+    """Authenticated client whose user is the owner (aggregate-read access).
+    The owner row already exists in the shared DB, so reuse it rather than
+    inserting a duplicate email."""
+    owner = db_session.query(User).filter(User.email == settings.owner_email).first()
+    if owner is None:
+        owner = make_user(db_session, settings.owner_email, "Owner")
+
+    def _override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = lambda: owner
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_expected_none_declared_round_trips(client):
+    """A declared 'Nothing to add' on the Should-do list persists distinct from
+    an empty list (ADR-035)."""
+    payload = valid_payload(
+        investigations={"required": ["Blood glucose"], "expected": [], "expected_none_declared": True, "situational": []},
+    )
+    case_id = client.post("/api/v1/eval-cases", json=payload).json()["id"]
+    exp = client.get(f"/api/v1/eval-cases/{case_id}").json()["expected_response"]
+    assert exp["required_investigations"]["expected_none_declared"] is True
+    assert exp["required_investigations"]["expected"] == []
+
+
+def test_expected_none_declared_defaults_false(client):
+    """An unspecified flag is a skip, not a declared-none."""
+    case_id = client.post("/api/v1/eval-cases", json=valid_payload()).json()["id"]
+    exp = client.get(f"/api/v1/eval-cases/{case_id}").json()["expected_response"]
+    assert exp["required_investigations"]["expected_none_declared"] is False
+    assert exp["required_treatments"]["expected_none_declared"] is False
+
+
+def test_section_fill_stats_requires_owner(client):
+    assert client.get("/api/v1/eval-cases/section-fill-stats").status_code == 403
+
+
+def test_section_fill_stats_counts_sections(owner_client):
+    owner_client.post("/api/v1/eval-cases", json=valid_payload(
+        investigations={"required": ["Blood glucose"], "expected": ["Packed cell volume"], "situational": []},
+        treatments={"required": ["Artesunate"], "expected": [], "expected_none_declared": True, "situational": []},
+    ))
+    stats = owner_client.get("/api/v1/eval-cases/section-fill-stats?n=10").json()
+    assert stats["n_cases"] >= 1
+    s = stats["sections"]
+    assert s["should_do_investigations"]["count"] >= 1
+    assert s["nothing_to_add_treatments"]["count"] >= 1
+    assert 0 <= s["should_do_investigations"]["pct"] <= 100

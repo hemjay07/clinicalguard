@@ -450,6 +450,17 @@ class EvalCase(Base):
     safety_none_declared: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    # True only when the author actively ticked "Nothing to add" on a Should-do
+    # (expected) list (ADR-035). False covers both "left empty" and "filled" —
+    # distinguished by whether required_{investigations,treatments}.expected is
+    # non-empty in expected_response. Lets the corpus tell a declared-none from a
+    # skip when reporting thoroughness coverage.
+    expected_investigations_none_declared: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    expected_treatments_none_declared: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     # How much of the authored answer NSTG actually covers (ADR-033).
     # Descriptive metadata for stratified reporting by guideline density —
     # the scorer ignores it, exactly as it ignores provenance_notes. Nullable

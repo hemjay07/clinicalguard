@@ -23,6 +23,10 @@ class SituationalItem(BaseModel):
 class TierGroup(BaseModel):
     required: list[str] = Field(default_factory=list)
     expected: list[str] = Field(default_factory=list)
+    # Distinguishes "author declared nothing to add" from "left the field empty"
+    # for the Should-do (expected) list — mirrors SafetyFlags.none_declared
+    # (ADR-035). Optional: unlike safety, no XOR check is enforced.
+    expected_none_declared: bool = False
     situational: list[SituationalItem] = Field(default_factory=list)
 
 

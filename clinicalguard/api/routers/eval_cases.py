@@ -131,6 +131,9 @@ def build_expected_response(
         "required_investigations": {
             "required": payload.investigations.required,
             "expected": payload.investigations.expected,
+            # Author ticked "Nothing to add" on the Should-do list (ADR-035);
+            # kept distinct from an empty `expected`.
+            "expected_none_declared": payload.investigations.expected_none_declared,
             "situational": [
                 {"test": s.item, "trigger": s.trigger}
                 for s in payload.investigations.situational
@@ -139,6 +142,7 @@ def build_expected_response(
         "required_treatments": {
             "required": payload.treatments.required,
             "expected": payload.treatments.expected,
+            "expected_none_declared": payload.treatments.expected_none_declared,
             "situational": [
                 {"treatment": s.item, "trigger": s.trigger}
                 for s in payload.treatments.situational
@@ -302,6 +306,8 @@ def create_eval_case(
         query_scope=payload.query_scope.strip() or None,
         ground_truth_source=GROUND_TRUTH_SOURCE,
         safety_none_declared=payload.safety.none_declared,
+        expected_investigations_none_declared=payload.investigations.expected_none_declared,
+        expected_treatments_none_declared=payload.treatments.expected_none_declared,
         guideline_provenance=payload.guideline_provenance,
         author_user_id=current_user.id,
     )
@@ -340,6 +346,8 @@ def update_eval_case(
     row.expected_response = json.dumps(expected)
     row.query_scope = payload.query_scope.strip() or None
     row.safety_none_declared = payload.safety.none_declared
+    row.expected_investigations_none_declared = payload.investigations.expected_none_declared
+    row.expected_treatments_none_declared = payload.treatments.expected_none_declared
     row.guideline_provenance = payload.guideline_provenance
     row.updated_at = datetime.utcnow()
     db.commit()
@@ -431,6 +439,77 @@ def count_eval_cases(db: Session = Depends(get_db)):
         .count()
     )
     return {"count": n}
+
+
+# Declared before "/{case_id}" so the literal path is not captured by the
+# int case-id route.
+@router.get("/section-fill-stats")
+def section_fill_stats(
+    n: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Owner-only (ADR-035 §5): of the last N MD-authored cases, what fraction
+    filled each thoroughness/optional section. Lets us see whether pairing
+    Expected with Required actually lifts coverage. Content sections are read
+    from the expected_response blob; the two "Nothing to add" declarations are
+    read from their dedicated columns."""
+    if not is_owner(current_user):
+        raise HTTPException(status_code=403, detail="Owner only")
+    n = max(1, min(n, 500))
+    rows = (
+        db.query(EvalCase)
+        .filter(EvalCase.ground_truth_source == GROUND_TRUTH_SOURCE)
+        .order_by(EvalCase.created_at.desc())
+        .limit(n)
+        .all()
+    )
+    total = len(rows)
+
+    def nonempty(x) -> bool:
+        return isinstance(x, list) and len(x) > 0
+
+    keys = [
+        "should_do_investigations", "should_do_treatments",
+        "nothing_to_add_investigations", "nothing_to_add_treatments",
+        "required_monitoring", "situational", "complications",
+        "monitoring_non_required", "escalation", "about_this_case",
+    ]
+    counts = {k: 0 for k in keys}
+    for row in rows:
+        e = _safe_load(row.expected_response)
+        inv = e.get("required_investigations") or {}
+        tx = e.get("required_treatments") or {}
+        mon = e.get("required_monitoring") or {}
+        if nonempty(inv.get("expected")):
+            counts["should_do_investigations"] += 1
+        if nonempty(tx.get("expected")):
+            counts["should_do_treatments"] += 1
+        if row.expected_investigations_none_declared:
+            counts["nothing_to_add_investigations"] += 1
+        if row.expected_treatments_none_declared:
+            counts["nothing_to_add_treatments"] += 1
+        if nonempty(mon.get("required_elements")):
+            counts["required_monitoring"] += 1
+        if nonempty(mon.get("expected_elements")):
+            counts["monitoring_non_required"] += 1
+        if nonempty(inv.get("situational")) or nonempty(tx.get("situational")):
+            counts["situational"] += 1
+        if nonempty(e.get("complications")):
+            counts["complications"] += 1
+        if nonempty(e.get("escalation_triggers")):
+            counts["escalation"] += 1
+        if (e.get("what_this_evaluates") or "").strip() or (e.get("query_scope") or "").strip():
+            counts["about_this_case"] += 1
+
+    def pct(c: int) -> float:
+        return round(100 * c / total, 1) if total else 0.0
+
+    return {
+        "n_requested": n,
+        "n_cases": total,
+        "sections": {k: {"count": counts[k], "pct": pct(counts[k])} for k in keys},
+    }
 
 
 @router.get("/{case_id}")

@@ -5,7 +5,7 @@
 
 import type { FormState, ValidationIssue } from "../caseForm";
 import { lines, safetyConflict, safetyPromptFor, requiredIssues } from "../caseForm";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   PHASES, phaseScreens, screenFilled, screenSummary, screenLabel,
   FLOW_STEPS, phaseSteps, stepIndexForScreen, enrichmentTarget,
@@ -116,6 +116,83 @@ const SAFETY_PLACEHOLDER = `One per line, e.g.
 Do not give a beta-blocker in acute decompensated heart failure
 Anti-TB drugs are hepatotoxic; do not start them without baseline liver function tests`;
 
+// Should-do (Expected) rule-bearing help + placeholders, kept verbatim from the
+// retired 2.5 / 2.8 screens — ADR-035 pairs them with Required on the core
+// screens without changing the wording.
+const EXPECTED_HELP = {
+  inv: "One per line. Investigations a thorough workup would include, but whose omission is not dangerous.",
+  tx: "One per line. A thorough response should include these, but their omission is not dangerous.",
+} as const;
+const EXPECTED_PLACEHOLDER = {
+  inv: "One per line, e.g. Serum ketones (beta-hydroxybutyrate)",
+  tx: "One per line, e.g. Change to 5% dextrose-containing fluid when blood glucose falls below 14 mmol/L",
+} as const;
+
+// Must do (required) + Should do (expected) on one core screen (ADR-035). The
+// screen's own question and help (rendered above by the shell) head the Must-do
+// list; the Should-do list carries its own rule-bearing help and a "Nothing to
+// add" box that mirrors the safety box — disabled while the list has items, and
+// typing clears it — but is never required at submission.
+function TieredCore({ form, set, requiredKey, requiredPlaceholder, expectedKey, expectedPlaceholder, expectedHelp, noneKey, children }: {
+  form: FormState;
+  set: (patch: Partial<FormState>) => void;
+  requiredKey: "inv_required" | "tx_required";
+  requiredPlaceholder: string;
+  expectedKey: "inv_expected" | "tx_expected";
+  expectedPlaceholder: string;
+  expectedHelp: string;
+  noneKey: "expected_investigations_none_declared" | "expected_treatments_none_declared";
+  children?: ReactNode;
+}) {
+  const expectedHasText = lines(form[expectedKey]).length > 0;
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="cg-label">Must do</div>
+        <textarea
+          rows={3}
+          className="cg-textarea"
+          value={form[requiredKey]}
+          onChange={(e) => set({ [requiredKey]: e.target.value } as Partial<FormState>)}
+          placeholder={requiredPlaceholder}
+          autoFocus
+        />
+      </div>
+      <div>
+        <div className="cg-label">Should do</div>
+        <p className="cg-help mb-1.5">{expectedHelp}</p>
+        <textarea
+          rows={3}
+          className="cg-textarea"
+          value={form[expectedKey]}
+          onChange={(e) => set(
+            lines(e.target.value).length > 0
+              ? ({ [expectedKey]: e.target.value, [noneKey]: false } as Partial<FormState>)
+              : ({ [expectedKey]: e.target.value } as Partial<FormState>)
+          )}
+          placeholder={expectedPlaceholder}
+        />
+        <label className={`mt-3 flex items-start gap-2.5 text-sm ${
+          expectedHasText ? "cursor-not-allowed text-neutral-400" : "cursor-pointer text-neutral-700"
+        }`}>
+          <input
+            type="checkbox"
+            checked={form[noneKey] as boolean}
+            disabled={expectedHasText}
+            onChange={(e) => set({ [noneKey]: e.target.checked } as Partial<FormState>)}
+            className="mt-0.5 accent-brand-700"
+          />
+          <span>Nothing to add here.</span>
+        </label>
+        {expectedHasText && (
+          <p className="mt-1.5 text-xs text-neutral-400">You've listed something above, so this doesn't apply.</p>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPrompt, showProvenancePrompt }: {
   screen: ScreenDef;
   form: FormState;
@@ -174,13 +251,35 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
     case "other_considerations":
       return <textarea {...textareaProps("other_considerations", 3, "One per line, e.g. Identification and treatment of the precipitating cause")} />;
     case "inv_required":
-      return <textarea {...textareaProps("inv_required", 3, "One per line, e.g. Venous or arterial blood gas")} />;
-    case "inv_expected":
-      return <textarea {...textareaProps("inv_expected", 3, "One per line, e.g. Serum ketones (beta-hydroxybutyrate)")} />;
+      return (
+        <TieredCore
+          form={form} set={set}
+          requiredKey="inv_required" requiredPlaceholder="One per line, e.g. Venous or arterial blood gas"
+          expectedKey="inv_expected" expectedPlaceholder={EXPECTED_PLACEHOLDER.inv} expectedHelp={EXPECTED_HELP.inv}
+          noneKey="expected_investigations_none_declared"
+        />
+      );
     case "tx_required":
-      return <textarea {...textareaProps("tx_required", 3, "One per line, e.g. IV fluid resuscitation with 0.9% normal saline initiated first, before insulin")} />;
+      return (
+        <TieredCore
+          form={form} set={set}
+          requiredKey="tx_required" requiredPlaceholder="One per line, e.g. IV fluid resuscitation with 0.9% normal saline initiated first, before insulin"
+          expectedKey="tx_expected" expectedPlaceholder={EXPECTED_PLACEHOLDER.tx} expectedHelp={EXPECTED_HELP.tx}
+          noneKey="expected_treatments_none_declared"
+        >
+          <div>
+            <div className="cg-label">Monitoring</div>
+            <p className="cg-help mb-1.5">Does anything here need monitoring? Add it. It's saved as required monitoring for this case.</p>
+            <textarea {...textareaProps("mon_required", 3, "One per line, e.g. Hourly capillary glucose; potassium every 2 hours")} />
+          </div>
+        </TieredCore>
+      );
+    // Retired as standalone screens (ADR-035): inv_expected / tx_expected now
+    // render inside the core screens above. Cases kept for switch exhaustiveness.
+    case "inv_expected":
+      return <textarea {...textareaProps("inv_expected", 3, EXPECTED_PLACEHOLDER.inv)} />;
     case "tx_expected":
-      return <textarea {...textareaProps("tx_expected", 3, "One per line, e.g. Change to 5% dextrose-containing fluid when blood glucose falls below 14 mmol/L")} />;
+      return <textarea {...textareaProps("tx_expected", 3, EXPECTED_PLACEHOLDER.tx)} />;
     case "inv_situational":
     case "tx_situational": {
       const key = screen.kind as "inv_situational" | "tx_situational";
@@ -195,14 +294,19 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
     case "complications":
       return <textarea {...textareaProps("complications", 3, "One per line, e.g. Cerebral edema (rare but catastrophic; particularly in young patients)")} />;
     case "monitoring":
-      // Stacks on a phone: side-by-side, each textarea was too narrow to read
-      // a monitoring line in.
+      // Required monitoring is authored on the Treatments screen (ADR-035); it's
+      // shown here read-only so nothing looks lost, and this screen edits the
+      // Expected tier only.
       return (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <div className="cg-label">Required</div>
-            <textarea {...textareaProps("mon_required", 4, "One per line, e.g. Hourly vital signs")} />
-          </div>
+        <div className="space-y-4">
+          {lines(form.mon_required).length > 0 && (
+            <div>
+              <div className="cg-label">Required monitoring (added on the Treatments screen)</div>
+              <ul className="cg-help list-disc pl-5">
+                {lines(form.mon_required).map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
+            </div>
+          )}
           <div>
             <div className="cg-label">Expected</div>
             <textarea {...textareaProps("mon_expected", 4, "One per line, e.g. Temperature monitoring for infection precipitant tracking")} />
@@ -509,7 +613,9 @@ export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmi
           <>
             <h2 className="font-serif text-xl font-semibold leading-snug text-neutral-900 sm:text-2xl">Add more detail</h2>
             <p className="mt-2 max-w-prose text-sm leading-relaxed text-neutral-500">
-              Optional. Skip this if you're short on time; you or another physician can add it later.
+              {step.phase === 1
+                ? "Optional. Context that helps a second reviewer understand what the case is testing."
+                : "Optional, but these make the case much stronger. Situational items, complications and escalation are where AI answers most often fall short."}
             </p>
             <div className="mt-6">
               <OptionalMenu

@@ -93,17 +93,12 @@ export const SCREENS: ScreenDef[] = [
     help: "So a reviewer knows what to check against what.",
   },
 
+  // Expected investigations/treatments no longer have their own screens: ADR-035
+  // pairs them ("Should do") beside Required ("Must do") on the core 2.4 / 2.7
+  // screens, so a case always has thoroughness signal. Their fields (inv_expected,
+  // tx_expected) and rule-bearing help live on those screens now (GuidedFlow).
+
   // Phase 2, optional — reachable through the "+" step, grouped by §4.6.
-  {
-    id: "2.5", phase: 2, kind: "inv_expected", crumb: "Expected investigations", optional: true,
-    question: "What investigations would a thorough workup include?",
-    help: "One per line. Investigations a thorough workup would include, but whose omission is not dangerous.",
-  },
-  {
-    id: "2.8", phase: 2, kind: "tx_expected", crumb: "Expected treatments", optional: true,
-    question: "What treatments would a thorough response include?",
-    help: "One per line. A thorough response should include these, but their omission is not dangerous.",
-  },
   {
     id: "2.6", phase: 2, kind: "inv_situational", crumb: "Situational investigations", optional: true,
     question: "What investigations only apply on specific AI-raised triggers?",
@@ -134,16 +129,17 @@ export const SCREENS: ScreenDef[] = [
     question: "What else should a thorough response cover?",
     help: "One per line. Things a thorough response would include: precipitant identification, counselling points, prognostic assessment.",
   },
-  // 1.3 and 1.4 also keep their Phase 1 ids: they describe the case rather
-  // than answer it, so v1.6 moved them out of the opening two questions and
-  // into "About this case" at the bottom of the optional menu.
+  // 1.3 and 1.4 describe the case rather than answer it. v1.6 demoted them into
+  // Phase 2's optional menu; ADR-035 returns them to Phase 1 as a collapsed
+  // "About this case" group (framing metadata belongs with framing), while
+  // keeping them optional and out of the opening two questions.
   {
-    id: "1.3", phase: 2, kind: "evaluates", crumb: "What it tests", optional: true,
+    id: "1.3", phase: 1, kind: "evaluates", crumb: "What it tests", optional: true,
     question: "What does this case evaluate?",
     help: "In 1–2 sentences, describe what aspect of clinical reasoning this case tests. This helps second reviewers understand your authoring intent.",
   },
   {
-    id: "1.4", phase: 2, kind: "scope", crumb: "How far the answer should go", optional: true,
+    id: "1.4", phase: 1, kind: "scope", crumb: "How far the answer should go", optional: true,
     question: "What is the scope of the scenario?",
     help: "Bounds what the AI is checked on, e.g. “diagnosis and initial management; excludes long-term glycaemic control planning”.",
   },
@@ -184,12 +180,8 @@ export interface OptionalGroup {
 }
 
 export const OPTIONAL_GROUPS: OptionalGroup[] = [
-  {
-    key: "expected",
-    title: "Expected items",
-    blurb: "Investigations and treatments a good answer would include, where missing one isn't a failure",
-    screenIds: ["2.5", "2.8"],
-  },
+  // "Expected items" is gone — Expected inv/tx are now paired with Required on
+  // the core screens (ADR-035), not tucked in the optional menu.
   {
     key: "situational",
     title: "Situational items",
@@ -263,7 +255,10 @@ export const FLOW_STEPS: FlowStep[] = (() => {
     }
     if (enrichmentScreens(p.n).length) {
       // Placed at the end of its phase so the core spine reads uninterrupted.
-      steps.push({ kind: "enrichment", id: ENRICHMENT_STEP_ID(p.n), phase: p.n, groups: OPTIONAL_GROUPS });
+      // Each phase's step shows only the groups whose screens live in that phase
+      // (ADR-035): "About this case" surfaces in Phase 1, the rest in Phase 2.
+      const groups = OPTIONAL_GROUPS.filter((g) => groupScreens(g).some((s) => s.phase === p.n));
+      steps.push({ kind: "enrichment", id: ENRICHMENT_STEP_ID(p.n), phase: p.n, groups });
     }
   }
   // Review is authored last: pull it to the very end regardless of tiering.
@@ -288,6 +283,10 @@ export function displayNumber(step: FlowStep): string {
 // step; an optional screen id maps to the grouped step (the caller opens that
 // group). Unknown ids fall back to the first step.
 export function stepIndexForScreen(id: string): number {
+  // Back-compat: a draft or deep link saved against the retired Expected screens
+  // (2.5 / 2.8, folded into 2.4 / 2.7 by ADR-035) resolves to the core screen.
+  const RETIRED: Record<string, string> = { "2.5": "2.4", "2.8": "2.7" };
+  if (RETIRED[id]) id = RETIRED[id];
   const direct = FLOW_STEPS.findIndex((st) => st.id === id);
   if (direct !== -1) return direct;
   const screen = BY_ID.get(id);
@@ -356,6 +355,19 @@ const count = (s: string, noun: string) => {
   return n === 0 ? "" : `${n} ${noun}${n === 1 ? "" : "s"}`;
 };
 
+// Summary for a core screen that pairs Must-do (required) and Should-do
+// (expected) lists (ADR-035): "3 investigations · +2 should-do", or noting the
+// author explicitly declared none for Should-do.
+const tierSummary = (req: string, exp: string, expNone: boolean, noun: string): string => {
+  const parts: string[] = [];
+  const r = count(req, noun);
+  if (r) parts.push(r);
+  const e = lines(exp).length;
+  if (e) parts.push(`+${e} should-do`);
+  else if (expNone) parts.push("no should-do");
+  return parts.join(" · ");
+};
+
 // One-line answer summary for the review screen and the case preview sidebar.
 // Empty string means "not answered yet" (callers render their own placeholder).
 export function screenSummary(kind: ScreenKind, form: FormState): string {
@@ -379,10 +391,11 @@ export function screenSummary(kind: ScreenKind, form: FormState): string {
     case "primary": return form.primary.trim();
     case "critical_differentials": return lines(form.critical_differentials).join(" · ");
     case "other_considerations": return count(form.other_considerations, "item");
-    case "inv_required": return count(form.inv_required, "investigation");
+    // Core screens now carry both tiers (ADR-035): summarise Must-do + Should-do.
+    case "inv_required": return tierSummary(form.inv_required, form.inv_expected, form.expected_investigations_none_declared, "investigation");
     case "inv_expected": return count(form.inv_expected, "investigation");
     case "inv_situational": return count(form.inv_situational, "trigger-bound item");
-    case "tx_required": return count(form.tx_required, "treatment");
+    case "tx_required": return tierSummary(form.tx_required, form.tx_expected, form.expected_treatments_none_declared, "treatment");
     case "tx_expected": return count(form.tx_expected, "treatment");
     case "tx_situational": return count(form.tx_situational, "trigger-bound item");
     case "complications": return count(form.complications, "complication");

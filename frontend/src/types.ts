@@ -152,6 +152,9 @@ export interface SituationalItem {
 export interface TierGroup {
   required: string[];
   expected: string[];
+  // Distinguishes "author declared nothing to add" from "left the field empty"
+  // for the Should-do (expected) list — mirrors safety `none_declared` (ADR-035).
+  expected_none_declared: boolean;
   situational: SituationalItem[];
 }
 

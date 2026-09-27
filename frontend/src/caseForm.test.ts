@@ -14,6 +14,7 @@ import {
   lines,
   mergeDraft,
   normaliseSafety,
+  normaliseExpected,
   parseSituational,
   provenanceAnswered,
   requiredIssues,
@@ -32,6 +33,30 @@ const form = (patch: Partial<FormState> = {}): FormState => ({ ...EMPTY, ...patc
 
 const TWO_CONSTRAINTS =
   "1.Ensure to complete Antimalarial regimens when diagnosis is confirmed\n2. Rapid diagnosis test is necessary to confirm diagnosis";
+
+describe("the Should-do (expected) 'Nothing to add' flag (ADR-035)", () => {
+  it("carries expected_none_declared through the payload for both lists", () => {
+    const p = toPayload(form({ expected_investigations_none_declared: true, expected_treatments_none_declared: true }), []);
+    expect(p.investigations.expected_none_declared).toBe(true);
+    expect(p.treatments.expected_none_declared).toBe(true);
+  });
+
+  it("defaults to false (a skipped list is not a declared-none)", () => {
+    const p = toPayload(EMPTY, []);
+    expect(p.investigations.expected_none_declared).toBe(false);
+    expect(p.treatments.expected_none_declared).toBe(false);
+  });
+
+  it("normalise clears the flag when the list has items (text wins)", () => {
+    const f = form({ inv_expected: "Serum ketones", expected_investigations_none_declared: true });
+    expect(normaliseExpected(f).expected_investigations_none_declared).toBe(false);
+  });
+
+  it("normalise leaves a genuine declared-none intact", () => {
+    const f = form({ expected_treatments_none_declared: true });
+    expect(normaliseExpected(f).expected_treatments_none_declared).toBe(true);
+  });
+});
 
 describe("the safety question", () => {
   it("accepts listed constraints", () => {

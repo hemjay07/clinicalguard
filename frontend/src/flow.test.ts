@@ -26,9 +26,11 @@ import { ARCHETYPES } from "./guidance";
 const form = (patch: Partial<FormState> = {}): FormState => ({ ...EMPTY, ...patch });
 
 describe("displayed step numbers", () => {
-  it("reads 1 2 / 1 2 3 4 5 + / 1 2 with no gaps", () => {
+  it("reads 1 2 + / 1 2 3 4 5 + / 1 2 with no gaps", () => {
+    // Phase 1 gained a "+" step: ADR-035 moved "About this case" back here as a
+    // collapsed optional group. Phase 2 keeps its five core screens + "+".
     const shown = PHASES.map((p) => phaseSteps(p.n).map(displayNumber).join(" "));
-    expect(shown).toEqual(["1 2", "1 2 3 4 5 +", "1 2"]);
+    expect(shown).toEqual(["1 2 +", "1 2 3 4 5 +", "1 2"]);
   });
 
   it("numbers by position even though the underlying ids are out of order", () => {
@@ -48,9 +50,22 @@ describe("resuming a case", () => {
   });
 
   it("sends an optional question to the grouped step, with its group opened", () => {
-    const target = enrichmentTarget("2.5"); // expected investigations
-    expect(target?.key).toBe("expected");
-    expect(FLOW_STEPS[stepIndexForScreen("2.5")].kind).toBe("enrichment");
+    const target = enrichmentTarget("2.6"); // situational investigations
+    expect(target?.key).toBe("situational");
+    expect(FLOW_STEPS[stepIndexForScreen("2.6")].kind).toBe("enrichment");
+  });
+
+  it("opens 'About this case' as a phase-1 group (ADR-035)", () => {
+    expect(enrichmentTarget("1.3")?.key).toBe("about");
+    const step = FLOW_STEPS[stepIndexForScreen("1.3")];
+    expect(step.kind).toBe("enrichment");
+    expect(step.phase).toBe(1);
+  });
+
+  it("resolves a retired Expected screen id to its core screen", () => {
+    // 2.5 / 2.8 were folded into 2.4 / 2.7 (ADR-035); old drafts must still land.
+    expect(FLOW_STEPS[stepIndexForScreen("2.5")].id).toBe("2.4");
+    expect(FLOW_STEPS[stepIndexForScreen("2.8")].id).toBe("2.7");
   });
 
   it("falls back to the first step for an unknown id rather than throwing", () => {

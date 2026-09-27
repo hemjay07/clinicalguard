@@ -16,12 +16,15 @@ import {
   normaliseSafety,
   parseSituational,
   provenanceAnswered,
+  requiredIssues,
   safetyAnswered,
   safetyConflict,
   safetyPromptFor,
   toPayload,
   SAFETY_PROMPT,
   SAFETY_CONFLICT_PROMPT,
+  SAFETY_SCREEN_ID,
+  PROVENANCE_SCREEN_ID,
 } from "./caseForm";
 import type { FormState } from "./caseForm";
 
@@ -96,6 +99,45 @@ describe("the provenance question", () => {
       ).toBe(true);
     }
   );
+});
+
+describe("the submit gate (requiredIssues)", () => {
+  const messages = (f: FormState) => requiredIssues(f).map((i) => i.message);
+  const screens = (f: FormState) => requiredIssues(f).map((i) => i.screenId);
+
+  // A resolved case: an answered safety question and a tier that needs no notes.
+  const ok = form({ safety_none_declared: true, guideline_provenance: "nstg_only" });
+
+  it("lets a fully-answered case through with no issues", () => {
+    expect(requiredIssues(ok)).toEqual([]);
+  });
+
+  it("reports both unmet answers at once, not one per submit", () => {
+    // The whack-a-mole the old one-at-a-time gate caused: fix safety, resubmit,
+    // then discover provenance. Both come back together now.
+    expect(screens(form())).toEqual([SAFETY_SCREEN_ID, PROVENANCE_SCREEN_ID]);
+  });
+
+  it("blocks a tier that looks picked but still needs notes", () => {
+    // The exact 'I filled it and it still would not submit' case: the tier is
+    // chosen, so the screen read as done, but the notes it demands are missing.
+    const f = form({ safety_none_declared: true, guideline_provenance: "nstg_plus_other" });
+    expect(screens(f)).toEqual([PROVENANCE_SCREEN_ID]);
+  });
+
+  it("clears once the missing notes are supplied", () => {
+    const f = form({
+      safety_none_declared: true,
+      guideline_provenance: "nstg_plus_other",
+      provenance_notes: "WHO guidance.",
+    });
+    expect(requiredIssues(f)).toEqual([]);
+  });
+
+  it("surfaces the safety conflict message, not the generic prompt", () => {
+    const f = form({ safety_harm_text: TWO_CONSTRAINTS, safety_none_declared: true, guideline_provenance: "nstg_only" });
+    expect(messages(f)).toEqual([SAFETY_CONFLICT_PROMPT]);
+  });
 });
 
 describe("drafts", () => {

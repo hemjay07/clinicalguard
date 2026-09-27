@@ -4,7 +4,7 @@
 // the shared FormState + autosave in the Authoring shell.
 
 import type { FormState, ValidationIssue } from "../caseForm";
-import { lines, safetyConflict, safetyPromptFor } from "../caseForm";
+import { lines, safetyConflict, safetyPromptFor, requiredIssues } from "../caseForm";
 import { useState } from "react";
 import {
   PHASES, phaseScreens, screenFilled, screenSummary, screenLabel,
@@ -374,13 +374,24 @@ function ReviewScreen({ form, goTo, issues }: {
   // the author was deciding whether to submit it.
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
+  // Shown the moment the author reaches review, not only after a failed submit:
+  // the two answers that gate submission, each with a jump. This is the upfront
+  // signal — the author no longer discovers what is required by being bounced.
+  const outstanding = requiredIssues(form);
+  // Errors the server returned (no screen to jump to) stay a separate red box.
+  const serverErrors = issues.filter((i) => i.screenId === null);
+
   return (
     <div>
-      {issues.length > 0 && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <p className="mb-1 font-medium">Please fix before submitting:</p>
+      {outstanding.length > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="mb-1 font-medium">
+            {outstanding.length === 1
+              ? "One answer is needed before you can submit:"
+              : `${outstanding.length} answers are needed before you can submit:`}
+          </p>
           <ul className="space-y-1">
-            {issues.map((iss, i) => (
+            {outstanding.map((iss, i) => (
               <li key={i} className="flex items-baseline justify-between gap-3">
                 <span>{iss.message}</span>
                 {iss.screenId && (
@@ -388,6 +399,14 @@ function ReviewScreen({ form, goTo, issues }: {
                 )}
               </li>
             ))}
+          </ul>
+        </div>
+      )}
+      {serverErrors.length > 0 && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="mb-1 font-medium">Submission failed:</p>
+          <ul className="space-y-1">
+            {serverErrors.map((iss, i) => <li key={i}>{iss.message}</li>)}
           </ul>
         </div>
       )}
@@ -473,6 +492,9 @@ export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmi
   const goBack = () => { if (idx > 0) goTo(FLOW_STEPS[idx - 1].id); };
   const isReview = screen?.kind === "review";
   const forwardLabel = idx === FLOW_STEPS.length - 2 ? "Review case →" : "Next →";
+  // Blockers that gate submission, so the Submit button (far below the phase
+  // cards on review) can say what is still missing without a scroll back up.
+  const outstanding = isReview ? requiredIssues(form) : [];
 
   return (
     <div className="space-y-5">
@@ -538,9 +560,16 @@ export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmi
               {forwardLabel}
             </button>
           ) : (
-            <button type="button" onClick={onSubmit} disabled={submitting} className="cg-btn-primary px-6">
-              {submitting ? "Submitting…" : "Submit case"}
-            </button>
+            <div className="flex items-center gap-3">
+              {outstanding.length > 0 && (
+                <span className="text-sm text-amber-700">
+                  {outstanding.length === 1 ? "1 answer still needed" : `${outstanding.length} answers still needed`}
+                </span>
+              )}
+              <button type="button" onClick={onSubmit} disabled={submitting} className="cg-btn-primary px-6">
+                {submitting ? "Submitting…" : "Submit case"}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -558,7 +587,11 @@ export function GuidedFlow({ form, set, screenId, goTo, toggleArchetype, onSubmi
           </button>
         ) : (
           <button type="button" onClick={onSubmit} disabled={submitting} className="cg-btn-primary flex-1">
-            {submitting ? "Submitting…" : "Submit"}
+            {submitting
+              ? "Submitting…"
+              : outstanding.length > 0
+                ? `Submit · ${outstanding.length} needed`
+                : "Submit"}
           </button>
         )}
         <button type="button" onClick={onOpenSource} aria-label="Open the NSTG source panel"

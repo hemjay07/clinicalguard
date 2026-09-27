@@ -19,8 +19,8 @@ import {
 import { useAuth } from "../AuthContext";
 import { decodeConditions } from "../selection";
 import {
-  EMPTY, toPayload, fromExpectedResponse, safetyAnswered, provenanceAnswered, isBlank, mergeDraft,
-  normaliseSafety, safetyPromptFor, PROVENANCE_PROMPT, PROVENANCE_NOTES_PROMPT,
+  EMPTY, toPayload, fromExpectedResponse, isBlank, mergeDraft,
+  normaliseSafety, requiredIssues,
 } from "../caseForm";
 import type { FormState, ValidationIssue } from "../caseForm";
 import { screenById, FLOW_STEPS, isValidFlowParam, stepIndexForScreen, groupScreens } from "../flow";
@@ -33,8 +33,6 @@ interface SourceEntry { ref: ConditionRef; data: SourceMaterial }
 
 const INTRO_KEY = "cg_guided_intro_seen";
 const REVIEW_SCREEN = "3.2";
-const PROVENANCE_SCREEN = "1.5";
-const SAFETY_SCREEN = "3.1";
 
 // One overlay, shown once. It used to be two — a cadre question, then an
 // introduction — which meant a first-time author hit two modals before
@@ -395,6 +393,11 @@ export function Authoring() {
       ?? (currentStep?.kind === "enrichment" ? groupScreens(currentStep.groups[0])[0]?.kind ?? null : null);
   const openSections = useMemo(() => sourceSectionsFor(panelKind), [panelKind]);
 
+  // The required answers, live — so the full form shows what is still needed
+  // before Submit is pressed, the same signal the guided review screen gives.
+  const outstandingRequired = requiredIssues(form);
+  const serverErrors = issues.filter((i) => i.screenId === null);
+
   async function startAuthoring(v: ViewMode, cadre: { cadre: string; other: string | null } | null) {
     if (cadre) {
       await api.setCadre(cadre.cadre, cadre.other);
@@ -407,20 +410,14 @@ export function Authoring() {
 
   async function submit() {
     // No client-side gating (v1.3.1 §4) except the two questions that must be
-    // actively answered: harm (ADR-029) and provenance (ADR-033). Checked
-    // before the request so neither round-trips to the server unresolved.
-    if (!safetyAnswered(form)) {
-      setIssues([{ message: safetyPromptFor(form), screenId: SAFETY_SCREEN }]);
-      if (view === "guided") goTo(SAFETY_SCREEN);
-      else window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-    if (!provenanceAnswered(form)) {
-      setIssues([{
-        message: form.guideline_provenance ? PROVENANCE_NOTES_PROMPT : PROVENANCE_PROMPT,
-        screenId: PROVENANCE_SCREEN,
-      }]);
-      if (view === "guided") goTo(PROVENANCE_SCREEN);
+    // actively answered: harm (ADR-029) and provenance (ADR-033). Both are
+    // checked together (requiredIssues) so the author sees every remaining
+    // answer at once, not one per failed submit, and neither round-trips to the
+    // server unresolved.
+    const problems = requiredIssues(form);
+    if (problems.length > 0) {
+      setIssues(problems);
+      if (view === "guided") goTo(problems[0].screenId!);
       else window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -562,10 +559,21 @@ export function Authoring() {
           </div>
         </div>
 
-        {view === "form" && issues.length > 0 && (
+        {view === "form" && outstandingRequired.length > 0 && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p className="mb-1 font-medium">
+              {outstandingRequired.length === 1
+                ? "One answer is needed before you can submit:"
+                : `${outstandingRequired.length} answers are needed before you can submit:`}
+            </p>
+            <ul className="list-disc space-y-0.5 pl-5">{outstandingRequired.map((iss, i) => <li key={i}>{iss.message}</li>)}</ul>
+          </div>
+        )}
+
+        {view === "form" && serverErrors.length > 0 && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <p className="mb-1 font-medium">Please fix:</p>
-            <ul className="list-disc space-y-0.5 pl-5">{issues.map((iss, i) => <li key={i}>{iss.message}</li>)}</ul>
+            <p className="mb-1 font-medium">Submission failed:</p>
+            <ul className="list-disc space-y-0.5 pl-5">{serverErrors.map((iss, i) => <li key={i}>{iss.message}</li>)}</ul>
           </div>
         )}
 

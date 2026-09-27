@@ -64,9 +64,17 @@ describe("resuming a case", () => {
 });
 
 describe("what counts as answered", () => {
-  it("counts the provenance tier, not the notes", () => {
+  it("counts provenance answered only when the submit gate would let it through", () => {
+    // Filled must mean the same thing submit means, or a dot reads "done" on a
+    // case submit will bounce.
     expect(screenFilled("provenance", form())).toBe(false);
+    // A tier that needs no notes is answered on the tier alone.
     expect(screenFilled("provenance", form({ guideline_provenance: "nstg_only" }))).toBe(true);
+    // A tier that claims an outside source is not answered until the notes exist.
+    expect(screenFilled("provenance", form({ guideline_provenance: "nstg_plus_other" }))).toBe(false);
+    expect(
+      screenFilled("provenance", form({ guideline_provenance: "nstg_plus_other", provenance_notes: "WHO guidance." }))
+    ).toBe(true);
   });
 
   it("counts a declared-empty safety answer as answered", () => {

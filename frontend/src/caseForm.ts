@@ -207,3 +207,30 @@ export interface ValidationIssue {
   message: string;
   screenId: string | null;
 }
+
+// The two required answers live on these guided-flow screens. Kept here, next
+// to the checks themselves, so the one place that decides what "required" means
+// also owns where each answer is fixed.
+export const SAFETY_SCREEN_ID = "3.1";
+export const PROVENANCE_SCREEN_ID = "1.5";
+
+// Single source of truth for "can this case be submitted". The breadcrumb dots,
+// the review rows and the submit gate all resolve "answered?" through the same
+// functions (safetyAnswered / provenanceAnswered), so "shows done" and "will
+// submit" can never disagree — the bug where provenance looked answered (tier
+// picked) but submit refused (notes missing) was exactly that disagreement.
+// Returns every unmet answer at once, so the author sees the whole list rather
+// than one, fix, resubmit, discover the next.
+export function requiredIssues(f: FormState): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (!safetyAnswered(f)) {
+    issues.push({ message: safetyPromptFor(f), screenId: SAFETY_SCREEN_ID });
+  }
+  if (!provenanceAnswered(f)) {
+    issues.push({
+      message: f.guideline_provenance ? PROVENANCE_NOTES_PROMPT : PROVENANCE_PROMPT,
+      screenId: PROVENANCE_SCREEN_ID,
+    });
+  }
+  return issues;
+}

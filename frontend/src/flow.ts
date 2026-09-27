@@ -7,7 +7,7 @@
 // scoring code.
 
 import type { FormState } from "./caseForm";
-import { lines, truncate, safetyAnswered } from "./caseForm";
+import { lines, truncate, safetyAnswered, provenanceAnswered } from "./caseForm";
 import { ARCHETYPES, PROVENANCE_TIERS } from "./guidance";
 import { labelFor } from "./labels";
 
@@ -319,9 +319,10 @@ export function screenFilled(kind: ScreenKind, form: FormState): boolean {
     case "query": return !!form.query.trim();
     case "evaluates": return !!form.what_this_evaluates.trim();
     case "scope": return !!form.query_scope.trim();
-    // The tier is the answer here; the notes are its follow-up, required only
-    // for the two tiers that claim something came from outside NSTG.
-    case "provenance": return !!form.guideline_provenance;
+    // Answered means the same thing the submit gate means: a tier, plus its
+    // notes when the tier claims something came from outside NSTG. Anything
+    // weaker lets a dot read "done" on a case submit will bounce.
+    case "provenance": return provenanceAnswered(form);
     case "primary": return !!form.primary.trim();
     case "critical_differentials": return !!form.critical_differentials.trim();
     case "other_considerations": return !!form.other_considerations.trim();

@@ -296,21 +296,18 @@ function ScreenBody({ screen, form, set, toggleArchetype, onEnter, showSafetyPro
     case "monitoring":
       // Required monitoring is authored on the Treatments screen (ADR-035); it's
       // shown here read-only so nothing looks lost, and this screen edits the
-      // Expected tier only.
+      // expected tier only (the screen help explains that).
       return (
         <div className="space-y-4">
           {lines(form.mon_required).length > 0 && (
-            <div>
-              <div className="cg-label">Required monitoring (added on the Treatments screen)</div>
-              <ul className="cg-help list-disc pl-5">
+            <div className="rounded-md bg-neutral-50 px-3 py-2">
+              <div className="cg-label">Required monitoring · added on the Treatments screen</div>
+              <ul className="cg-help mb-0 list-disc pl-5">
                 {lines(form.mon_required).map((m, i) => <li key={i}>{m}</li>)}
               </ul>
             </div>
           )}
-          <div>
-            <div className="cg-label">Expected</div>
-            <textarea {...textareaProps("mon_expected", 4, "One per line, e.g. Temperature monitoring for infection precipitant tracking")} />
-          </div>
+          <textarea {...textareaProps("mon_expected", 4, "One per line, e.g. Temperature monitoring for infection precipitant tracking")} />
         </div>
       );
     case "escalation":

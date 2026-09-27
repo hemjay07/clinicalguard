@@ -6,6 +6,11 @@ requires-python = ">=3.11"
 
 dependencies = [
     "sqlalchemy>=2.0",
+    # The engine connects through the psycopg (v3) dialect — the URL selects
+    # postgresql+psycopg — so v3 must be installed, not only psycopg2. Without
+    # it a clean install (CI) errors at collection with "No module named
+    # 'psycopg'". psycopg2-binary is kept for the plain postgresql:// paths.
+    "psycopg[binary]>=3.1",
     "psycopg2-binary>=2.9",
     "pgvector>=0.2",
     "pydantic>=2.0",

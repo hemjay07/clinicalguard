@@ -12,7 +12,7 @@ const BLOG_URL = "https://medium.com/@mujeebopabode07/the-eval-was-wrong-not-the
 
 // Honest current estimate for one case, end to end. Update when the flow is
 // shortened — it is the number the invitation is judged against.
-const AUTHORING_TIME = "30–45";
+const AUTHORING_TIME = "20 to 30";
 
 function Cta({ className = "" }: { className?: string }) {
   return (
@@ -42,12 +42,16 @@ export function Home() {
           to test whether AI systems follow the standard of care where they'd actually be used.
         </p>
         <p className="mt-4 text-[17px] leading-relaxed text-neutral-700">
-          It takes about {AUTHORING_TIME} minutes, and it's the clinical reasoning you already do
-          every day.
+          It takes about {AUTHORING_TIME} minutes, on your phone or laptop. Your progress saves as
+          you go, so you can stop and come back whenever you like. It's the clinical reasoning you
+          already do every day.
         </p>
         <div className="mt-7">
           <Cta />
         </div>
+        <p className="mt-3 text-sm text-neutral-500">
+          Take your time. One careful case is worth more than several rushed ones.
+        </p>
       </header>
 
       {/* Why it matters */}
@@ -68,7 +72,8 @@ export function Home() {
           You'll <strong className="font-semibold text-neutral-900">write</strong> a realistic
           clinical question, then mark what a correct response must include: the diagnosis, the key
           investigations and treatments, and above all the safety points: the things an AI
-          must never miss or get wrong.
+          must never miss or get wrong. Base it on the kind of patient you see, with the details
+          changed so no real person can be identified.
         </p>
         <p className="mt-4 text-[17px] leading-relaxed text-neutral-700">
           The Nigerian treatment guideline (NSTG) sits beside you as you work. Where the guideline is
@@ -77,8 +82,14 @@ export function Home() {
         <div className="mt-7">
           <Cta />
         </div>
-        <p className="mt-4 text-sm text-neutral-500">
-          Contributing physicians are credited in the research.
+      </section>
+
+      {/* Recognition */}
+      <section className="mt-10 border-t border-neutral-200 pt-9">
+        <h2 className="font-serif text-xl font-semibold text-neutral-900">Recognition</h2>
+        <p className="mt-3 text-[17px] leading-relaxed text-neutral-700">
+          Everyone whose case is accepted into the study is named in the acknowledgements of the
+          research paper.
         </p>
       </section>
 
@@ -94,6 +105,15 @@ export function Home() {
           Read more
         </Link>
       </p>
+
+      {/* Who's behind this */}
+      <section className="mt-10 border-t border-neutral-200 pt-9">
+        <h2 className="font-serif text-xl font-semibold text-neutral-900">Who's behind this</h2>
+        <p className="mt-3 text-[17px] leading-relaxed text-neutral-700">
+          ClinicalGuard is an open-source project by Dr Abdulmujeeb Opabode (MBBS, Ibadan), built
+          with Nigerian doctors who write and review the cases.
+        </p>
+      </section>
 
       {/* Footer */}
       <footer className="mt-10 border-t border-neutral-200 pt-8 text-sm text-neutral-500">
